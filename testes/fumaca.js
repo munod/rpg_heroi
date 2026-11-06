@@ -1,0 +1,455 @@
+// Teste de fumaça: roda o jogo inteiro com DOM falsificado no Node.
+// Uso: node testes/fumaca.js
+'use strict';
+
+const { carregar } = require('./carga');
+
+// harness comum: canvas, DOM, localStorage, sandbox e scripts do jogo
+const {
+  sandbox, jogoCanvas, ouvintesJanela, clicados,
+  localStorage: localStorageStub, frame, tecla, clique
+} = carregar();
+
+// ---------------------------------------------------------------- asserções
+let falhas = 0;
+function conf(cond, msg) {
+  if (cond) {
+    console.log('  ok  ' + msg);
+  } else {
+    falhas++;
+    console.log('  FALHA  ' + msg);
+  }
+}
+
+// ---------------------------------------------------------------- testes
+const Game = sandbox.Game;
+const Personagem = sandbox.Personagem;
+const Salvar = sandbox.Salvar;
+const Sprite = sandbox.Sprite;
+
+console.log('1) geração de sprites');
+{
+  const classes = ['guerreiro', 'mago', 'ladino', 'clerigo'];
+  const estilos = ['curto', 'longo', 'rabo', 'moicana', 'careca'];
+  let min = Infinity, max = 0, total = 0;
+  for (const cl of classes) {
+    const p = Personagem.novo();
+    p.classe = cl;
+    const look = Personagem.lookDe(p);
+    for (const est of estilos) {
+      look.estilo = est;
+      for (const anim of ['idle', 'walk', 'attack']) {
+        const frames = anim === 'walk' ? 4 : anim === 'attack' ? 3 : 2;
+        for (let f = 0; f < frames; f++) {
+          const c = Sprite.heroCanvas(look, anim, f);
+          const n = c.canvas._pixels;
+          min = Math.min(min, n);
+          max = Math.max(max, n);
+          total++;
+          if (n < 80) console.log('     -> sprite vazio?', cl, est, anim, f, n);
+        }
+      }
+    }
+  }
+  conf(total === 4 * 5 * (2 + 4 + 3), 'gerou todos os frames (' + total + ')');
+  conf(min >= 80, 'nenhum sprite vazio (mín ' + min + ' px)');
+  conf(max <= 400, 'nenhum sprite estourou a grade (máx ' + max + ' px)');
+
+  const slime = Sprite.slimeCanvas('#4aa03a', 0);
+  conf(slime.canvas._pixels > 50, 'slime desenhado (' + slime.canvas._pixels + ' px)');
+  const tree = Sprite.treeCanvas();
+  conf(tree.canvas._pixels > 150, 'árvore desenhada (' + tree.canvas._pixels + ' px)');
+  const rock = Sprite.rockCanvas();
+  conf(rock.canvas._pixels > 40, 'pedra desenhada (' + rock.canvas._pixels + ' px)');
+}
+
+console.log('2) status por classe');
+{
+  const esperado = {
+    guerreiro: { hp: 18 + 10 * 4, dano: 5 + Math.floor(11 / 2) },
+    mago: { hp: 8 + 7 * 4, dano: 4 + Math.floor(12 / 2) },
+    ladino: { hp: 12 + 8 * 4, dano: 4 + Math.floor(12 / 2) },
+    clerigo: { hp: 16 + 11 * 4, dano: 4 + Math.floor(9 / 2) }
+  };
+  for (const cl of Object.keys(esperado)) {
+    const p = Personagem.novo();
+    p.classe = cl;
+    const s = Personagem.status(p);
+    conf(s.hpMax === esperado[cl].hp && s.dano === esperado[cl].dano,
+      cl + ': hp=' + s.hpMax + ' dano=' + s.dano + ' vel=' + s.vel + ' crit=' + s.crit + '%');
+  }
+
+  // Velocidade também acelera o ataque
+  const pv = Personagem.novo();
+  const rvBase = Personagem.status(pv).recarga;
+  conf(Math.abs(rvBase - 0.5) < 1e-9,
+    'vel base mantém 0.50s por golpe (recarga=' + rvBase.toFixed(2) + 's)');
+  pv.atributos.des = 40;
+  const rvAlta = Personagem.status(pv).recarga;
+  conf(rvAlta < rvBase,
+    'velocidade maior encurta a recarga (' + rvBase.toFixed(2) + 's -> ' +
+    rvAlta.toFixed(2) + 's)');
+}
+
+console.log('3) export/import JSON');
+{
+  const p = Personagem.novo();
+  p.nome = 'Teste';
+  p.classe = 'mago';
+  p.atributos.int = 14;
+  const ida = Personagem.exportarJSON(p);
+  const volta = Personagem.importarJSON(ida);
+  conf(volta.nome === 'Teste' && volta.classe === 'mago' && volta.atributos.int === 14,
+    'round-trip preserva dados');
+  let erro = false;
+  try { Personagem.importarJSON('{ sem json'); } catch (e) { erro = true; }
+  conf(erro, 'JSON inválido lança erro');
+  const parcial = Personagem.importarJSON('{"nome":"Parcial","classe":"mago"}');
+  conf(parcial.nome === 'Parcial' && parcial.classe === 'mago' &&
+       parcial.atributos.for === 8 && typeof parcial.look.skin === 'string',
+    'JSON parcial é normalizado com padrões');
+  const gigante = Personagem.importarJSON(
+    '{"nome":"G","atributos":{"for":999,"des":1}}');
+  conf(gigante.atributos.for === 999 && gigante.atributos.des === 1,
+    'sem teto: atributo999 é aceito (for=' + gigante.atributos.for + ')');
+  const zerado = Personagem.importarJSON('{"atributos":{"for":0}}');
+  conf(zerado.atributos.for === 1,
+    'import corrige atributo0 para1 (for=' + zerado.atributos.for + ')');
+  const alvo = Personagem.novo();
+  alvo.atributos.for = 0;
+  let rejeitou = false;
+  try { Personagem.validar(alvo); } catch (e) { rejeitou = true; }
+  conf(rejeitou, 'validar rejeita atributo0 no save');
+}
+
+console.log('4) boot na tela de seleção + entrada na jogatina');
+{
+  // dispara o load
+  (ouvintesJanela.load || []).forEach(fn => fn({}));
+  frame(10);
+  conf(Game.cena === 'selecao', 'abriu na tela de seleção (fora da jogatina)');
+  conf(jogoCanvas._chamadas > 100, 'renderizou (' + jogoCanvas._chamadas + ' desenhos)');
+
+  // botão "+": atributo Força sobe e pontos caem
+  const p0 = Game.personagem;
+  const for0 = p0.atributos.for, pts0 = p0.pontos;
+  clique(361, 46); // centro do botão + (aba Atributos)
+  frame(2);
+  conf(p0.atributos.for === for0 + 1 && p0.pontos === pts0 - 1,
+    'botão + funciona na criação (for ' + for0 + '->' + p0.atributos.for +
+    ', pts ' + pts0 + '->' + p0.pontos + ')');
+
+  // sem teto de 18: dá pra ir além
+  p0.atributos.for = 50;
+  const ptsCap = p0.pontos;
+  clique(361, 46);
+  frame(2);
+  conf(p0.atributos.for === 51 && p0.pontos === ptsCap - 1,
+    'sem teto: Força50 -> 51 (pontos ' + ptsCap + ' -> ' + p0.pontos + ')');
+
+  // digitar o nome (renomeia o herói em foco, antes de jogar)
+  tecla('keydown', 'KeyB', 'b');
+  tecla('keyup', 'KeyB', 'b');
+  frame(1);
+  conf(p0.nome === 'b', 'digitação renomeia o herói (' + p0.nome + ')');
+
+  // JOGAR: Enter entra na arena e grava o personagem
+  tecla('keydown', 'Enter', 'Enter');
+  tecla('keyup', 'Enter', 'Enter');
+  frame(2);
+  conf(Game.cena === 'jogo', 'Enter entrou na jogatina (modo idle)');
+  const salvos = Salvar.listar();
+  conf(salvos.length === 1 && salvos[0].nome === 'b' &&
+       salvos[0].atributos.for === 51,
+    'JOGAR salvou antes de entrar (nome=' + (salvos[0] && salvos[0].nome) +
+    ', for=' + (salvos[0] && salvos[0].atributos.for) + ')');
+
+  // --- combate 100% automático: sobe a primeira onda sozinho
+  const Batalha = sandbox.Batalha;
+  let info = Batalha.info();
+  let espera = 0;
+  while (info.onda < 2 && espera < 3000) {
+    frame(1);
+    espera++;
+    info = Batalha.info();
+  }
+  conf(info.onda >= 2,
+    'batalha automática limpou a onda 1 (onda=' + info.onda +
+    ', xp=' + info.xp + ', hp=' + info.hp + ')');
+
+  // --- progressão: próximo abate dá nível e +5 pontos
+  const p1 = Game.personagem;
+  p1.xp = p1.xpProx - 1;
+  const nivel0 = p1.nivel, pts1 = p1.pontos;
+  let subiu = false;
+  for (let i = 0; i < 3000 && !subiu; i++) {
+    frame(1);
+    if (p1.nivel > nivel0) subiu = true;
+  }
+  conf(p1.nivel === nivel0 + 1 && p1.pontos === pts1 + 5,
+    'abate dá nível e +5 pontos (nv ' + nivel0 + '->' + p1.nivel +
+    ', pts ' + pts1 + '->' + p1.pontos + ')');
+
+  // --- abas de gestão
+  clique(291, 25);            // aba Aparência
+  frame(2);
+  const pele0 = p1.look.skin;
+  clique(353, 48);           // botão > da linha Pele
+  frame(2);
+  conf(p1.look.skin !== pele0, 'troca de cor de pele funciona');
+
+  clique(349, 25);           // aba Classe
+  frame(2);
+  clique(290, 69);           // botão Mago
+  frame(2);
+  conf(p1.classe === 'mago', 'troca de classe funciona');
+
+  clique(233, 25);           // volta pra aba Atributos
+  frame(2);
+
+  // --- pausar / continuar
+  clique(322, 194);
+  frame(2);
+  conf(Batalha.info().pausada === true, 'botão Pausar pausa a batalha');
+  clique(322, 194);
+  frame(2);
+  conf(Batalha.info().pausada === false, 'botão Continuar retoma a batalha');
+}
+
+console.log('5) exportação');
+{
+  const antes = clicados.length;
+  Salvar.exportar(Game.personagem);
+  conf(clicados.length === antes + 1, 'exportar baixou um arquivo');
+}
+
+console.log('6) morte, revivescimento e troca de tela');
+{
+  const p = Game.personagem;
+  const Batalha = sandbox.Batalha;
+
+  // --- herói fraco cai em combate
+  p.atributos.con = 1;
+  p.atributos.for = 1;
+  let caiu = false;
+  for (let i = 0; i < 6000 && !caiu; i++) {
+    frame(1);
+    if (Batalha.info().morto) caiu = true;
+  }
+  conf(caiu, 'herói pode cair em combate (vida baixa)');
+
+  // --- e revive sozinho
+  let reviveu = false;
+  for (let i = 0; i < 500 && !reviveu; i++) {
+    frame(1);
+    if (!Batalha.info().morto) reviveu = true;
+  }
+  conf(reviveu, 'herói revive sozinho depois de 3s');
+
+  // --- a jogatina não tem como trocar de herói por baixo: você sai dela
+  clique(118, 194);           // botão Trocar herói
+  frame(2);
+  conf(Game.cena === 'selecao',
+    'Trocar herói leva para a tela de seleção (fora da arena)');
+  const ondaParada = Batalha.info().onda;
+  for (let i = 0; i < 60; i++) frame(1);
+  conf(Batalha.info().onda === ondaParada,
+    'a batalha fica parada enquanto você está fora da jogatina');
+
+  const forSel = Game.personagem.atributos.for;
+  clique(361, 46);            // + funciona na tela de seleção
+  frame(2);
+  conf(Game.personagem.atributos.for === forSel + 1,
+    'dá para ajustar atributos na seleção (for ' + forSel + ' -> ' +
+    Game.personagem.atributos.for + ')');
+
+  clique(60, 194);            // botão JOGAR
+  frame(2);
+  conf(Game.cena === 'jogo' && Batalha.info().onda >= 1,
+    'JOGAR entra na arena de novo (onda ' + Batalha.info().onda + ')');
+
+  // --- números de dano continuam aparecendo
+  jogoCanvas._textos = [];
+  for (let i = 0; i < 600; i++) frame(1);
+  conf((jogoCanvas._textos || []).some(t => /^\d+$/.test(t)),
+    'números de dano aparecem na arena');
+}
+
+console.log('7) autosave, nome do arquivo e carisma');
+{
+  const p = Game.personagem;
+
+  // --- autosave: muda um atributo e roda >3s SEM apertar Enter
+  const for0 = p.atributos.for;
+  p.atributos.for = for0 + 5;
+  for (let i = 0; i < 260; i++) frame(1);
+  const gravado = Salvar.listar().find(s => s.id === p.id);
+  conf(!!gravado && gravado.atributos.for === for0 + 5,
+    'autosave gravou sem Enter (for ' + for0 + ' -> ' +
+    (gravado ? gravado.atributos.for : 'não achado') + ')');
+
+  // --- exportar não mangleia acento ("José" -> "Jose.json", não "Jos.json")
+  const antes = clicados.length;
+  const nomeGuardado = p.nome;
+  p.nome = 'José';
+  Salvar.exportar(p);
+  p.nome = nomeGuardado;
+  conf(clicados.length === antes + 1 && clicados[clicados.length - 1] === 'Jose.json',
+    'arquivo exportado sem acento (' + clicados[clicados.length - 1] + ')');
+
+  // --- carisma agora dá XP de verdade
+  const pCar = Personagem.novo();
+  pCar.atributos.car = 18;                 // efetivo 18 -> x1.30
+  conf(Math.abs(Personagem.status(pCar).xpMult - 1.3) < 1e-9,
+    'carisma multiplica o XP (x' +
+    Personagem.status(pCar).xpMult.toFixed(2) + ')');
+}
+
+console.log('8) seleção: novo herói, exclusão em duas etapas e paginação');
+{
+  clique(118, 194);                       // Trocar herói -> seleção
+  frame(2);
+  conf(Game.cena === 'selecao', 'a lista vive na tela de seleção');
+
+  const qtd0 = Salvar.listar().length;
+  clique(35, 144);                        // botão Novo (8,136,54,16)
+  frame(2);
+  conf(Salvar.listar().length === qtd0 + 1,
+    'Novo criou um registro a mais (' + qtd0 + ' -> ' +
+    Salvar.listar().length + ')');
+  conf(Game.personagem.nome === 'Herói', 'o novo herói está em foco na seleção');
+
+  // --- exclusão em duas etapas: foca o primeiro herói da lista
+  clique(100, 56);                        // item 1 da lista (8,48,184,16)
+  frame(2);
+  const alvo = Game.personagem;
+  clique(96, 144);                        // Apagar (1º clique)
+  frame(2);
+  conf(Salvar.listar().some(s => s.id === alvo.id),
+    'primeiro clique só pede confirmação (não apagou)');
+  clique(96, 144);                        // Sim? (2º clique)
+  frame(2);
+  conf(!Salvar.listar().some(s => s.id === alvo.id),
+    'segundo clique apagou "' + alvo.nome + '"');
+
+  // --- paginação: 9 personagens não cabem mais numa página só
+  for (let i = 0; i < 8; i++) {
+    const q = Personagem.novo();
+    q.nome = 'Pag' + i;
+    Salvar.salvar(q);
+  }
+  frame(2);
+  jogoCanvas._textos = [];
+  clique(190, 40);                        // seta > da navegação (184,34,12,12)
+  frame(2);
+  const txts = jogoCanvas._textos || [];
+  conf(txts.some(t => t.indexOf('2/2') >= 0),
+    'lista paginou para a página 2/2');
+  conf(txts.some(t => t.indexOf('Pag') >= 0),
+    'a página 2 mostra os personagens Pag*');
+}
+
+console.log('9) progresso offline (ausência creditada ao reabrir)');
+{
+  const pOff = Game.personagem;
+  const xp0 = pOff.xp, nv0 = pOff.nivel;
+  // finga que o herói ficou 10 minutos fora na onda 4
+  Salvar.salvarEstado(pOff.id, 4, Date.now() - 10 * 60 * 1000, false);
+  jogoCanvas._textos = [];
+  Game.setScene('jogo');                  // reabre o jogo (enter)
+  frame(2);
+  const inf = sandbox.Batalha.info();
+  conf(inf.onda >= 4, 'retomou na onda gravada (onda=' + inf.onda + ')');
+  conf(pOff.xp > xp0 || pOff.nivel > nv0,
+    'creditou a ausência (xp ' + xp0 + '->' + pOff.xp +
+    ', nv ' + nv0 + '->' + pOff.nivel + ')');
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('fora') >= 0),
+    'avisa o tempo de ausência na tela');
+}
+
+console.log('10) falha de gravação é comunicada');
+{
+  const setOriginal = localStorageStub.setItem;
+  localStorageStub.setItem = function () { throw new Error('QuotaExceededError'); };
+  jogoCanvas._textos = [];
+  tecla('keydown', 'Enter', 'Enter');
+  tecla('keyup', 'Enter', 'Enter');
+  frame(2);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('Sem espaço') >= 0),
+    'diz que não salvou em vez de fingir que salvou');
+  localStorageStub.setItem = setOriginal;
+}
+
+console.log('11) barra de HP dos inimigos');
+{
+  // a barra dos inimigos tem 3px: o contorno de 1px não pode cobrir o miolo
+  const UI = sandbox.UI;
+  const ctxJogo = jogoCanvas.getContext();
+  const chamadas = [];
+  const espiao = new Proxy({}, {
+    get(t, p) { return (...a) => { chamadas.push(p); }; },
+    set() { return true; }
+  });
+  function medir(h) {
+    chamadas.length = 0;
+    UI.bar(0, 0, 16, h, 1, '#d84a4a');
+    return chamadas.slice();
+  }
+  UI.setContext(espiao);
+  const fina3 = medir(3);               // barra dos inimigos
+  const fina2 = medir(2);               // barra ainda mais fina
+  const alta = medir(6);                // barra do herói
+  UI.setContext(ctxJogo);
+  conf(!fina3.includes('strokeRect') && !fina2.includes('strokeRect'),
+    'barra fina não recebe contorno (o preenchimento fica visível)');
+  conf(alta.includes('strokeRect'), 'barra alta mantém o contorno');
+}
+
+console.log('12) boss a cada 100 ondas');
+{
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+  // herói forte para o teste não depender de tempo de luta
+  p.atributos.for = 999;
+  p.atributos.con = 999;
+
+  Batalha.restaurarOnda(100);            // onda 99 + tOnda=0 -> nasce a 100
+  let espera = 0;
+  while (Batalha.info().onda < 100 && espera < 600) {
+    frame(1);
+    espera++;
+  }
+  conf(Batalha.info().onda === 100, 'chegou na onda 100 (onda=' +
+    Batalha.info().onda + ')');
+  conf(Batalha.info().boss === true,
+    'a onda 100 tem um boss em campo (inimigos=' +
+    Batalha.info().inimigos + ')');
+
+  // a onda só passa depois de derrubar boss + minions (não trava)
+  let passou = false;
+  for (let i = 0; i < 6000 && !passou; i++) {
+    frame(1);
+    if (Batalha.info().onda >= 101) passou = true;
+  }
+  conf(passou, 'a onda 100 passou após derrotar o boss (onda=' +
+    Batalha.info().onda + ')');
+  conf(Batalha.info().boss === false, 'o boss não ficou preso depois de morto');
+
+  // boss de onda 200 também nasce (regra vale para todo múltiplo de 100)
+  Batalha.restaurarOnda(200);
+  espera = 0;
+  while (Batalha.info().onda < 200 && espera < 600) {
+    frame(1);
+    espera++;
+  }
+  conf(Batalha.info().onda === 200 && Batalha.info().boss === true,
+    'a onda 200 também tem boss (onda=' + Batalha.info().onda +
+    ', boss=' + Batalha.info().boss + ')');
+}
+
+console.log('');
+if (falhas) {
+  console.log(falhas + ' FALHA(S)');
+  process.exit(1);
+}
+console.log('TODOS OS TESTES PASSARAM');
