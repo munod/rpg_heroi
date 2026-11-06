@@ -123,6 +123,8 @@ console.log('3) export/import JSON');
   let rejeitou = false;
   try { Personagem.validar(alvo); } catch (e) { rejeitou = true; }
   conf(rejeitou, 'validar rejeita atributo0 no save');
+  conf(Personagem.novo().pontos === 0,
+    'herói novo nasce com 0 pontos (só +5 por nível)');
 }
 
 console.log('4) boot na tela de seleção + entrada na jogatina');
@@ -135,6 +137,7 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
 
   // botão "+": atributo Força sobe e pontos caem
   const p0 = Game.personagem;
+  p0.pontos = 5;              // herói novo nasce sem pontos: dá saldo ao teste
   const for0 = p0.atributos.for, pts0 = p0.pontos;
   clique(361, 46); // centro do botão + (aba Atributos)
   frame(2);
@@ -260,11 +263,14 @@ console.log('6) morte, revivescimento e troca de tela');
     'a batalha fica parada enquanto você está fora da jogatina');
 
   const forSel = Game.personagem.atributos.for;
+  Game.personagem.pontos = 5;  // saldo pro clique (herói nasce sem pontos)
   clique(361, 46);            // + funciona na tela de seleção
   frame(2);
-  conf(Game.personagem.atributos.for === forSel + 1,
+  conf(Game.personagem.atributos.for === forSel + 1 &&
+       Game.personagem.pontos === 4,
     'dá para ajustar atributos na seleção (for ' + forSel + ' -> ' +
-    Game.personagem.atributos.for + ')');
+    Game.personagem.atributos.for + ', pontos 5 -> ' +
+    Game.personagem.pontos + ')');
 
   clique(60, 194);            // botão JOGAR
   frame(2);

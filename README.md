@@ -41,7 +41,8 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   por abate**).
 - **Progressão** — cada inimigo derrubado dá **XP**; ao subir de **nível**
   você ganha **+5 pontos** para distribuir e **+4 de vida** (o XP e o nível
-  ficam no cabeçalho).
+  ficam no cabeçalho). Heróis novos nascem com **0 pontos** (atributos base
+  em 8) — os primeiros +5 vêm já no primeiro nível.
 - **Classe** — Guerreiro, Mago, Ladino ou Clérigo, com bônus e arma próprios;
   trocar no meio da luta altera o herói na hora.
 - **Aparência** — pele, cabelo, estilo (curto, longo, cavalo, moicana, bandana)

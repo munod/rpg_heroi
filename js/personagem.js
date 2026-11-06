@@ -61,7 +61,7 @@ var Personagem = (function () {
       nome: 'Herói',
       classe: 'guerreiro',
       atributos: { for: 8, des: 8, con: 8, int: 8, car: 8 },
-      pontos: 20,
+      pontos: 0,            // sem pontos na criação: só +5 por nível
       nivel: 1,
       xp: 0,
       xpProx: 20,
