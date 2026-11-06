@@ -3,6 +3,9 @@ var Salvar = (function () {
   var KEY = 'rpg_personagens_v1';
   var KEY_ULTIMO = 'rpg_ultimo_id';
   var KEY_ESTADO = 'rpg_estado_v1';   // onda + instante do último save
+  // Sanidade do estado: save legítimo nunca chega perto disso; valores
+  // maiores vêm de storage corrompido e são rejeitados na leitura.
+  var ONDA_MAX = 99999;
 
   function listar() {
     try {
@@ -71,6 +74,7 @@ var Salvar = (function () {
     var e = mapaEstado()[id];
     if (!e) return null;
     if (typeof e.onda !== 'number' || !isFinite(e.onda) || e.onda < 0) return null;
+    if (e.onda > ONDA_MAX) return null;   // storage corrompido
     if (typeof e.ts !== 'number' || !isFinite(e.ts)) return null;
     return { onda: Math.floor(e.onda), ts: e.ts, pausada: !!e.pausada };
   }

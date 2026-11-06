@@ -4,91 +4,50 @@
 var Selecao = (function () {
   var pagina = 0;          // página da lista de heróis
   var apagando = null;     // { id, t } — apagar em duas etapas
-  var toast = null;        // { txt, t }
   var blinkT = 0;
-  var saveT = 0;           // cronômetro do autosave
-  var ultimoJson = '';     // última cópia gravada (detecta mudança)
   var POR_PAGINA = 5;
 
   function enter() {
     pagina = 0;
     apagando = null;
-    toast = null;
-    saveT = 0;
     // foca o último herói usado (ou o que já está em memória / um novo)
     var p = Salvar.ultimo() || Game.personagem || Personagem.novo();
     Game.personagem = p;
-    ultimoJson = JSON.stringify(p);
-  }
-
-  function msg(txt) {
-    toast = { txt: txt, t: 3 };
-  }
-
-  // Grava o herói em foco (silencioso; só avisa em erro).
-  function salvarFoco() {
-    var p = Game.personagem;
-    if (!p) return false;
-    if (!p.nome.trim()) p.nome = 'Herói';
-    try {
-      if (!Salvar.salvar(p)) {
-        msg('Sem espaço no navegador para salvar.');
-        return false;
-      }
-      ultimoJson = JSON.stringify(p);
-      return true;
-    } catch (e) {
-      msg('Erro ao salvar: ' + e.message);
-      return false;
-    }
-  }
-
-  // Autosave a cada 3s, só quando o herói em foco mudou.
-  function atualizaAutosave(dt) {
-    saveT += dt;
-    if (saveT < 3) return;
-    saveT = 0;
-    if (JSON.stringify(Game.personagem) !== ultimoJson) salvarFoco();
+    Gravacao.entrar(p);
   }
 
   function focar(p) {
-    salvarFoco();          // não perde o que estava sendo editado
+    Gravacao.salvarPersonagem(Game.personagem, false);  // não perde a edição
     Game.personagem = p;
     apagando = null;
-    ultimoJson = JSON.stringify(p);
+    Gravacao.sincronizar(p);
   }
 
   function novoPersonagem() {
-    salvarFoco();
+    Gravacao.salvarPersonagem(Game.personagem, false);
     var p = Personagem.novo();
     Game.personagem = p;
-    Salvar.salvar(p);      // já entra na lista
+    Gravacao.salvarPersonagem(p, false);   // já entra na lista
     apagando = null;
     pagina = 0;
-    ultimoJson = JSON.stringify(p);
-    msg('Novo herói criado — dê um nome a ele!');
+    Gravacao.sincronizar(p);
+    Gravacao.msg('Novo herói criado — dê um nome a ele!');
   }
 
   function importar() {
     Salvar.importarArquivo(function (err, personagem) {
       if (err) {
-        msg('Erro: ' + err.message);
+        Gravacao.msg('Erro: ' + err.message);
         return;
       }
-      salvarFoco();
+      Gravacao.salvarPersonagem(Game.personagem, false);
       Game.personagem = personagem;
       apagando = null;
       pagina = 0;
-      try {
-        if (!Salvar.salvar(personagem)) {
-          msg('Importado, mas sem espaço para salvar.');
-        } else {
-          msg('"' + personagem.nome + '" importado!');
-        }
-      } catch (e) {
-        msg('Importado: ' + e.message);
+      if (Gravacao.salvarPersonagem(personagem, false)) {
+        Gravacao.msg('"' + personagem.nome + '" importado!');
       }
-      ultimoJson = JSON.stringify(personagem);
+      Gravacao.sincronizar(personagem);
     });
   }
 
@@ -99,26 +58,26 @@ var Selecao = (function () {
     if (Game.personagem && Game.personagem.id === id) {
       if (lista.length) {
         Game.personagem = lista[0];
-        msg('Personagem apagado.');
+        Gravacao.msg('Personagem apagado.');
       } else {
         var p = Personagem.novo();
         Game.personagem = p;
-        Salvar.salvar(p);
-        msg('Apagado — criei um novo herói.');
+        Gravacao.salvarPersonagem(p, false);
+        Gravacao.msg('Apagado — criei um novo herói.');
       }
     } else {
-      msg('Personagem apagado.');
+      Gravacao.msg('Personagem apagado.');
     }
     var paginas = Math.max(1, Math.ceil(Salvar.listar().length / POR_PAGINA));
     if (pagina > paginas - 1) pagina = paginas - 1;
-    ultimoJson = JSON.stringify(Game.personagem);
+    Gravacao.sincronizar(Game.personagem);
   }
 
   // Entra na jogatina com o herói em foco.
   function jogar() {
     var p = Game.personagem;
     if (!p) return;
-    salvarFoco();
+    Gravacao.salvarPersonagem(p, false);
     Game.setScene('jogo');
   }
 
@@ -126,16 +85,13 @@ var Selecao = (function () {
   function update(dt) {
     blinkT += dt;
 
-    if (toast) {
-      toast.t -= dt;
-      if (toast.t <= 0) toast = null;
-    }
     if (apagando) {
       apagando.t -= dt;
       if (apagando.t <= 0) apagando = null;
     }
 
-    atualizaAutosave(dt);
+    // toast + autosave (só o personagem; sem estado de batalha aqui)
+    Gravacao.update(dt, Game.personagem);
 
     // digitar o nome do herói em foco (qualquer tecla)
     var p = Game.personagem;
@@ -145,7 +101,7 @@ var Selecao = (function () {
         var ch = Input.typed[i];
         if (!/[A-Za-zÀ-ÿ0-9 \-]/.test(ch)) continue;
         if (p.nome === 'Herói') p.nome = '';   // primeira tecla substitui o padrão
-        if (p.nome.length < 12) p.nome += ch;
+        if (p.nome.length < 14) p.nome += ch;  // mesmo teto do normalizar
       }
     }
 
@@ -178,12 +134,8 @@ var Selecao = (function () {
 
     desenhaRodape(ctx, p);
 
-    if (toast) {
-      UI.text(toast.txt, 192, 206, { align: 'center', color: '#8ce08c' });
-    } else {
-      UI.text('Ajuste o herói e clique em JOGAR — Enter também entra',
-        192, 206, { align: 'center', color: '#6f678a' });
-    }
+    Gravacao.desenharAviso(ctx,
+      'Ajuste o herói e clique em JOGAR — Enter também entra');
   }
 
   function desenhaLista(ctx) {
@@ -239,7 +191,7 @@ var Selecao = (function () {
     })) {
       if (!marcado) {
         apagando = { id: foco.id, t: 4 };
-        msg('Clique em "Sim?" para confirmar a exclusão.');
+        Gravacao.msg('Clique em "Sim?" para confirmar a exclusão.');
       } else {
         excluir(foco.id);
       }
@@ -247,20 +199,13 @@ var Selecao = (function () {
 
     if (UI.button(130, 136, 54, 16, 'Exp.', { disabled: !foco })) {
       Salvar.exportar(foco);
-      msg('Arquivo .json exportado!');
+      Gravacao.msg('Arquivo .json exportado!');
     }
   }
 
   function desenhaRodape(ctx, p) {
     if (!p) return;
-    var s = Personagem.status(p);
-
-    UI.text(
-      'HP ' + s.hpMax + '  ·  Dano ' + s.dano + '  ·  Vel ' + s.vel +
-      '  ·  Crítico ' + s.crit + '%  ·  Alcance ' + s.alcance +
-      '  ·  ' + s.arma,
-      192, 176, { align: 'center', color: '#c9c2dd' }
-    );
+    UI.linhaStatus(Personagem.status(p));
 
     if (UI.button(4, 186, 110, 16, 'JOGAR', {
       color: '#8ce08c', font: 'bold 8px monospace'
@@ -268,9 +213,11 @@ var Selecao = (function () {
     if (UI.button(120, 186, 66, 16, 'Importar')) importar();
     if (UI.button(192, 186, 66, 16, 'Exportar')) {
       Salvar.exportar(p);
-      msg('Arquivo .json exportado!');
+      Gravacao.msg('Arquivo .json exportado!');
     }
-    if (UI.button(264, 186, 116, 16, 'Salvar')) salvarFoco();
+    if (UI.button(264, 186, 116, 16, 'Salvar')) {
+      Gravacao.salvarPersonagem(p, true);
+    }
   }
 
   return { enter: enter, update: update, render: render };

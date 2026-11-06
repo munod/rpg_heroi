@@ -1,7 +1,6 @@
 // UI imediata desenhada direto no canvas (botões, painéis, barras, texto).
 var UI = (function () {
   var ctx = null;
-  var locked = false; // quando true, botões desenham mas não respondem
 
   function setContext(c) { ctx = c; }
 
@@ -30,7 +29,7 @@ var UI = (function () {
   function button(x, y, w, h, label, o) {
     o = o || {};
     var m = Input.mouse;
-    var hover = !locked && !o.disabled &&
+    var hover = !o.disabled &&
       m.x >= x && m.x < x + w && m.y >= y && m.y < y + h;
 
     var ativo = !!o.ativo;
@@ -73,14 +72,23 @@ var UI = (function () {
     ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   }
 
+  // Linha de status derivado dos rodapés das duas telas (HP/dano/vel/...).
+  function linhaStatus(s) {
+    text(
+      'HP ' + s.hpMax + '  ·  Dano ' + s.dano + '  ·  Vel ' + s.vel +
+      '  ·  Crítico ' + s.crit + '%  ·  Alcance ' + s.alcance +
+      '  ·  ' + s.arma,
+      192, 176, { align: 'center', color: '#c9c2dd' }
+    );
+  }
+
   return {
     setContext: setContext,
-    get locked() { return locked; },
-    set locked(v) { locked = !!v; },
     text: text,
     panel: panel,
     button: button,
     bar: bar,
-    swatch: swatch
+    swatch: swatch,
+    linhaStatus: linhaStatus
   };
 })();

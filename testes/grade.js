@@ -12,15 +12,7 @@ const { sandbox } = carregar({
 const Sprite = sandbox.Sprite;
 const Personagem = sandbox.Personagem;
 
-// reconstrói a grade capturando os pixels (mesma técnica da prévia)
-function grade(look, anim, frame) {
-  const cv = Sprite.heroCanvas(look, anim, frame);
-  // paraCanvas não expõe a grade, então regeramos lendo o canvas:
-  // o stub guarda os pixels em _data
-  return cv;
-}
-
-// melhor: reimplementa lendo o canvas stub
+// desenha a grade do sprite como texto lendo os pixels capturados no stub
 function mostrar(rotulo, look, anim, frame) {
   const c = Sprite.heroCanvas(look, anim, frame);
   const W = c.w, H = c.h;

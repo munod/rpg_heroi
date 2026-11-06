@@ -8,7 +8,7 @@
 //                        scripts: ['js/sprite.js'] });
 //
 // carregar() devolve:
-//   sandbox, jogoCanvas, ouvintesJanela, clicados,
+//   sandbox, jogoCanvas, ouvintesJanela, ouvintesDocumento, clicados,
 //   localStorage (stub), storage (objeto cru),
 //   frame(n), tecla(tipo, code, key), clique(xJogo, yJogo)
 'use strict';
@@ -138,8 +138,11 @@ function carregar(opcoes) {
   let rafCb = null;
   let relogio = 0;
   const clicados = [];
+  const ouvintesDocumento = {};
 
   const documentStub = {
+    // visibilidade da aba: o teste liga/desliga para disparar visibilitychange
+    hidden: false,
     createElement(tag) {
       if (tag === 'canvas') return novoCanvas();
       return {
@@ -154,7 +157,9 @@ function carregar(opcoes) {
     },
     getElementById(id) { return id === 'game' ? jogoCanvas : null; },
     body: { appendChild() {}, removeChild() {} },
-    addEventListener() {}
+    addEventListener(ev, fn) {
+      (ouvintesDocumento[ev] = ouvintesDocumento[ev] || []).push(fn);
+    }
   };
 
   const sandbox = {
@@ -227,6 +232,7 @@ function carregar(opcoes) {
     sandbox,
     jogoCanvas,
     ouvintesJanela,
+    ouvintesDocumento,
     clicados,
     localStorage: localStorageStub,
     storage,

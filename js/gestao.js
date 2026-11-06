@@ -180,13 +180,8 @@ var Gestao = (function () {
     else desenhaClasse(ctx, p);
   }
 
-  function setAba(a) { aba = a; }
-  function atual() { return aba; }
-
   return {
     desenhar: desenhar,
-    setAba: setAba,
-    atual: atual,
     quebra: quebra
   };
 })();

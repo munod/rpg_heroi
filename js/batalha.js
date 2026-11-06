@@ -15,6 +15,7 @@ var Batalha = (function () {
   var nivelFlash = 0;
   var shake = 0;
   var pausada = false;
+  var donoId = null;         // personagem dono da batalha em memória
 
   var TIPOS = {
     slime: { hp: 16, dmg: 4, vel: 34, cor: '#4aa03a', xpExtra: 0 },
@@ -117,6 +118,10 @@ var Batalha = (function () {
   function iniciar() {
     if (!chao) { constroiChao(); constroiObst(); }
 
+    // a batalha em memória pertence a este personagem: o estado gravado no
+    // save é sempre o dele (evita misturar ondas de heróis diferentes)
+    donoId = Game.personagem ? Game.personagem.id : null;
+
     var s = Personagem.status(Game.personagem);
     heroi = {
       x: W / 2, y: H / 2, facing: 1,
@@ -137,12 +142,19 @@ var Batalha = (function () {
 
   function reiniciar() { iniciar(); }
 
+  // Personagem dono da batalha em memória (null antes da primeira entrada
+  // na jogatina). O save de estado é gravado por ele, não pelo personagem
+  // em foco — na seleção os dois podem ser diferentes.
+  function dono() { return donoId; }
+
   function alternarPausa() { pausada = !pausada; return pausada; }
 
   // Retoma a onda gravada no save (reabertura/progresso offline).
+  // Sem teto aqui: valor absurdo vem de storage corrompido e é rejeitado
+  // em Salvar.lerEstado (ONDA_MAX); onda legítima nunca chega perto disso.
   function restaurarOnda(n) {
     if (typeof n !== 'number' || !isFinite(n) || n < 1) return;
-    onda = Math.max(0, Math.min(999, Math.floor(n)) - 1);
+    onda = Math.max(0, Math.floor(n) - 1);
     tOnda = 0;
     inimigos = [];
     nums = [];
@@ -607,6 +619,7 @@ var Batalha = (function () {
   return {
     iniciar: iniciar,
     reiniciar: reiniciar,
+    dono: dono,
     atualizar: atualizar,
     desenhar: desenhar,
     alternarPausa: alternarPausa,

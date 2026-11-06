@@ -176,7 +176,8 @@ var Personagem = (function () {
       atributos: {},
       pontos: num(p.pontos, 0, base.pontos),
       nivel: nivel,
-      xp: num(p.xp, 0, 0),
+      // teto defensivo: xp absurdo (save corrompido) travaria o loop de níveis
+      xp: Math.min(num(p.xp, 0, 0), 1e9),
       xpProx: num(p.xpProx, 1, 20 * nivel),
       look: {
         skin: corOu(p.look && p.look.skin, base.look.skin),
@@ -217,7 +218,6 @@ var Personagem = (function () {
     CORES_ROUPA: CORES_ROUPA,
     ESTILOS: ESTILOS,
     novo: novo,
-    efetivos: efetivos,
     status: status,
     lookDe: lookDe,
     validar: validar,

@@ -3,10 +3,7 @@
 // A criação/seleção de personagem vive em outra tela (Selecao): daqui só
 // se troca de herói saindo explicitamente para a tela de seleção.
 var Jogo = (function () {
-  var toast = null;        // { txt, t }
   var blinkT = 0;
-  var saveT = 0;           // cronômetro do autosave
-  var ultimoJson = '';     // última cópia gravada (detecta mudança)
   var eventosLigados = false;
 
   // Ausência: o rAF não roda com a aba oculta, então o tempo longe do jogo
@@ -16,12 +13,11 @@ var Jogo = (function () {
   var PASSO = 0.1;           // dt da simulação offline
 
   function enter() {
-    toast = null;
     Batalha.iniciar();
     ligarEventos();
-    ultimoJson = JSON.stringify(Game.personagem);
+    Gravacao.entrar(Game.personagem);
     var ausente = voltaAusencia(true);
-    if (ausente) msg(ausente);
+    if (ausente) Gravacao.msg(ausente);
   }
 
   // Salva ao fechar/ocultar a aba e credit a ausência ao voltar.
@@ -31,26 +27,16 @@ var Jogo = (function () {
     window.addEventListener('beforeunload', function () { salvarTudo(); });
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) salvarTudo();
-      else voltaAusencia(false);
+      // fora da jogatina a batalha não roda: sem simulação de ausência
+      // (o estado em memória também pode nem ser do personagem em foco)
+      else if (Game.cena === 'jogo') voltaAusencia(false);
     });
   }
 
-  function msg(txt) {
-    toast = { txt: txt, t: 3 };
-  }
-
-  function salvar() {
-    var p = Game.personagem;
-    if (!p.nome.trim()) p.nome = 'Herói';
-    try {
-      if (Salvar.salvar(p)) msg('Personagem salvo!');
-      else msg('Sem espaço no navegador para salvar.');
-    } catch (e) {
-      msg('Erro ao salvar: ' + e.message);
-    }
-  }
-
   // Grava personagem + estado da batalha sem exibir nada (autosave/unload).
+  // O estado é sempre do DONO da batalha em memória (Batalha.dono()): na
+  // seleção o personagem em foco pode ser outro herói, e gravar a onda
+  // dele sob o id errado corromperia o save (bug de contaminação).
   function salvarTudo() {
     var p = Game.personagem;
     if (!p) return false;
@@ -65,21 +51,16 @@ var Jogo = (function () {
         paraGravar.nome = 'Herói';
       }
       if (!Salvar.salvar(paraGravar)) return false;
-      Salvar.salvarEstado(p.id, Batalha.info().onda, Date.now(),
-        Batalha.info().pausada);
-      ultimoJson = JSON.stringify(p);
+      var dono = Batalha.dono();
+      if (dono) {
+        Salvar.salvarEstado(dono, Batalha.info().onda, Date.now(),
+          Batalha.info().pausada);
+      }
+      Gravacao.sincronizar(p);
       return true;
     } catch (e) {
       return false;
     }
-  }
-
-  // Autosave a cada 3s, só quando o personagem mudou.
-  function atualizaAutosave(dt) {
-    saveT += dt;
-    if (saveT < 3) return;
-    saveT = 0;
-    if (JSON.stringify(Game.personagem) !== ultimoJson) salvarTudo();
   }
 
   // Credit o tempo em que o jogo esteve fechado/aba oculta.
@@ -120,40 +101,34 @@ var Jogo = (function () {
   function importar() {
     Salvar.importarArquivo(function (err, personagem) {
       if (err) {
-        msg('Erro: ' + err.message);
+        Gravacao.msg('Erro: ' + err.message);
         return;
       }
       Game.personagem = personagem;
       Batalha.reiniciar();
       salvarTudo();
-      msg('"' + personagem.nome + '" importado!');
+      Gravacao.msg('"' + personagem.nome + '" importado!');
     });
   }
 
   // -------------------------------------------------------------- update
   function update(dt) {
-    if (toast) {
-      toast.t -= dt;
-      if (toast.t <= 0) toast = null;
-    }
     blinkT += dt;
 
     // A batalha roda sempre (idle).
     Batalha.atualizar(dt);
 
-    // o progresso nunca depende do Enter
-    atualizaAutosave(dt);
+    // o progresso nunca depende do Enter: toast + autosave
+    Gravacao.update(dt, Game.personagem, salvarTudo);
 
-    if (Input.pressed('Enter')) salvar();
+    if (Input.pressed('Enter')) Gravacao.salvarPersonagem(Game.personagem, true);
   }
 
   // -------------------------------------------------------------- render
   function render(ctx) {
     desenhaFundo(ctx);
-
-    if (toast) {
-      UI.text(toast.txt, 192, 206, { align: 'center', color: '#8ce08c' });
-    }
+    Gravacao.desenharAviso(ctx,
+      'Combate 100% automático — gerencie seus atributos');
   }
 
   function desenhaFundo(ctx) {
@@ -186,17 +161,11 @@ var Jogo = (function () {
   }
 
   function desenhaRodape(ctx, p) {
-    var s = Personagem.status(p);
+    UI.linhaStatus(Personagem.status(p));
 
-    // status derivado
-    UI.text(
-      'HP ' + s.hpMax + '  ·  Dano ' + s.dano + '  ·  Vel ' + s.vel +
-      '  ·  Crítico ' + s.crit + '%  ·  Alcance ' + s.alcance +
-      '  ·  ' + s.arma,
-      192, 176, { align: 'center', color: '#c9c2dd' }
-    );
-
-    if (UI.button(4, 186, 64, 16, 'Salvar')) salvar();
+    if (UI.button(4, 186, 64, 16, 'Salvar')) {
+      Gravacao.salvarPersonagem(Game.personagem, true);
+    }
     if (UI.button(72, 186, 92, 16, 'Trocar herói')) {
       // a troca acontece fora da jogatina: salva e sai para a seleção
       salvarTudo();
@@ -204,18 +173,13 @@ var Jogo = (function () {
     }
     if (UI.button(170, 186, 56, 16, 'Exportar')) {
       Salvar.exportar(p);
-      msg('Arquivo .json exportado!');
+      Gravacao.msg('Arquivo .json exportado!');
     }
     if (UI.button(232, 186, 56, 16, 'Importar')) importar();
     if (UI.button(294, 186, 56, 16,
       Batalha.info().pausada ? 'Continuar' : 'Pausar')) {
       var pausou = Batalha.alternarPausa();
-      msg(pausou ? 'Batalha pausada.' : 'Batalha retomada!');
-    }
-
-    if (!toast) {
-      UI.text('Combate 100% automático — gerencie seus atributos',
-        192, 206, { align: 'center', color: '#6f678a' });
+      Gravacao.msg(pausou ? 'Batalha pausada.' : 'Batalha retomada!');
     }
   }
 

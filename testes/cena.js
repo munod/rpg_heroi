@@ -3,50 +3,10 @@
 // Uso: node testes/cena.js   ->  tela-selecao.png, tela-jogo.png, ...
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 
 const { carregar } = require('./carga');
-
-// ------------------------------------------------------------------ PNG
-const CRC_TABELA = [];
-for (let n = 0; n < 256; n++) {
-  let c = n;
-  for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
-  CRC_TABELA[n] = c >>> 0;
-}
-function crc32(buf) {
-  let c = 0xFFFFFFFF;
-  for (let i = 0; i < buf.length; i++) c = CRC_TABELA[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
-  return (c ^ 0xFFFFFFFF) >>> 0;
-}
-function chunk(tipo, dados) {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(dados.length, 0);
-  const td = Buffer.concat([Buffer.from(tipo, 'ascii'), dados]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(td), 0);
-  return Buffer.concat([len, td, crc]);
-}
-function escreverPNG(arquivo, larg, alt, rgb) {
-  const cru = Buffer.alloc(alt * (1 + larg * 3));
-  for (let y = 0; y < alt; y++) {
-    cru[y * (1 + larg * 3)] = 0;
-    rgb.copy(cru, y * (1 + larg * 3) + 1, y * larg * 3, (y + 1) * larg * 3);
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(larg, 0);
-  ihdr.writeUInt32BE(alt, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 2;
-  fs.writeFileSync(arquivo, Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', zlib.deflateSync(cru)),
-    chunk('IEND', Buffer.alloc(0))
-  ]));
-}
+const { escreverPNG } = require('./png');
 
 // ------------------------------------------------------- cor / blending
 function parseCor(s) {

@@ -69,6 +69,7 @@ js/
   anim.js           cache de frames animados
   personagem.js     classes, atributos, status derivados, validação, níveis
   salvar.js         localStorage + export/import JSON
+  gravacao.js       toast, autosave e save do personagem (compartilhado)
   ui.js             botões, painéis, barras e texto no canvas
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
   gestao.js         painel de gestão (atributos/aparência/classe) compartilhado
@@ -89,7 +90,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 60 asserções: sprites, status, UI, idle completo
+node testes/fumaca.js     # 70 asserções: sprites, status, UI, idle completo
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # rasteriza e salva screenshots das telas
@@ -97,7 +98,7 @@ node testes/mapa.js X.png # converte screenshot em mapa ASCII (layout)
 node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 ```
 
-São **73 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **83 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.

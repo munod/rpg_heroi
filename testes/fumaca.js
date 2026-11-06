@@ -6,7 +6,7 @@ const { carregar } = require('./carga');
 
 // harness comum: canvas, DOM, localStorage, sandbox e scripts do jogo
 const {
-  sandbox, jogoCanvas, ouvintesJanela, clicados,
+  sandbox, jogoCanvas, ouvintesJanela, ouvintesDocumento, clicados,
   localStorage: localStorageStub, frame, tecla, clique
 } = carregar();
 
@@ -112,6 +112,9 @@ console.log('3) export/import JSON');
     '{"nome":"G","atributos":{"for":999,"des":1}}');
   conf(gigante.atributos.for === 999 && gigante.atributos.des === 1,
     'sem teto: atributo999 é aceito (for=' + gigante.atributos.for + ')');
+  const xpAlto = Personagem.importarJSON('{"nome":"X","xp":1e15}');
+  conf(xpAlto.xp === 1e9,
+    'xp importado tem teto defensivo (1e15 -> ' + xpAlto.xp + ')');
   const zerado = Personagem.importarJSON('{"atributos":{"for":0}}');
   conf(zerado.atributos.for === 1,
     'import corrige atributo0 para1 (for=' + zerado.atributos.for + ')');
@@ -445,6 +448,83 @@ console.log('12) boss a cada 100 ondas');
   conf(Batalha.info().onda === 200 && Batalha.info().boss === true,
     'a onda 200 também tem boss (onda=' + Batalha.info().onda +
     ', boss=' + Batalha.info().boss + ')');
+}
+
+console.log('13) save de estado não contamina outro personagem');
+{
+  const Batalha = sandbox.Batalha;
+  const pA = Game.personagem;
+  const ondaA = Batalha.info().onda;
+  conf(Batalha.dono() === pA.id,
+    'a batalha em memória pertence a A (dono=' + Batalha.dono() + ')');
+  conf(ondaA > 0, 'batalha em andamento antes do teste (onda ' + ondaA + ')');
+
+  // sai para a seleção e foca outro herói
+  clique(118, 194);              // Trocar herói
+  frame(2);
+  conf(Game.cena === 'selecao', 'saiu para a seleção');
+  clique(35, 144);               // Novo -> cria e foca o herói B
+  frame(2);
+  const pB = Game.personagem;
+  conf(pB.id !== pA.id, 'focou um personagem diferente (B)');
+
+  // fechar a aba na seleção: o estado gravado deve continuar sendo o de A
+  (ouvintesJanela.beforeunload || []).forEach(fn => fn({}));
+  const estA = Salvar.lerEstado(pA.id);
+  conf(!!estA && estA.onda === ondaA,
+    'beforeunload gravou a onda do dono (A=' +
+    (estA ? estA.onda : 'sem estado') + ', esperado ' + ondaA + ')');
+  conf(Salvar.lerEstado(pB.id) === null,
+    'beforeunload não gravou estado para B');
+
+  // aba oculta na seleção: segue sem gravar estado de B
+  sandbox.document.hidden = true;
+  (ouvintesDocumento.visibilitychange || []).forEach(fn => fn({}));
+  sandbox.document.hidden = false;
+  conf(Salvar.lerEstado(pB.id) === null,
+    'ocultar a aba não gravou estado para B');
+
+  // voltar da aba na seleção com estado antigo de B: não pode creditar XP
+  Salvar.salvarEstado(pB.id, 5, Date.now() - 60 * 1000, false);
+  const xpB = pB.xp, nvB = pB.nivel;
+  (ouvintesDocumento.visibilitychange || []).forEach(fn => fn({}));
+  conf(pB.xp === xpB && pB.nivel === nvB,
+    'volta da aba na seleção não creditou XP em B (xp ' +
+    xpB + '->' + pB.xp + ')');
+}
+
+console.log('14) ausência creditada na jogatina + limites do estado');
+{
+  const Batalha = sandbox.Batalha;
+
+  // JOGAR com o foco em B: entra na arena e restaura o estado dele
+  clique(60, 194);
+  frame(2);
+  conf(Game.cena === 'jogo', 'entrou na jogatina com B');
+
+  // regressão positiva: na jogatina, a volta da aba creditada continua
+  const p = Game.personagem;
+  const xp0 = p.xp, nv0 = p.nivel;
+  Salvar.salvarEstado(p.id, Batalha.info().onda, Date.now() - 60 * 1000, false);
+  sandbox.document.hidden = false;
+  (ouvintesDocumento.visibilitychange || []).forEach(fn => fn({}));
+  conf(p.xp > xp0 || p.nivel > nv0,
+    'volta da aba na jogatina creditou a ausência (xp ' +
+    xp0 + '->' + p.xp + ', nv ' + nv0 + '->' + p.nivel + ')');
+
+  // onda acima do antigo teto de 999 não é mais truncada
+  // (espera com teto: a onda só nasce depois que o herói, possivelmente
+  // caído na simulação anterior, reviver)
+  Batalha.restaurarOnda(1500);
+  let esp = 0;
+  while (Batalha.info().onda < 1500 && esp < 600) { frame(1); esp++; }
+  conf(Batalha.info().onda === 1500,
+    'restaurarOnda preserva onda > 999 (onda=' + Batalha.info().onda + ')');
+
+  // save corrompido: onda absurda é rejeitada na leitura
+  Salvar.salvarEstado(p.id, 1e15, Date.now(), false);
+  conf(Salvar.lerEstado(p.id) === null,
+    'lerEstado rejeita onda absurda (1e15, save corrompido)');
 }
 
 console.log('');

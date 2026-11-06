@@ -2,48 +2,8 @@
 // Uso: node testes/mapa.js arquivo.png [celula]
 'use strict';
 const fs = require('fs');
-const zlib = require('zlib');
 
-function lerPNG(buf) {
-  let off = 8;
-  const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
-  const idat = [];
-  while (off < buf.length) {
-    const len = buf.readUInt32BE(off);
-    const tipo = buf.toString('ascii', off + 4, off + 8);
-    if (tipo === 'IDAT') idat.push(buf.slice(off + 8, off + 8 + len));
-    off += 12 + len;
-  }
-  const raw = zlib.inflateSync(Buffer.concat(idat));
-  const bpp = 3, stride = w * bpp;
-  const px = Buffer.alloc(w * h * 3);
-  let pos = 0;
-  let prev = Buffer.alloc(stride);
-  for (let y = 0; y < h; y++) {
-    const f = raw[pos++];
-    const line = raw.slice(pos, pos + stride);
-    pos += stride;
-    const cur = Buffer.alloc(stride);
-    for (let i = 0; i < stride; i++) {
-      const a = i >= bpp ? cur[i - bpp] : 0;
-      const b = prev[i];
-      const c = i >= bpp ? prev[i - bpp] : 0;
-      let v = line[i];
-      if (f === 1) v = (v + a) & 255;
-      else if (f === 2) v = (v + b) & 255;
-      else if (f === 3) v = (v + ((a + b) >> 1)) & 255;
-      else if (f === 4) {
-        const p = a + b - c;
-        const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
-        v = (v + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c)) & 255;
-      }
-      cur[i] = v;
-    }
-    cur.copy(px, y * stride);
-    prev = cur;
-  }
-  return { w, h, px };
-}
+const { lerPNG } = require('./png');
 
 // classifica uma cor em símbolo
 function simbolo(r, g, b) {

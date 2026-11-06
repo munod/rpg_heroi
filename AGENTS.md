@@ -37,6 +37,12 @@
   import). Mantenha o estilo. Já `testes/` usa JS moderno (roda só no Node).
 - Cenas: `js/main.js` (`Game`) inicia no `load` da janela, cena inicial
   `selecao` e depois `jogo`. Loop em `js/loop.js` (rAF, `dt` limitado a 0.05s).
+- Save/toast/autosave das telas vive em `js/gravacao.js` (instância única;
+  o `enter()` de cada tela zera com `Gravacao.entrar(p)`) — mudanças de
+  gravação vão para lá, não duplicadas nas telas.
+- O estado da batalha (onda/ts) é gravado pelo **dono** da batalha em
+  memória (`Batalha.dono()`), nunca pelo personagem em foco — na seleção
+  os dois podem ser heróis diferentes e gravar pelo focado corrompia o save.
 
 ## Testes — peculiaridades
 
