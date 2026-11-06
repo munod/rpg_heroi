@@ -7,7 +7,11 @@
 - **Código, comentários e textos de UI em português (pt-BR)** — mantenha o
   padrão em tudo que escrever.
 - `README.md` documenta jogo, estrutura de arquivos e testes em detalhe.
-- Não é um repositório git (não há commits/branches).
+- Repositório Git com remote `origin` =
+  `git@github.com:munod/rpg_heroi.git`, branch `main`. Identidade de commit
+  configurada apenas localmente no clone (`Munod <thiagodss@hotmail.com>`).
+- `.gitignore` exclui `testes/*.png` — esses PNGs são regenerados pelos
+  testes (`previa.js`, `cena.js`) e não são versionados.
 
 ## Comandos
 
