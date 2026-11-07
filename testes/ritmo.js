@@ -1,0 +1,55 @@
+// Mede o ritmo de progressão — ferramenta manual para ajustar a curva
+// (Personagem.custoProximo / CUSTO_BASE). Fica fora do todos.js.
+// Uso: node testes/ritmo.js [minutos]   (padrão 15; use 60 p/ ver o boss)
+// Investe os pontos em Força a cada 10s de jogo para referência estável.
+'use strict';
+const { carregar } = require('./carga');
+
+const minutos = parseFloat(process.argv[2] || '15');
+const FPS_MS = 16.7;               // o harness avança 16,7ms por frame
+
+const h = carregar();
+(h.ouvintesJanela.load || []).forEach(fn => fn({}));
+h.frame(5);
+const Game = h.sandbox.Game;
+const Batalha = h.sandbox.Batalha;
+Game.setScene('jogo');
+const p = Game.personagem;
+
+let total = 0;
+function gastar() {
+  while (p.pontos > 0) { p.atributos.for++; p.pontos--; }
+}
+function run(n) {
+  for (let i = 0; i < n; i++) {
+    h.frame(1);
+    total++;
+    if (total % 600 === 0) gastar();   // a cada ~10s de jogo
+  }
+}
+
+// tempo até o 1º nível (referência do começo de jogo)
+while (p.nivel < 2 && total < 60 * 60 * 1000 / FPS_MS) run(1);
+console.log('1º nível: ' + (total * FPS_MS / 1000).toFixed(1) + 's');
+gastar();
+
+const marcos = [...new Set([1, 5, 15, 30, 45, 60, 90, 120, minutos])]
+  .filter(m => m <= minutos).sort((a, b) => a - b);
+let onda100 = null;
+
+for (const m of marcos) {
+  const alvo = Math.round(m * 60 * 1000 / FPS_MS);
+  while (total < alvo) {
+    run(1);
+    if (onda100 === null && Batalha.info().onda >= 100) {
+      onda100 = total * FPS_MS / 1000;
+    }
+  }
+  gastar();
+  const inf = Batalha.info();
+  console.log(m + 'min: onda ' + inf.onda + ', nv ' + p.nivel +
+    ', xp ' + p.xp + '/' + p.xpProx + (inf.morto ? ' (caído)' : ''));
+}
+console.log(onda100 !== null
+  ? 'onda 100 em ' + (onda100 / 60).toFixed(1) + 'min'
+  : 'onda 100 não alcançada em ' + minutos + 'min');

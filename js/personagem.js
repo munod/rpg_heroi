@@ -55,6 +55,18 @@ var Personagem = (function () {
     return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
   }
 
+  // Custo do próximo nível — fonte única da curva de progressão.
+  // O valor antigo (20 × nível) estava repetido em quatro lugares
+  // (novo, normalizar e dois em Batalha.ganhaXP); mudava em um só.
+  // CUSTO_INICIAL puxa o começo (1º nível não cai em segundos) e
+  // CUSTO_BASE controla o ritmo sustentado (medir com testes/ritmo.js).
+  var CUSTO_INICIAL = 150;
+  var CUSTO_BASE = 25;
+  function custoProximo(nivel) {
+    var nv = (typeof nivel === 'number' && nivel >= 1) ? Math.floor(nivel) : 1;
+    return CUSTO_INICIAL + CUSTO_BASE * nv;
+  }
+
   function novo() {
     return {
       id: uid(),
@@ -64,7 +76,7 @@ var Personagem = (function () {
       pontos: 0,            // sem pontos na criação: só +5 por nível
       nivel: 1,
       xp: 0,
-      xpProx: 20,
+      xpProx: custoProximo(1),
       look: {
         skin: CORES_PELE[1],
         hair: CORES_CABELO[0],
@@ -178,7 +190,7 @@ var Personagem = (function () {
       nivel: nivel,
       // teto defensivo: xp absurdo (save corrompido) travaria o loop de níveis
       xp: Math.min(num(p.xp, 0, 0), 1e9),
-      xpProx: num(p.xpProx, 1, 20 * nivel),
+      xpProx: num(p.xpProx, 1, custoProximo(nivel)),
       look: {
         skin: corOu(p.look && p.look.skin, base.look.skin),
         hair: corOu(p.look && p.look.hair, base.look.hair),
@@ -218,6 +230,7 @@ var Personagem = (function () {
     CORES_ROUPA: CORES_ROUPA,
     ESTILOS: ESTILOS,
     novo: novo,
+    custoProximo: custoProximo,
     status: status,
     lookDe: lookDe,
     validar: validar,

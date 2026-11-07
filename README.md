@@ -98,6 +98,7 @@ node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # rasteriza e salva screenshots das telas
 node testes/mapa.js X.png # converte screenshot em mapa ASCII (layout)
 node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
+node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
 São **83 asserções** no total. Todos os testes que abrem o jogo compartilham

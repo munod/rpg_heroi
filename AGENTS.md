@@ -46,6 +46,11 @@
 - O estado da batalha (onda/ts) é gravado pelo **dono** da batalha em
   memória (`Batalha.dono()`), nunca pelo personagem em foco — na seleção
   os dois podem ser heróis diferentes e gravar pelo focado corrompia o save.
+- Curva de progressão com fonte única em `Personagem.custoProximo`
+  (`CUSTO_INICIAL` + `CUSTO_BASE × nível`); ritmo das ondas em constantes
+  de `Batalha` (`ESC_HP`, `ESPERA_ONDA`). Mudou algum? Meça com
+  `node testes/ritmo.js [min]` (fica fora do `todos.js`) antes de achar
+  que está bom.
 
 ## Testes — peculiaridades
 

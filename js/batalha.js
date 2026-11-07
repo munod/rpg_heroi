@@ -25,6 +25,12 @@ var Batalha = (function () {
             boss: true, escala: 2.6, raio: 11 }
   };
 
+  // Escala por onda — alavanca do ritmo das ondas (boss incluído).
+  // Medir com testes/ritmo.js antes de mexer.
+  var ESC_HP = 1.2;       // vida do inimigo por onda
+  var ESC_DMG = 0.18;     // dano do inimigo por onda
+  var ESPERA_ONDA = 2.0;  // respiro depois de limpar a onda (segundos)
+
   // ------------------------------------------------------------ cenário
   function constroiChao() {
     chao = document.createElement('canvas');
@@ -207,8 +213,8 @@ var Batalha = (function () {
 
     // escala mais suave que a do herói (+4 HP/nível +5 pontos/nível),
     // senão em ondas altas vira loop de morte sem progresso
-    var escHp = 1 + (onda - 1) * 0.30;
-    var escDmg = 1 + (onda - 1) * 0.18;
+    var escHp = 1 + (onda - 1) * ESC_HP;
+    var escDmg = 1 + (onda - 1) * ESC_DMG;
     // boss: hp x4 e dano x1.5 sobre a escala da própria onda — desafiador,
     // mas derrotável (ele não regenera e o herói revive com vida cheia)
     var hp = Math.round(t.hp * escHp * (t.boss ? 4 : 1));
@@ -229,7 +235,9 @@ var Batalha = (function () {
   function ganhaXP(qtd) {
     var p = Game.personagem;
     // guarda contra save corrompido (xpProx <= 0 travaria a aba em loop)
-    if (!(p.xpProx > 0)) p.xpProx = 20 * Math.max(1, Math.floor(p.nivel) || 1);
+    if (!(p.xpProx > 0)) {
+      p.xpProx = Personagem.custoProximo(Math.max(1, Math.floor(p.nivel) || 1));
+    }
     // Carisma aumenta o XP ganho ("sorte nas recompensas")
     var mult = Personagem.status(p).xpMult || 1;
     p.xp += Math.max(1, Math.round(qtd * mult));
@@ -237,7 +245,7 @@ var Batalha = (function () {
       p.xp -= p.xpProx;
       p.nivel++;
       p.pontos += 5;
-      p.xpProx = 20 * p.nivel;
+      p.xpProx = Personagem.custoProximo(p.nivel);
       tFlash = 1.6;
       nivelFlash = p.nivel;
       if (heroi && !heroi.morto) heroi.hp = heroi.hpMax;
@@ -290,7 +298,7 @@ var Batalha = (function () {
     }
     numero(en.x, en.y - 24, '+' + ganho + ' XP', '#ffd866', false);
     ganhaXP(ganho);
-    tOnda = 2.0;
+    tOnda = ESPERA_ONDA;
   }
 
   function golpeia() {

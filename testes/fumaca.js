@@ -125,6 +125,11 @@ console.log('3) export/import JSON');
   conf(rejeitou, 'validar rejeita atributo0 no save');
   conf(Personagem.novo().pontos === 0,
     'herói novo nasce com 0 pontos (só +5 por nível)');
+  conf(Personagem.novo().xpProx === Personagem.custoProximo(1),
+    'herói novo começa com o custo do nível 1 (' +
+    Personagem.custoProximo(1) + ' XP)');
+  conf(Personagem.custoProximo(50) > Personagem.custoProximo(1),
+    'custo de nível cresce com o nível');
 }
 
 console.log('4) boot na tela de seleção + entrada na jogatina');
