@@ -690,6 +690,7 @@ console.log('15) drops, equipamento e aba de itens');
 console.log('16) magias automáticas (procs por classe)');
 {
   const Magias = sandbox.Magias;
+  const Efeitos = sandbox.Efeitos;
   const Batalha = sandbox.Batalha;
   const p = Game.personagem;
   if (Batalha.info().pausada) Batalha.alternarPausa();
@@ -715,6 +716,7 @@ console.log('16) magias automáticas (procs por classe)');
   p.nivel = 4;
   p.xp = p.xpProx - 1;
   jogoCanvas._textos = [];
+  Batalha.limparEfeitos();        // some com textos/efeitos pendentes
   let desbloqueou = false;
   for (let i = 0; i < 6000 && !desbloqueou; i++) {
     frame(1);
@@ -725,32 +727,41 @@ console.log('16) magias automáticas (procs por classe)');
 
   // --- nuke periódico do mago dispara sozinho (Bola de Fogo)
   jogoCanvas._textos = [];
+  Batalha.limparEfeitos();
   let lancou = false;
   for (let i = 0; i < 900 && !lancou; i++) {
     frame(1);
     lancou = (jogoCanvas._textos || []).some(t => t === 'Bola de Fogo');
   }
   conf(lancou, 'mago dispara a magia automática (Bola de Fogo)');
+  conf(Efeitos.qtd() > 0,
+    'a magia nasce com efeito visual (missil/explosão)');
 
   // --- área do guerreiro: varredura a cada 5 golpes
   p.classe = 'guerreiro';
   jogoCanvas._textos = [];
+  Batalha.limparEfeitos();
   let varreu = false;
   for (let i = 0; i < 2500 && !varreu; i++) {
     frame(1);
     varreu = (jogoCanvas._textos || []).some(t => t === 'Golpe Embravecido');
   }
   conf(varreu, 'guerreiro faz a varredura contando golpes');
+  conf(Efeitos.qtd() > 0,
+    'a varredura nasce com o corte luminoso + estilhaços');
 
   // --- veneno do ladino por acerto
   p.classe = 'ladino';
   jogoCanvas._textos = [];
+  Batalha.limparEfeitos();
   let envenenou = false;
   for (let i = 0; i < 2500 && !envenenou; i++) {
     frame(1);
     envenenou = (jogoCanvas._textos || []).some(t => t === 'Veneno');
   }
   conf(envenenou, 'ladino aplica veneno nos acertos');
+  conf(Efeitos.qtd() > 0,
+    'a aplicação do veneno respinga efeitos visuais');
 
   // --- bênção do clérigo: só anuncia quando cura de verdade
   p.classe = 'clerigo';
@@ -765,12 +776,15 @@ console.log('16) magias automáticas (procs por classe)');
   }
   conf(ferido, 'herói fraco fica ferido em combate');
   jogoCanvas._textos = [];
+  Batalha.limparEfeitos();
   let curou = false;
   for (let i = 0; i < 3000 && !curou; i++) {
     frame(1);
     curou = (jogoCanvas._textos || []).some(t => t === 'Bênção');
   }
   conf(curou, 'clérigo cura periodicamente (Bênção)');
+  conf(Efeitos.qtd() > 0,
+    'a bênção solta os motes de cura (efeito visual)');
 }
 
 console.log('');

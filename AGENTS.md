@@ -71,6 +71,15 @@
   estado fica em `magiasEstado` (zerado em `iniciar()`, criado na
   preguiça p/ troca de classe em combate). `Batalha` e `Gestao` dependem
   de magias.js; `personagem.js` não (grade/previa carregam só ele).
+- Efeitos visuais em `js/efeitos.js` (chamado por `Batalha` em
+  `atualizar`/`desenhar`/`limparEfeitos`): **só primitivas que
+  `testes/cena.js` rasteriza** — `fillRect`, `ellipse`+`fill` e
+  `globalAlpha`. `arc`/`stroke`/gradiente **quebram o screenshot** (e o
+  `stroke()` do rasterizador é no-op). O dano do missil vive no callback
+  que a `Batalha` passa, não no Efeitos. Em teste, para zerar efeitos
+  pendentes use `Batalha.limparEfeitos()` (limpa também `nums`): só
+  `Efeitos.limpar()` deixa texto flutuando por 1,4s e dá falso-positivo
+  em conf de "efeito apareceu".
 
 ## Testes — peculiaridades
 

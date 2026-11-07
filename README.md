@@ -37,6 +37,9 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   guerreiro (a cada N golpes), bola de fogo/nova arcana do mago, veneno
   contínuo do ladino e bênção/castigo sagrado do clérigo. A aba **Classe**
   mostra a magia ativa e o nível avisa **"\<magia\> desbloqueada!"**.
+  Cada proc tem **efeito visual próprio**: missil teleguiado com rastro e
+  explosão em anel, arco de corte luminoso, respingos + ícone de veneno no
+  inimigo e motes de cura subindo (capturados em `testes/tela-magia*.png`).
 - `Pausar`/`Continuar` (botão embaixo) congela a batalha se quiser.
 - **Autosave** a cada 3s (e ao fechar a aba): o progresso nunca depende de
   `Enter`, e o navegador avisa se faltar espaço pra salvar.
@@ -112,16 +115,16 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 106 asserções: sprites, status, UI, idle completo
+node testes/fumaca.js     # 110 asserções: sprites, status, UI, idle completo
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
-node testes/cena.js       # rasteriza e salva screenshots das telas
+node testes/cena.js       # screenshots das telas (e um por magia: tela-magia*.png)
 node testes/mapa.js X.png # converte screenshot em mapa ASCII (layout)
 node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
-São **119 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **123 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.
@@ -136,5 +139,7 @@ sem contorno que a tapava, o **chefe do fim de mapa** (nasce na onda 100, o
 avanço muda de mapa e não trava), o **avance de mapa** com migração de save
 legado, **drops com auto-equip/bolsa** e a **aba Itens** equipando no clique,
 as **magias com os 4 tipos de proc** (área, nuke, veneno e cura) com aviso
-de desbloqueio, e a lista de personagens na seleção com paginação, novo
-herói e exclusão em duas etapas.
+de desbloqueio e **efeitos visuais** (missil teleguiado, arco de corte,
+anel de impacto, respingos de veneno e motes de cura), e a lista de
+personagens na seleção com paginação, novo herói e exclusão em duas
+etapas.

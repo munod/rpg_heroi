@@ -208,6 +208,7 @@ var Batalha = (function () {
   function limparEfeitos() {
     nums.length = 0;
     parts.length = 0;
+    Efeitos.limpar();
     shake = 0;
     tFlash = 0;
   }
@@ -295,6 +296,8 @@ var Batalha = (function () {
       if (heroi && !heroi.morto) heroi.hp = heroi.hpMax;
       numero(heroi ? heroi.x : W / 2, (heroi ? heroi.y : H / 2) - 34,
         'NIVEL ' + p.nivel + '!', '#ffd866', true);
+      Efeitos.explosao(heroi ? heroi.x : W / 2,
+        (heroi ? heroi.y : H / 2) - 12, '#ffd866', 1.1);
       var nova = Magias.desbloqueada(p.classe, p.nivel);
       if (nova) {
         numero(heroi ? heroi.x : W / 2, (heroi ? heroi.y : H / 2) - 46,
@@ -413,6 +416,29 @@ var Batalha = (function () {
     return magiasEstado[id];
   }
 
+  // Nuke vira missil teleguiado: clarão no conjuro, rastro no voo e o
+  // dano só cai na chegada (callback). mg/alvo são PARÂMETROS — o
+  // closure captura valores por invocação (não a variável do laço).
+  function conjuraNuke(mg, alvo) {
+    var mult = mg.mult;
+    numero(heroi.x, heroi.y - 30, mg.nome, mg.cor, true);
+    Efeitos.brasas(heroi.x, heroi.y - 12, mg.cor, 5, 40, 45);   // clarão
+    Efeitos.missil({ x: heroi.x, y: heroi.y - 16 }, alvo, mg.cor,
+      1 + (mult - 1) * 0.6,
+      function () {
+        var idx = inimigos.indexOf(alvo);
+        if (idx < 0) return;              // alvo morreu durante o voo
+        var dmg = Math.max(1, Math.round(heroi.stats.dano * mult) +
+          Math.floor(Math.random() * 3));
+        alvo.hp -= dmg;
+        alvo.hitFlash = 0.15;
+        shake = Math.max(shake, 0.08);
+        numero(alvo.x, alvo.y - 18, String(dmg), '#ffffff', false);
+        faísca(alvo.x, alvo.y - 6, mg.cor, 6);
+        if (alvo.hp <= 0) mataInimigo(idx, alvo);
+      });
+  }
+
   // Nuke/cura periódicos (rodando a cada frame com alvo em mãos).
   function magiasPeriodicas(dt, alvo) {
     for (var i = 0; i < magiasVigentes.length; i++) {
@@ -424,15 +450,7 @@ var Batalha = (function () {
       st.t = mg.intervalo;
       if (mg.tipo === 'nuke') {
         if (!alvo) continue;
-        var dmg = Math.max(1, Math.round(heroi.stats.dano * mg.mult) +
-          Math.floor(Math.random() * 3));
-        alvo.hp -= dmg;
-        alvo.hitFlash = 0.15;
-        numero(alvo.x, alvo.y - 30, mg.nome, mg.cor, true);
-        numero(alvo.x, alvo.y - 18, String(dmg), '#ffffff', false);
-        faísca(alvo.x, alvo.y - 6, mg.cor, 8);
-        var idx = inimigos.indexOf(alvo);
-        if (alvo.hp <= 0 && idx >= 0) mataInimigo(idx, alvo);
+        conjuraNuke(mg, alvo);
       } else if (!heroi.morto && heroi.hp < heroi.hpMax) {
         // cura só anuncia quando realmente cura
         var cura = Math.max(1, Math.round(heroi.hpMax * mg.pct));
@@ -440,6 +458,7 @@ var Batalha = (function () {
         heroi.hp = Math.min(heroi.hpMax, heroi.hp + cura);
         var ganho = Math.round(heroi.hp - antes);
         if (ganho > 0) {
+          Efeitos.cura(heroi.x, heroi.y - 6, mg.cor);
           numero(heroi.x, heroi.y - 34, '+' + ganho, mg.cor, false);
           numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
         }
@@ -451,6 +470,8 @@ var Batalha = (function () {
   function varredura(mg) {
     var st = heroi.stats;
     numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
+    Efeitos.corte(heroi.x, heroi.y - 10, mg.cor, 1 + (mg.mult - 1) * 0.8);
+    shake = Math.max(shake, 0.1 + (mg.mult - 1) * 0.1);
     for (var i = inimigos.length - 1; i >= 0; i--) {
       var en = inimigos[i];
       var dmg = Math.max(1, Math.round(st.dano * mg.mult) +
@@ -476,6 +497,7 @@ var Batalha = (function () {
         acc: 0,
         cor: mg.cor
       };
+      Efeitos.brasas(en.x, en.y - 8, mg.cor, 5, 60, 45);
       numero(en.x, en.y - 30, mg.nome, mg.cor, false);
     }
   }
@@ -578,13 +600,17 @@ var Batalha = (function () {
           en.veneno.acc -= v;
           en.hp -= v;
           en.hitFlash = 0.1;
+          Efeitos.brasas(en.x, en.y - 6, en.veneno.cor, 3, 50, 35);
           numero(en.x, en.y - 14, String(v), en.veneno.cor, false);
           if (en.hp <= 0) {
             mataInimigo(i, en);
             continue;
           }
         }
-        if (en.veneno.t <= 0) en.veneno = null;
+        if (en.veneno.t <= 0) {
+          Efeitos.brasas(en.x, en.y - 8, en.veneno.cor, 4, 40, 40);
+          en.veneno = null;
+        }
       }
 
       var alvoX, alvoY;
@@ -615,6 +641,10 @@ var Batalha = (function () {
 
     if (shake > 0) shake -= dt;
     if (tFlash > 0) tFlash -= dt;
+
+    // efeitos visuais (missis podem matar e reduzir a lista de inimigos
+    // antes do laço de baixo — por isso rodam primeiro)
+    Efeitos.atualizar(dt);
 
     if (heroi.morto) {
       heroi.revT -= dt;
@@ -665,11 +695,18 @@ var Batalha = (function () {
     }
   }
 
-  function sombra(ctx, x, y, rx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.26)';
+  function sombra(ctx, x, y, rx, cor) {
+    ctx.fillStyle = cor || 'rgba(0,0,0,0.26)';
     ctx.beginPath();
     ctx.ellipse(x, y, rx, rx * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  // hex '#rrggbb' -> 'rgba(r,g,b,a)' (o rasterizador entende os dois)
+  function corAlfa(hex, a) {
+    var n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' +
+      (n & 255) + ',' + a + ')';
   }
 
   function desenhaHeroi(ctx) {
@@ -691,13 +728,27 @@ var Batalha = (function () {
   function desenhaInimigo(ctx, en) {
     var esc = en.escala;
     var c = spriteInimigo(en);
-    sombra(ctx, en.x, en.y - 1, 9 * esc);
+    // envenenado: sombra ganha o tom do veneno (pulso vem do tempo restante)
+    sombra(ctx, en.x, en.y - 1, 9 * esc,
+      en.veneno ? corAlfa(en.veneno.cor,
+        0.26 + 0.14 * (0.5 + 0.5 * Math.sin(en.veneno.t * 8))) : null);
     var pulso = en.lunge > 0 ? 1.15 : 1;
     if (en.hitFlash > 0 && Math.floor(en.hitFlash * 40) % 2 === 0) ctx.globalAlpha = 0.45;
     var w = Math.round(14 * esc), h = Math.round(12 * esc * pulso);
     ctx.drawImage(c.canvas, Math.round(en.x - w / 2),
       Math.round(en.y - h - (pulso - 1) * 8), w, h);
     ctx.globalAlpha = 1;
+    // marcador de veneno: 3 pontinhos piscando acima da barra de HP
+    if (en.veneno) {
+      ctx.fillStyle = en.veneno.cor;
+      var my = Math.round(en.y - 18 * esc - 7);
+      var mx = Math.round(en.x);
+      for (var vv = 0; vv < 3; vv++) {
+        ctx.globalAlpha = Math.sin(en.veneno.t * 9 + vv * 2.1) > -0.3 ? 1 : 0.3;
+        ctx.fillRect(mx - 4 + vv * 4, my - (vv === 1 ? 3 : 0), 2, 2);
+      }
+      ctx.globalAlpha = 1;
+    }
     if (en.hp < en.hpMax) {
       // 3px: o contorno de 1px (quando existe) não pode cobrir a barra toda
       var bw = Math.round(16 * esc);
@@ -742,6 +793,9 @@ var Batalha = (function () {
       ctx.fillStyle = pa.color;
       ctx.fillRect(Math.round(pa.x), Math.round(pa.y), 2, 2);
     }
+
+    // efeitos das magias (missis, anéis, cortes, motes)
+    Efeitos.desenhar(ctx);
 
     ctx.font = 'bold 8px monospace';
     ctx.textAlign = 'center';
