@@ -30,7 +30,9 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   depois do último entra o **modo infinito** (o tema repete com a dificuldade
   crescente). Saves de antes dos mapas migram sozinhos (onda 250 → mapa 3,
   onda 50).
-- Ao morrer ele **revive sozinho** em 3s e a luta continua.
+- Ao morrer ele **revive sozinho** em 3s — em **local aleatório do mapa**
+  (longe de obstáculos e inimigos) — e a luta continua; os inimigos se
+  agrupam onde ele caiu e a câmera acompanha o renascimento.
 - Ele **regenera vida** constantemente.
 - **Magias automáticas** — cada classe tem **2 magias** que desbloqueiam
   nos níveis **5 e 15** e disparam sozinhas, sem botão: varredura do
@@ -105,9 +107,11 @@ js/
 testes/             ferramentas de verificação (ver abaixo)
 ```
 
-Resolução interna de **384×216** escalada por inteiro. A arena é uma janela de
-192×134 com o mundo inteiro visível (sem câmera); os sprites são grades de
-pixels desenhadas por código e escaladas com `imageSmoothing` desligado.
+Resolução interna de **384×216** escalada por inteiro. A arena é uma
+**janela de 192×134 deslizando sobre um mundo de 384×268** — uma câmera
+suave segue o herói (com trava nas bordas do mundo) — e os sprites são
+grades de pixels desenhadas por código e escaladas com `imageSmoothing`
+desligado.
 
 ## Testes
 
@@ -115,7 +119,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 110 asserções: sprites, status, UI, idle completo
+node testes/fumaca.js     # 116 asserções: sprites, status, UI, idle completo
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por magia: tela-magia*.png)
@@ -124,7 +128,7 @@ node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
-São **123 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **129 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.
@@ -140,6 +144,7 @@ avanço muda de mapa e não trava), o **avance de mapa** com migração de save
 legado, **drops com auto-equip/bolsa** e a **aba Itens** equipando no clique,
 as **magias com os 4 tipos de proc** (área, nuke, veneno e cura) com aviso
 de desbloqueio e **efeitos visuais** (missil teleguiado, arco de corte,
-anel de impacto, respingos de veneno e motes de cura), e a lista de
+anel de impacto, respingos de veneno e motes de cura), a **câmera sobre o
+mundo 384×268** com o **renascimento em local aleatório**, e a lista de
 personagens na seleção com paginação, novo herói e exclusão em duas
 etapas.

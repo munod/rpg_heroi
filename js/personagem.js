@@ -60,8 +60,8 @@ var Personagem = (function () {
   // (novo, normalizar e dois em Batalha.ganhaXP); mudava em um só.
   // CUSTO_INICIAL puxa o começo (1º nível não cai em segundos) e
   // CUSTO_BASE controla o ritmo sustentado (medir com testes/ritmo.js).
-  var CUSTO_INICIAL = 150;
-  var CUSTO_BASE = 25;
+  var CUSTO_INICIAL = 125;
+  var CUSTO_BASE = 21;
   function custoProximo(nivel) {
     var nv = (typeof nivel === 'number' && nivel >= 1) ? Math.floor(nivel) : 1;
     return CUSTO_INICIAL + CUSTO_BASE * nv;

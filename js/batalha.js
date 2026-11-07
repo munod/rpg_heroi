@@ -1,7 +1,10 @@
 // Batalha automática (idle): o herói mira, anda e ataca sozinho.
 // O jogador não controla nada aqui — só assiste e administra o personagem.
 var Batalha = (function () {
-  var W = 192, H = 134;          // mundo = viewport (sem câmera)
+  var VW = 192, VH = 134;       // janela da arena no painel (não muda)
+  var MW = 384, MH = 268;       // mundo 2×; a câmera desliza sobre ele
+  var cam = { x: 0, y: 0 };     // posição da janela no mundo
+  var morte = { x: 0, y: 0 };   // onde o herói caiu (inimigos miram aqui)
 
   var chao = null;
   var obst = [];
@@ -47,16 +50,16 @@ var Batalha = (function () {
   // ------------------------------------------------------------ cenário
   function constroiChao(tema) {
     chao = document.createElement('canvas');
-    chao.width = W;
-    chao.height = H;
+    chao.width = MW;
+    chao.height = MH;
     var c = chao.getContext('2d');
 
     c.fillStyle = tema.chao.base;
-    c.fillRect(0, 0, W, H);
+    c.fillRect(0, 0, MW, MH);
 
     var T = 16;
-    for (var y = 0; y < H; y += T) {
-      for (var x = 0; x < W; x += T) {
+    for (var y = 0; y < MH; y += T) {
+      for (var x = 0; x < MW; x += T) {
         c.fillStyle = ((x / T + y / T) % 2 === 0) ? tema.chao.par : tema.chao.imp;
         c.fillRect(x, y, T, T);
       }
@@ -65,7 +68,7 @@ var Batalha = (function () {
     for (var i = 0; i < 24; i++) {
       c.fillStyle = tema.chao.mancha[i % 2];
       c.beginPath();
-      c.ellipse(Math.random() * W, Math.random() * H,
+      c.ellipse(Math.random() * MW, Math.random() * MH,
         8 + Math.random() * 14, 5 + Math.random() * 7, 0, 0, Math.PI * 2);
       c.fill();
     }
@@ -73,19 +76,29 @@ var Batalha = (function () {
     var flores = tema.chao.flores;
     for (i = 0; flores.length && i < 18; i++) {
       c.fillStyle = flores[i % flores.length];
-      c.fillRect((Math.random() * W) | 0, (Math.random() * H) | 0, 2, 2);
+      c.fillRect((Math.random() * MW) | 0, (Math.random() * MH) | 0, 2, 2);
     }
 
     c.strokeStyle = tema.chao.borda;
     c.lineWidth = 8;
-    c.strokeRect(4, 4, W - 8, H - 8);
+    c.strokeRect(4, 4, MW - 8, MH - 8);
     c.strokeStyle = tema.chao.borda2;
     c.lineWidth = 2;
-    c.strokeRect(4, 4, W - 8, H - 8);
+    c.strokeRect(4, 4, MW - 8, MH - 8);
   }
 
   function constroiObst(tema) {
-    obst = tema.obst.slice();
+    // coordenadas valem na base 192×134 (ver mapas.js) e são escaladas
+    // para o mundo — os sprites de obstáculo NÃO escalam (só a posição)
+    var ex = MW / 192, ey = MH / 134;
+    obst = [];
+    for (var i = 0; i < tema.obst.length; i++) {
+      var o = tema.obst[i];
+      obst.push({
+        x: o.x * ex, y: o.y * ey, r: o.r, tipo: o.tipo,
+        cx: o.cx * ex, cy: o.cy * ey
+      });
+    }
   }
 
   // (re)constrói chão e obstáculos quando o mapa muda
@@ -109,9 +122,9 @@ var Batalha = (function () {
 
   function resolve(ent, raio) {
     if (ent.x < 8) ent.x = 8;
-    if (ent.x > W - 8) ent.x = W - 8;
+    if (ent.x > MW - 8) ent.x = MW - 8;
     if (ent.y < 10) ent.y = 10;
-    if (ent.y > H - 8) ent.y = H - 8;
+    if (ent.y > MH - 8) ent.y = MH - 8;
 
     for (var i = 0; i < obst.length; i++) {
       var o = obst[i];
@@ -123,9 +136,9 @@ var Batalha = (function () {
         ent.x = o.cx + (dx / d) * min;
         ent.y = o.cy + (dy / d) * min;
         if (ent.x < 8) ent.x = 8;
-        if (ent.x > W - 8) ent.x = W - 8;
+        if (ent.x > MW - 8) ent.x = MW - 8;
         if (ent.y < 10) ent.y = 10;
-        if (ent.y > H - 8) ent.y = H - 8;
+        if (ent.y > MH - 8) ent.y = MH - 8;
       }
     }
   }
@@ -148,12 +161,15 @@ var Batalha = (function () {
 
     var s = Personagem.status(Game.personagem);
     heroi = {
-      x: W / 2, y: H / 2, facing: 1,
+      x: MW / 2, y: MH / 2, facing: 1,
       anim: 'idle', frame: 0, frameT: 0,
       hp: s.hpMax, hpMax: s.hpMax, stats: s,
       atkT: 0, atkCd: 0, hitDone: true, inv: 1,
       morto: false, revT: 0
     };
+    var c0 = alvoCamera();
+    cam.x = c0.x;
+    cam.y = c0.y;
     inimigos = [];
     nums = [];
     parts = [];
@@ -174,6 +190,36 @@ var Batalha = (function () {
   function dono() { return donoId; }
 
   function alternarPausa() { pausada = !pausada; return pausada; }
+
+  // ------------------------------------------------------------- câmera
+  // Alvo: herói centralizado, presa nos limites do mundo.
+  function alvoCamera() {
+    return {
+      x: Math.max(0, Math.min(MW - VW, heroi.x - VW / 2)),
+      y: Math.max(0, Math.min(MH - VH, heroi.y - VH / 2))
+    };
+  }
+
+  // Suaviza o deslize (lerp); teleporte grande (renascimento) trava na
+  // hora para a câmera não viajar pela tela inteira.
+  function atualizaCamera(dt) {
+    var alvo = alvoCamera();
+    var dx = alvo.x - cam.x, dy = alvo.y - cam.y;
+    if (dx * dx + dy * dy > 96 * 96) {
+      cam.x = alvo.x;
+      cam.y = alvo.y;
+      return;
+    }
+    var k = Math.min(1, dt * 12);
+    cam.x += dx * k;
+    cam.y += dy * k;
+  }
+
+  // Aviso grande (onda/chefe/mapa) ancorado no centro da janela atual —
+  // nums vive em coordenadas de mundo, e a câmera muda.
+  function aviso(txt, cor) {
+    numero(cam.x + VW / 2, cam.y + 34, txt, cor, true);
+  }
 
   // Retoma a onda gravada no save (reabertura/progresso offline).
   // Sem teto aqui: valor absurdo vem de storage corrompido e é rejeitado
@@ -200,8 +246,8 @@ var Batalha = (function () {
     onda = 0;
     garanteCenario();
     tOnda = ESPERA_ONDA;
-    numero(W / 2, 34, 'MAPA ' + mapa + ' — ' + Mapas.info(mapa).nome.toUpperCase(),
-      '#8ce08c', true);
+    aviso('MAPA ' + mapa + ' — ' + Mapas.info(mapa).nome.toUpperCase(),
+      '#8ce08c');
   }
 
   // Zera números/partículas depois de uma simulação offline.
@@ -228,13 +274,13 @@ var Batalha = (function () {
       spawn(tem.boss);
       spawn(tem.inimigos.comum);
       spawn(tem.inimigos.raro);
-      numero(W / 2, 34, 'BOSS! ' + tem.boss.nome, '#ff6b6b', true);
+      aviso('BOSS! ' + tem.boss.nome, '#ff6b6b');
     } else {
       var n = Math.min(3 + Math.floor((onda - 1) / 2), 5);
       for (var k = 0; k < n; k++) {
         spawn((onda >= 3 && k % 3 === 2) ? tem.inimigos.raro : tem.inimigos.comum);
       }
-      numero(W / 2, 34, 'ONDA ' + onda, '#e8c86a', true);
+      aviso('ONDA ' + onda, '#e8c86a');
     }
   }
 
@@ -242,15 +288,25 @@ var Batalha = (function () {
   function spawn(def) {
     var t = TIPOS[def.tipo] || TIPOS.slime;
     var raio = t.raio || 6;
-    var x = W / 2, y = 10, tent = 0;
+    // nasce fora da janela, ao redor do herói: mantém o ritmo das ondas
+    // (nas bordas do mundo grande o inimigo levaria uma eternidade p/ chegar)
+    var fora = 110;                                // ~fora da tela do herói
+    var x = heroi.x, y = heroi.y, dx = 0, dy = 0, tent = 0;
     do {
-      var lado = Math.floor(Math.random() * 4);
-      if (lado === 0) { x = 12 + Math.random() * (W - 24); y = 12; }
-      else if (lado === 1) { x = 12 + Math.random() * (W - 24); y = H - 10; }
-      else if (lado === 2) { x = 10; y = 12 + Math.random() * (H - 24); }
-      else { x = W - 10; y = 12 + Math.random() * (H - 24); }
+      var ang = Math.random() * Math.PI * 2;
+      var dist = fora + Math.random() * 22;        // 110..132px do herói
+      x = Math.max(14, Math.min(MW - 14, heroi.x + Math.cos(ang) * dist));
+      y = Math.max(14, Math.min(MH - 14, heroi.y + Math.sin(ang) * dist));
+      dx = x - heroi.x;
+      dy = y - heroi.y;
       tent++;
-    } while (tent < 30 && colideObst(x, y, raio));
+    } while (tent < 30 && (colideObst(x, y, raio) ||
+      dx * dx + dy * dy < (fora - 8) * (fora - 8)));
+    if (tent >= 30 && dx * dx + dy * dy < (fora - 8) * (fora - 8)) {
+      // herói grudado na parede: canto oposto ao agrupamento (quase nunca)
+      x = heroi.x < MW / 2 ? MW - 14 : 14;
+      y = heroi.y < MH / 2 ? MH - 14 : 14;
+    }
 
     // dificuldade escala por onda e por mapa (Mapas.forca) — a escala do
     // herói (+4 HP/nível +5 pontos/nível) é mais suave, senão vira loop
@@ -294,13 +350,13 @@ var Batalha = (function () {
       tFlash = 1.6;
       nivelFlash = p.nivel;
       if (heroi && !heroi.morto) heroi.hp = heroi.hpMax;
-      numero(heroi ? heroi.x : W / 2, (heroi ? heroi.y : H / 2) - 34,
+      numero(heroi ? heroi.x : MW / 2, (heroi ? heroi.y : MH / 2) - 34,
         'NIVEL ' + p.nivel + '!', '#ffd866', true);
-      Efeitos.explosao(heroi ? heroi.x : W / 2,
-        (heroi ? heroi.y : H / 2) - 12, '#ffd866', 1.1);
+      Efeitos.explosao(heroi ? heroi.x : MW / 2,
+        (heroi ? heroi.y : MH / 2) - 12, '#ffd866', 1.1);
       var nova = Magias.desbloqueada(p.classe, p.nivel);
       if (nova) {
-        numero(heroi ? heroi.x : W / 2, (heroi ? heroi.y : H / 2) - 46,
+        numero(heroi ? heroi.x : MW / 2, (heroi ? heroi.y : MH / 2) - 46,
           nova.nome + ' desbloqueada!', nova.cor, true);
       }
     }
@@ -333,10 +389,29 @@ var Batalha = (function () {
       heroi.hp = 0;
       heroi.morto = true;
       heroi.revT = 3;
+      morte.x = heroi.x;      // inimigos se agrupam onde ele caiu
+      morte.y = heroi.y;
       heroi.anim = 'idle';
       faísca(heroi.x, heroi.y - 10, '#ff6b6b', 14);
       numero(heroi.x, heroi.y - 36, 'CAIU...', '#ff6b6b', true);
     }
+  }
+
+  // Renascimento: sorteia no mundo, longe de obstáculos e de inimigos;
+  // depois de 30 tentativas, cai no centro (quase nunca acontece).
+  function posicaoAleatoriaSegura() {
+    for (var tent = 0; tent < 30; tent++) {
+      var x = 16 + Math.random() * (MW - 32);
+      var y = 16 + Math.random() * (MH - 32);
+      if (colideObst(x, y, 8)) continue;
+      var perto = false;
+      for (var i = 0; i < inimigos.length; i++) {
+        var dx = inimigos[i].x - x, dy = inimigos[i].y - y;
+        if (dx * dx + dy * dy < 40 * 40) { perto = true; break; }
+      }
+      if (!perto) return { x: x, y: y };
+    }
+    return { x: MW / 2, y: MH / 2 };
   }
 
   function mataInimigo(i, en) {
@@ -615,7 +690,9 @@ var Batalha = (function () {
 
       var alvoX, alvoY;
       if (heroi.morto) {
-        alvoX = W / 2; alvoY = H / 2;  // herói caído: inimigos voltam ao centro
+        // herói caído: se agrupam no local da morte (o centro do mundo
+        // grande não estaria nem perto de onde ele caiu)
+        alvoX = morte.x; alvoY = morte.y;
       } else {
         alvoX = heroi.x; alvoY = heroi.y;
       }
@@ -637,7 +714,9 @@ var Batalha = (function () {
   }
 
   function atualizar(dt) {
-    if (pausada || !heroi) return;
+    if (!heroi) return;
+    atualizaCamera(dt);        // é apresentação: segue mesmo pausada
+    if (pausada) return;
 
     if (shake > 0) shake -= dt;
     if (tFlash > 0) tFlash -= dt;
@@ -652,8 +731,9 @@ var Batalha = (function () {
       if (heroi.revT <= 0) {
         heroi.morto = false;
         heroi.hp = heroi.hpMax;
-        heroi.x = W / 2;
-        heroi.y = H / 2;
+        var volta = posicaoAleatoriaSegura();
+        heroi.x = volta.x;
+        heroi.y = volta.y;
         heroi.inv = 1.2;
         numero(heroi.x, heroi.y - 26, 'DE VOLTA!', '#8ce08c', true);
       }
@@ -765,7 +845,7 @@ var Batalha = (function () {
     ctx.clip();
     ctx.fillStyle = '#0d0b14';
     ctx.fillRect(vx, vy, vw, vh);
-    ctx.translate(vx, vy);
+    ctx.translate(vx - cam.x, vy - cam.y);
 
     if (shake > 0) {
       ctx.translate((Math.random() * 3 - 1.5) | 0, (Math.random() * 3 - 1.5) | 0);
@@ -851,6 +931,11 @@ var Batalha = (function () {
     return {
       mapa: mapa,
       onda: onda,
+      janela: { w: VW, h: VH },
+      mundo: { w: MW, h: MH },
+      cam: { x: Math.round(cam.x), y: Math.round(cam.y) },
+      heroi: { x: Math.round(heroi ? heroi.x : 0),
+               y: Math.round(heroi ? heroi.y : 0) },
       inimigos: inimigos.length,
       boss: boss,
       pausada: pausada,

@@ -50,7 +50,17 @@
   (`CUSTO_INICIAL` + `CUSTO_BASE × nível`); ritmo das ondas em constantes
   de `Batalha` (`ESC_HP`, `ESPERA_ONDA`). Mudou algum? Meça com
   `node testes/ritmo.js [min]` (fica fora do `todos.js`) antes de achar
-  que está bom.
+  que está bom. Alvos medidos hoje: 1º nível ~42s · 15min = nv 30-35 /
+  onda 40-60 · mapa 1 fechado em 25-35min.
+- Mundo × janela: `VW/VH` (192×134, janela do painel — o layout NÃO muda)
+  × `MW/MH` (384×268, mundo). Câmera `cam` com lerp em `atualizaCamera`
+  (roda até pausada, é apresentação; teleporte >96px trava) e desenho
+  via `ctx.translate(vx - cam.x, vy - cam.y)`. Obstáculos de `mapas.js`
+  valem na base 192×134 e são escalados em `constroiObst`; inimigos
+  nascem em anel de 110-132px do herói (fora da janela — mudar isso
+  muda o ritmo); renascimento em `posicaoAleatoriaSegura()` e inimigos
+  miram no local da morte. `info()` expõe `janela`/`mundo`/`cam`/`heroi`
+  para os testes (seção 17).
 - Mapas: ciclo de `FIM_MAPA` (100) ondas — a onda 100 é o chefe; vencido,
   `passaMapa()` faz `mapa++` e volta a onda 1. Dados em `js/mapas.js`
   (`Mapas.info(n)` p/ tema e `Mapas.forca(n)` p/ dificuldade+XP); cenário

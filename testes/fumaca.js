@@ -787,6 +787,81 @@ console.log('16) magias automáticas (procs por classe)');
     'a bênção solta os motes de cura (efeito visual)');
 }
 
+console.log('17) câmera, mundo maior e renascimento aleatório');
+{
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+  let inf = Batalha.info();
+
+  conf(inf.janela.w === 192 && inf.janela.h === 134 &&
+       inf.mundo.w === 384 && inf.mundo.h === 268,
+    'mundo 384×268 com a janela 192×134 intacta');
+
+  // --- câmera: pausa congela o mundo (mas não a câmera) e ela assenta
+  Batalha.alternarPausa();
+  let limitesOk = true;
+  for (let i = 0; i < 200; i++) {
+    frame(1);
+    const c = Batalha.info();
+    if (c.cam.x < 0 || c.cam.y < 0 ||
+        c.cam.x > c.mundo.w - c.janela.w ||
+        c.cam.y > c.mundo.h - c.janela.h) {
+      limitesOk = false;
+    }
+  }
+  conf(limitesOk, 'câmera sempre presa nos limites do mundo');
+  inf = Batalha.info();
+  const ax = Math.max(0, Math.min(inf.mundo.w - inf.janela.w,
+    inf.heroi.x - inf.janela.w / 2));
+  const ay = Math.max(0, Math.min(inf.mundo.h - inf.janela.h,
+    inf.heroi.y - inf.janela.h / 2));
+  conf(Math.abs(inf.cam.x - ax) <= 2 && Math.abs(inf.cam.y - ay) <= 2,
+    'câmera assentada e centrada no herói (dx=' +
+    (inf.cam.x - ax) + ' dy=' + (inf.cam.y - ay) + ')');
+  Batalha.alternarPausa();
+
+  // --- renascimento aleatório: 3 ciclos de morte em locais distintos
+  p.atributos.con = 1;
+  p.atributos.for = 1;
+  const locais = [];
+  let completo = true;
+  for (let ciclo = 0; ciclo < 3 && completo; ciclo++) {
+    let morreu = false;
+    for (let i = 0; i < 9000 && !morreu; i++) {
+      frame(1);
+      morreu = Batalha.info().morto;
+    }
+    if (!morreu) { completo = false; break; }
+    let reviveu = false;
+    for (let i = 0; i < 600 && !reviveu; i++) {
+      frame(1);
+      reviveu = !Batalha.info().morto;
+    }
+    if (!reviveu) { completo = false; break; }
+    const h = Batalha.info().heroi;
+    if (h.x < 16 || h.x > 384 - 16 || h.y < 16 || h.y > 268 - 16) {
+      completo = false;
+      break;
+    }
+    locais.push(h.x + ',' + h.y);
+  }
+  conf(completo, 'renascimento dentro dos limites do mundo (3 ciclos)');
+  conf(new Set(locais).size >= 2,
+    'renascimento em locais distintos (' + locais.join(' | ') + ')');
+
+  // --- a câmera viajou junto do renascimento (assenta na pausa)
+  Batalha.alternarPausa();
+  for (let i = 0; i < 200; i++) frame(1);
+  const f = Batalha.info();
+  const fax = Math.max(0, Math.min(f.mundo.w - f.janela.w,
+    f.heroi.x - f.janela.w / 2));
+  const fay = Math.max(0, Math.min(f.mundo.h - f.janela.h,
+    f.heroi.y - f.janela.h / 2));
+  conf(Math.abs(f.cam.x - fax) <= 2 && Math.abs(f.cam.y - fay) <= 2,
+    'câmera acompanha o renascimento');
+  Batalha.alternarPausa();
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');
