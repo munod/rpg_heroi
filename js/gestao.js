@@ -2,7 +2,8 @@
 // Compartilhado pela tela de seleção/criação e pela tela de jogo, para
 // as duas telas terem exatamente o mesmo comportamento.
 var Gestao = (function () {
-  var aba = 'atributos';   // atributos | aparencia | classe
+  var aba = 'atributos';   // atributos | aparencia | classe | itens
+  var paginaBolsa = 0;     // página da lista da bolsa (5 por página)
   var passo = 1;           // quantos pontos por ação (toggle ×1/×5)
   var repT = 0;            // tempo segurando um botão +/−
   var repI = 0;            // tempo desde a última repetição
@@ -105,14 +106,16 @@ var Gestao = (function () {
   }
 
   function desenhaAbas() {
+    // 4 abas encurtadas: os rótulos completos não cabem em 176px
     var lista = [
-      ['atributos', 'Atributos'],
-      ['aparencia', 'Aparência'],
-      ['classe', 'Classe']
+      ['atributos', 'Atrib'],
+      ['aparencia', 'Apar'],
+      ['classe', 'Classe'],
+      ['itens', 'Itens']
     ];
     lista.forEach(function (a, i) {
-      var x = 205 + i * 58;
-      if (UI.button(x, 19, 57, 13, a[1], {
+      var x = 205 + i * 44;
+      if (UI.button(x, 19, 42, 13, a[1], {
         ativo: aba === a[0],
         color: aba === a[0] ? '#e8c86a' : '#9a90b8',
         font: 'bold 8px monospace'
@@ -225,6 +228,45 @@ var Gestao = (function () {
     }
   }
 
+  // Aba Itens: 2 slots equipados + bolsa paginada (clique equipa; o item
+  // equipado anterior volta para a bolsa).
+  function desenhaItens(ctx, p) {
+    var arma = p.equip.arma, arm = p.equip.armadura;
+    UI.text('Arma: ' + (arma ? arma.nome : '—'), 208, 48,
+      { color: arma ? Itens.corRar(arma.rar) : '#6f678a' });
+    UI.text('Armadura: ' + (arm ? arm.nome : '—'), 208, 62,
+      { color: arm ? Itens.corRar(arm.rar) : '#6f678a' });
+
+    UI.text('Bolsa ' + p.bolsa.length + '/' + Itens.BOLSA_MAX,
+      208, 76, { color: '#9a90b8' });
+    var paginas = Math.max(1, Math.ceil(p.bolsa.length / 5));
+    if (paginaBolsa > paginas - 1) paginaBolsa = paginas - 1;
+    if (UI.button(346, 70, 12, 12, '<', { disabled: paginaBolsa === 0 })) {
+      paginaBolsa--;
+    }
+    if (UI.button(362, 70, 12, 12, '>',
+      { disabled: paginaBolsa >= paginas - 1 })) {
+      paginaBolsa++;
+    }
+
+    if (!p.bolsa.length) {
+      UI.text('Derrotar monstros dropa equipamento', 208, 96,
+        { color: '#6f678a' });
+      return;
+    }
+
+    p.bolsa.slice(paginaBolsa * 5, paginaBolsa * 5 + 5)
+      .forEach(function (item, i) {
+        var y = 88 + i * 14;
+        if (UI.button(206, y, 172, 13,
+          item.nome + '  ' + Itens.resumo(item), {
+            align: 'left', color: Itens.corRar(item.rar)
+          })) {
+          Itens.equipar(p, item);
+        }
+      });
+  }
+
   function desenhaClasse(ctx, p) {
     var ordem = ['guerreiro', 'mago', 'ladino', 'clerigo'];
     ordem.forEach(function (id, i) {
@@ -253,6 +295,7 @@ var Gestao = (function () {
     desenhaAbas();
     if (aba === 'atributos') desenhaAtributos(ctx, p);
     else if (aba === 'aparencia') desenhaAparencia(ctx, p, o);
+    else if (aba === 'itens') desenhaItens(ctx, p);
     else desenhaClasse(ctx, p);
   }
 

@@ -54,6 +54,13 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   trocar no meio da luta altera o herói na hora.
 - **Aparência** — pele, cabelo, estilo (curto, longo, cavalo, moicana, bandana)
   e cor de roupa; aparece no herói que está lutando.
+- **Equipamento** — inimigos **dropam** armas e armaduras (3 raridades) a
+  cada abate; o item melhor que o equipado é **usado na hora** e o resto vai
+  para a **bolsa** (até 10). A aba **Itens** mostra os 2 slots e a bolsa —
+  clique numa linha para equipar (o anterior volta para a bolsa). A arma
+  equipada aparece no herói (sem equipamento, vale a da classe) e o bônus
+  entra no dano, vida, velocidade e crítico. O chefe do mapa sempre dropa 2
+  itens raros.
 
 ### A tela de seleção é separada do jogo
 
@@ -79,6 +86,7 @@ js/
   salvar.js         localStorage + export/import JSON
   gravacao.js       toast, autosave e save do personagem (compartilhado)
   mapas.js          cada mapa: chão, obstáculos, monstros e chefe
+  itens.js          drops: armas/armaduras, bolsa e auto-equip
   ui.js             botões, painéis, barras e texto no canvas
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
   gestao.js         painel de gestão (atributos/aparência/classe) compartilhado
@@ -99,7 +107,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 70 asserções: sprites, status, UI, idle completo
+node testes/fumaca.js     # 97 asserções: sprites, status, UI, idle completo
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # rasteriza e salva screenshots das telas
@@ -108,7 +116,7 @@ node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
-São **83 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **110 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.
@@ -119,6 +127,8 @@ completo do idle: abrir na **tela de seleção**, entrar na jogatina pelo
 classe/aparência, pausar, cair e reviver, **trocar de tela** (a batalha fica
 parada fora da arena), autosave, exportação sem manglear acento, progresso
 offline, a **velocidade acelerando o ataque**, a **barra de HP dos inimigos**
-sem contorno que a tapava, o **boss a cada 100 ondas** (nasce, só passa a
-onda depois de derrubá-lo e não trava), e a lista de personagens na seleção
-com paginação, novo herói e exclusão em duas etapas.
+sem contorno que a tapava, o **chefe do fim de mapa** (nasce na onda 100, o
+avanço muda de mapa e não trava), o **avance de mapa** com migração de save
+legado, **drops com auto-equip/bolsa** e a **aba Itens** equipando no clique,
+e a lista de personagens na seleção com paginação, novo herói e exclusão em
+duas etapas.

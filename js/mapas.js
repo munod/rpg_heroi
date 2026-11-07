@@ -80,7 +80,7 @@ var Mapas = (function () {
   // testes/ritmo.js antes de mexer — mapa 1 = 1 (a Config A vale sem troco).
   function forca(n) {
     var m = (typeof n === 'number' && n >= 1 && isFinite(n)) ? Math.floor(n) : 1;
-    return 1 + (m - 1) * 0.75;
+    return 1 + (m - 1) * 1.0;
   }
 
   return { LISTA: LISTA, info: info, forca: forca };

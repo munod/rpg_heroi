@@ -136,6 +136,40 @@ console.log('3) export/import JSON');
     Personagem.custoProximo(1) + ' XP)');
   conf(Personagem.custoProximo(50) > Personagem.custoProximo(1),
     'custo de nível cresce com o nível');
+
+  // --- itens: round-trip, normalização e efeito no status
+  const eq = Personagem.novo();
+  eq.classe = 'mago';           // arma padrão da classe: cajado
+  eq.equip.arma = { nome: 'Espada de Aço', slot: 'arma', arma: 'espada',
+                    rar: 2, bonus: { dano: 7, hp: 10, vel: 5, crit: 3 } };
+  eq.bolsa = [{ nome: 'Trapos Gastos', slot: 'armadura', rar: 1,
+                bonus: { hp: 8 } }];
+  const voltaEq = Personagem.importarJSON(Personagem.exportarJSON(eq));
+  conf(voltaEq.equip.arma && voltaEq.equip.arma.nome === 'Espada de Aço' &&
+       voltaEq.equip.arma.bonus.dano === 7 && voltaEq.bolsa.length === 1,
+    'itens sobrevivem ao round-trip de export/import');
+  const semItens = Personagem.importarJSON('{"nome":"Velho"}');
+  conf(semItens.equip.arma === null && semItens.equip.armadura === null &&
+       semItens.bolsa.length === 0,
+    'JSON antigo sem itens ganha equip/bolsa vazios');
+  const itemRuim = Personagem.importarJSON(
+    '{"nome":"X","equip":{"arma":{"slot":"arma"}},"bolsa":[123]}');
+  conf(itemRuim.equip.arma === null && itemRuim.bolsa.length === 0,
+    'item malformado é descartado na normalização');
+  // status e visual: mede sem equipamento e depois com ele
+  eq.equip.arma = null;
+  eq.bolsa = [];
+  const semEq = Personagem.status(eq);
+  eq.equip.arma = voltaEq.equip.arma;
+  const comEq = Personagem.status(eq);
+  conf(comEq.dano === semEq.dano + 7 && comEq.hpMax === semEq.hpMax + 10 &&
+       comEq.vel === semEq.vel + 5 && comEq.crit === semEq.crit + 3,
+    'bônus do equipamento entra no status (dano/hp/vel/crítico)');
+  conf(Personagem.lookDe(eq).weapon === 'espada',
+    'arma equipada muda o visual do herói');
+  eq.equip.arma = null;
+  conf(Personagem.lookDe(eq).weapon === 'cajado',
+    'sem arma equipada volta a arma da classe');
 }
 
 console.log('4) boot na tela de seleção + entrada na jogatina');
@@ -236,20 +270,20 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     ', pts ' + pts1 + '->' + p1.pontos + ')');
 
   // --- abas de gestão
-  clique(291, 25);            // aba Aparência
+  clique(270, 25);            // aba Aparência
   frame(2);
   const pele0 = p1.look.skin;
   clique(353, 48);           // botão > da linha Pele
   frame(2);
   conf(p1.look.skin !== pele0, 'troca de cor de pele funciona');
 
-  clique(349, 25);           // aba Classe
+  clique(314, 25);           // aba Classe
   frame(2);
   clique(290, 69);           // botão Mago
   frame(2);
   conf(p1.classe === 'mago', 'troca de classe funciona');
 
-  clique(233, 25);           // volta pra aba Atributos
+  clique(226, 25);           // volta pra aba Atributos
   frame(2);
 
   // --- pausar / continuar
@@ -579,6 +613,78 @@ console.log('14) ausência creditada na jogatina + limites do estado');
   Salvar.salvarEstado(p.id, 1e15, Date.now(), false);
   conf(Salvar.lerEstado(p.id) === null,
     'lerEstado rejeita onda absurda (1e15, save corrompido)');
+}
+
+console.log('15) drops, equipamento e aba de itens');
+{
+  const Batalha = sandbox.Batalha;
+  const Itens = sandbox.Itens;
+  const p = Game.personagem;
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+
+  // --- drop de verdade: com Math.random zerado todo abate dropa
+  const rnd0 = Math.random;
+  Math.random = function () { return 0; };
+  let dropou = false;
+  for (let i = 0; i < 6000 && !dropou; i++) {
+    frame(1);
+    if (p.equip.arma || p.equip.armadura || p.bolsa.length) dropou = true;
+  }
+  Math.random = rnd0;
+  conf(dropou, 'abate dropou e auto-coletou equipamento');
+
+  // congela a batalha: os próximos passos precisam de RNG e estado fixos
+  const estavaPausada = Batalha.info().pausada;
+  if (!estavaPausada) Batalha.alternarPausa();
+
+  let s = Itens.sorteiaDrop(1, false);
+  let tent = 0;
+  while (!s.length && tent++ < 500) s = Itens.sorteiaDrop(1, false);
+  conf(s.length === 1 && !!s[0].nome && !!s[0].bonus &&
+       (s[0].slot === 'arma' || s[0].slot === 'armadura') &&
+       s[0].rar >= 1 && s[0].rar <= 3,
+    'sorteio devolve 1 item válido');
+  const sd = Itens.sorteiaDrop(1, true);
+  conf(sd.length === 2 && sd.every(i => i.rar >= 2),
+    'chefe dropa 2 itens de raridade >= 2');
+
+  // --- auto-equip compara por pontuação; o antigo volta pra bolsa
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  const fraca = { nome: 'Fraca', slot: 'arma', rar: 1, bonus: { dano: 1 } };
+  const pior = { nome: 'Pior', slot: 'arma', rar: 1, bonus: { dano: 1 } };
+  const forte = { nome: 'Forte', slot: 'arma', rar: 3, bonus: { dano: 9 } };
+  conf(Itens.equiparSeMelhor(p, fraca) && p.equip.arma === fraca,
+    'arma vazia aceita o primeiro drop');
+  conf(!Itens.equiparSeMelhor(p, pior) && p.equip.arma === fraca,
+    'item pior não substitui o equipado');
+  conf(Itens.equiparSeMelhor(p, forte) && p.equip.arma === forte &&
+       p.bolsa.indexOf(fraca) >= 0,
+    'item melhor equipa e o antigo volta pra bolsa');
+  const hpAntes = Personagem.status(p).hpMax;
+  p.equip.armadura = { nome: 'Colete', slot: 'armadura', rar: 2,
+                       bonus: { hp: 20 } };
+  conf(Personagem.status(p).hpMax === hpAntes + 20,
+    'bônus da armadura entra no status');
+
+  // --- aba Itens: abre, mostra a bolsa e equipa no clique da linha
+  const manto = { nome: 'Manto Teste', slot: 'armadura', rar: 3,
+                  bonus: { hp: 50 } };
+  Itens.guardar(p, manto);
+  jogoCanvas._textos = [];
+  clique(358, 25);                 // aba Itens (4ª coluna)
+  frame(2);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('Bolsa') >= 0),
+    'aba Itens abre com a bolsa');
+  clique(292, 108);                // linha da bolsa (2ª: y=102..115)
+  frame(2);
+  conf(p.equip.armadura === manto && p.bolsa.indexOf(manto) < 0,
+    'clicar na linha da bolsa equipa o item');
+  clique(226, 25);                 // volta pra Atributos (estado neutro)
+  frame(2);
+
+  if (!estavaPausada) Batalha.alternarPausa();
 }
 
 console.log('');

@@ -77,6 +77,8 @@ var Personagem = (function () {
       nivel: 1,
       xp: 0,
       xpProx: custoProximo(1),
+      equip: { arma: null, armadura: null },
+      bolsa: [],
       look: {
         skin: CORES_PELE[1],
         hair: CORES_CABELO[0],
@@ -98,21 +100,38 @@ var Personagem = (function () {
     return out;
   }
 
+  // Soma dos bônus dos itens equipados (arma + armadura).
+  function bonusEquipamento(p) {
+    var out = { dano: 0, hp: 0, vel: 0, crit: 0 };
+    if (!p || !p.equip) return out;
+    var lista = [p.equip.arma, p.equip.armadura];
+    for (var i = 0; i < lista.length; i++) {
+      var it = lista[i];
+      if (!it || !it.bonus) continue;
+      out.dano += it.bonus.dano || 0;
+      out.hp += it.bonus.hp || 0;
+      out.vel += it.bonus.vel || 0;
+      out.crit += it.bonus.crit || 0;
+    }
+    return out;
+  }
+
   function status(p) {
     var c = CLASSES[p.classe] || CLASSES.guerreiro;
     var a = efetivos(p);
+    var b = bonusEquipamento(p);
     var nv = (typeof p.nivel === 'number' && p.nivel >= 1)
       ? Math.floor(p.nivel) : 1;
-    var vel = 46 + a.des * 3;
+    var vel = 46 + a.des * 3 + b.vel;
     return {
       // +4 de vida por nível (0 no nível 1, preservando o custo inicial)
-      hpMax: c.hpBase + a.con * 4 + (nv - 1) * 4,
-      dano: c.danoBase + Math.floor(a[c.danoMod] / 2),
+      hpMax: c.hpBase + a.con * 4 + (nv - 1) * 4 + b.hp,
+      dano: c.danoBase + Math.floor(a[c.danoMod] / 2) + b.dano,
       vel: vel,
       // Velocidade também acelera o ataque: recarga do golpe em segundos
       // (vel 70 = 0,50s base; piso de 0,15s para não virar metralhadora)
       recarga: Math.max(0.15, 35 / vel),
-      crit: Math.min(45, 4 + Math.floor(a.des * 1.3)),
+      crit: Math.min(45, 4 + Math.floor(a.des * 1.3) + b.crit),
       alcance: c.alcance,
       arma: c.armaNome,
       xpMult: 1 + (a.car - 8) * 0.03,
@@ -120,15 +139,16 @@ var Personagem = (function () {
     };
   }
 
-  // Look pronto pra desenhar (arma vem da classe).
+  // Look pronto pra desenhar (arma equipada sobrepõe a da classe).
   function lookDe(p) {
     var c = CLASSES[p.classe] || CLASSES.guerreiro;
+    var armaEq = p.equip && p.equip.arma && p.equip.arma.arma;
     return {
       skin: p.look.skin,
       hair: p.look.hair,
       estilo: p.look.estilo,
       cloth: p.look.cloth,
-      weapon: c.arma
+      weapon: armaEq || c.arma
     };
   }
 
@@ -172,6 +192,48 @@ var Personagem = (function () {
     return (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) ? v : padrao;
   }
 
+  // Chaves de bônus de item — espelho de Itens (personagem.js não pode
+  // depender de itens.js: testes como grade carregam só sprite+personagem).
+  var BONUS_ITENS = ['dano', 'hp', 'vel', 'crit'];
+  var BOLSA_LIMITE = 10;   // espelho de Itens.BOLSA_MAX
+
+  // Item vindo de save/export antigo ou corrompido: valida e completa.
+  // Toda leitura passa por aqui (listar/importar), então validar() não
+  // refaz esse trabalho.
+  function normalizaItem(it, slotEsperado) {
+    if (!it || typeof it !== 'object') return null;
+    if (typeof it.nome !== 'string' || !it.nome.trim()) return null;
+    var slot = (it.slot === 'arma' || it.slot === 'armadura')
+      ? it.slot : slotEsperado;
+    if (!slot) return null;
+    var out = {
+      nome: it.nome.slice(0, 24),
+      slot: slot,
+      rar: (typeof it.rar === 'number' && it.rar >= 1 && it.rar <= 3)
+        ? Math.floor(it.rar) : 1,
+      bonus: {}
+    };
+    if (typeof it.arma === 'string' && it.arma) out.arma = it.arma.slice(0, 12);
+    for (var i = 0; i < BONUS_ITENS.length; i++) {
+      var k = BONUS_ITENS[i];
+      var v = it.bonus ? it.bonus[k] : null;
+      if (typeof v === 'number' && isFinite(v) && v > 0) {
+        out.bonus[k] = Math.floor(v);
+      }
+    }
+    return out;
+  }
+
+  function normalizaBolsa(b) {
+    if (!Array.isArray(b)) return [];
+    var out = [];
+    for (var i = 0; i < b.length && out.length < BOLSA_LIMITE; i++) {
+      var it = normalizaItem(b[i], null);   // da bolsa o item precisa trazer slot
+      if (it) out.push(it);
+    }
+    return out;
+  }
+
   function num(v, min, padrao) {
     return (typeof v === 'number' && isFinite(v) && v >= min) ? Math.floor(v) : padrao;
   }
@@ -191,6 +253,11 @@ var Personagem = (function () {
       // teto defensivo: xp absurdo (save corrompido) travaria o loop de níveis
       xp: Math.min(num(p.xp, 0, 0), 1e9),
       xpProx: num(p.xpProx, 1, custoProximo(nivel)),
+      equip: {
+        arma: normalizaItem(p.equip && p.equip.arma, 'arma'),
+        armadura: normalizaItem(p.equip && p.equip.armadura, 'armadura')
+      },
+      bolsa: normalizaBolsa(p.bolsa),
       look: {
         skin: corOu(p.look && p.look.skin, base.look.skin),
         hair: corOu(p.look && p.look.hair, base.look.hair),

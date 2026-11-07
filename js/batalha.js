@@ -38,7 +38,7 @@ var Batalha = (function () {
 
   // Escala por onda — alavanca do ritmo das ondas (boss incluído).
   // Medir com testes/ritmo.js antes de mexer.
-  var ESC_HP = 1.2;       // vida do inimigo por onda
+  var ESC_HP = 1.5;       // vida do inimigo por onda
   var ESC_DMG = 0.18;     // dano do inimigo por onda
   var ESPERA_ONDA = 2.0;  // respiro depois de limpar a onda (segundos)
 
@@ -340,7 +340,24 @@ var Batalha = (function () {
     }
     numero(en.x, en.y - 24, '+' + ganho + ' XP', '#ffd866', false);
     ganhaXP(ganho);
+    soltaItens(en);
     tOnda = ESPERA_ONDA;
+  }
+
+  // Drop do abate: equipa automaticamente se for melhor que o equipado;
+  // senão vai para a bolsa (a mais antiga sai quando enche).
+  function soltaItens(en) {
+    var p = Game.personagem;
+    if (!p || !p.equip || !p.bolsa) return;
+    var drops = Itens.sorteiaDrop(mapa, !!en.tipo.boss);
+    for (var i = 0; i < drops.length; i++) {
+      var it = drops[i];
+      var equipou = Itens.equiparSeMelhor(p, it);
+      if (!equipou) Itens.guardar(p, it);
+      numero(en.x, en.y - 34,
+        equipou ? it.nome + '!' : '+' + it.nome,
+        Itens.corRar(it.rar), false);
+    }
   }
 
   function golpeia() {

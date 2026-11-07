@@ -57,6 +57,14 @@
   reconstruído por `garanteCenario()`. O estado salvo guarda `mapa` e
   `Salvar.lerEstado` migra saves legados (onda >100 → mapa/onda equivalentes)
   — a migração é na leitura, sem rewrite.
+- Drops/equipamento em `js/itens.js`: `mataInimigo` chama
+  `Itens.sorteiaDrop`; auto-equip por `Itens.pontuar`, senão vai para
+  `p.bolsa` (teto 10). Itens vivem em `p.equip`/`p.bolsa` do personagem e
+  `Personagem.status`/`lookDe` leem os bônus. **`personagem.js` não pode
+  depender de `itens.js`** (grade/previa carregam só sprite+personagem) —
+  as chaves de bônus são espelhadas nos dois arquivos.
+- Gestão tem 4 abas (Atrib/Apar/Classe/Itens): centros dos cliques em
+  x = 226/270/314/358, y = 25 — testes que clikam abas dependem dessa grade.
 
 ## Testes — peculiaridades
 

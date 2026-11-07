@@ -237,12 +237,12 @@ salvar('tela-jogo-luta.png');
 console.log('luta: ' + JSON.stringify(sandbox.Batalha.info()));
 
 // gestao: aba aparência
-clique(291, 25);
+clique(270, 25);
 frame(4);
 salvar('tela-aparencia.png');
 
 // gestão: aba classe
-clique(349, 25);
+clique(314, 25);
 frame(4);
 salvar('tela-classe.png');
 
