@@ -16,14 +16,25 @@ var Batalha = (function () {
   var shake = 0;
   var pausada = false;
   var donoId = null;         // personagem dono da batalha em memória
+  var mapa = 1;              // mapa atual (ciclo de FIM_MAPA ondas)
+  var cenarioMapa = 0;       // mapa para o qual chao/obst já foram construídos
 
+  // stats/visual por espécie — cor/escala/forma vêm do mapa (Mapas.info)
   var TIPOS = {
-    slime: { hp: 16, dmg: 4, vel: 34, cor: '#4aa03a', xpExtra: 0 },
-    visgo: { hp: 28, dmg: 6, vel: 28, cor: '#7a4ac0', xpExtra: 3 },
-    // boss: nasce a cada 100 ondas — os multiplicadores são aplicados no spawn
-    boss: { hp: 20, dmg: 5, vel: 30, cor: '#d8a020', xpExtra: 0,
-            boss: true, escala: 2.6, raio: 11 }
+    slime:   { hp: 16, dmg: 4, vel: 34, xpExtra: 0, forma: 'slime',
+               cor: '#4aa03a' },
+    visgo:   { hp: 28, dmg: 6, vel: 28, xpExtra: 3, forma: 'slime',
+               cor: '#7a4ac0' },
+    morcego: { hp: 22, dmg: 5, vel: 44, xpExtra: 3, forma: 'morcego',
+               cor: '#7a5aa8', raio: 5 },
+    aranha:  { hp: 34, dmg: 7, vel: 30, xpExtra: 4, forma: 'aranha',
+               cor: '#c84a3a' },
+    // chefe do fim de mapa — cor/escala/forma específicas por mapa
+    boss:    { hp: 20, dmg: 5, vel: 30, xpExtra: 0, boss: true, escala: 2.6,
+               raio: 11, forma: 'slime', cor: '#d8a020' }
   };
+
+  var FIM_MAPA = 100;        // ondas por mapa; a100 é o chefe
 
   // Escala por onda — alavanca do ritmo das ondas (boss incluído).
   // Medir com testes/ritmo.js antes de mexer.
@@ -32,52 +43,56 @@ var Batalha = (function () {
   var ESPERA_ONDA = 2.0;  // respiro depois de limpar a onda (segundos)
 
   // ------------------------------------------------------------ cenário
-  function constroiChao() {
+  function constroiChao(tema) {
     chao = document.createElement('canvas');
     chao.width = W;
     chao.height = H;
     var c = chao.getContext('2d');
 
-    c.fillStyle = '#33703f';
+    c.fillStyle = tema.chao.base;
     c.fillRect(0, 0, W, H);
 
     var T = 16;
     for (var y = 0; y < H; y += T) {
       for (var x = 0; x < W; x += T) {
-        c.fillStyle = ((x / T + y / T) % 2 === 0) ? '#387a44' : '#2f6a3c';
+        c.fillStyle = ((x / T + y / T) % 2 === 0) ? tema.chao.par : tema.chao.imp;
         c.fillRect(x, y, T, T);
       }
     }
 
     for (var i = 0; i < 24; i++) {
-      c.fillStyle = Math.random() < 0.5 ? 'rgba(74,146,84,0.30)' : 'rgba(34,86,48,0.30)';
+      c.fillStyle = tema.chao.mancha[i % 2];
       c.beginPath();
       c.ellipse(Math.random() * W, Math.random() * H,
         8 + Math.random() * 14, 5 + Math.random() * 7, 0, 0, Math.PI * 2);
       c.fill();
     }
 
-    var flores = ['#e8d060', '#e88a9a', '#d8d8f0'];
-    for (i = 0; i < 18; i++) {
+    var flores = tema.chao.flores;
+    for (i = 0; flores.length && i < 18; i++) {
       c.fillStyle = flores[i % flores.length];
       c.fillRect((Math.random() * W) | 0, (Math.random() * H) | 0, 2, 2);
     }
 
-    c.strokeStyle = '#5a4a2e';
+    c.strokeStyle = tema.chao.borda;
     c.lineWidth = 8;
     c.strokeRect(4, 4, W - 8, H - 8);
-    c.strokeStyle = '#6b5a38';
+    c.strokeStyle = tema.chao.borda2;
     c.lineWidth = 2;
     c.strokeRect(4, 4, W - 8, H - 8);
   }
 
-  function constroiObst() {
-    obst = [
-      { x: 18, y: 26, r: 7, tipo: 'tree', cx: 18, cy: 20 },
-      { x: W - 18, y: 26, r: 7, tipo: 'tree', cx: W - 18, cy: 20 },
-      { x: 16, y: H - 12, r: 5, tipo: 'rock', cx: 16, cy: H - 16 },
-      { x: W - 16, y: H - 14, r: 5, tipo: 'rock', cx: W - 16, cy: H - 18 }
-    ];
+  function constroiObst(tema) {
+    obst = tema.obst.slice();
+  }
+
+  // (re)constrói chão e obstáculos quando o mapa muda
+  function garanteCenario() {
+    if (cenarioMapa === mapa) return;
+    var tem = Mapas.info(mapa);
+    constroiChao(tem);
+    constroiObst(tem);
+    cenarioMapa = mapa;
   }
 
   function colideObst(x, y, raio) {
@@ -122,7 +137,8 @@ var Batalha = (function () {
 
   // ------------------------------------------------------------- setup
   function iniciar() {
-    if (!chao) { constroiChao(); constroiObst(); }
+    mapa = 1;
+    garanteCenario();
 
     // a batalha em memória pertence a este personagem: o estado gravado no
     // save é sempre o dele (evita misturar ondas de heróis diferentes)
@@ -167,6 +183,23 @@ var Batalha = (function () {
     parts = [];
   }
 
+  // Retoma o mapa gravado no save (reabertura/progresso offline).
+  function restaurarMapa(n) {
+    if (typeof n !== 'number' || !isFinite(n) || n < 1) return;
+    mapa = Math.floor(n);
+    garanteCenario();
+  }
+
+  // Chefe do mapa derrubado: avança para o próximo (onda 1 de novo).
+  function passaMapa() {
+    mapa++;
+    onda = 0;
+    garanteCenario();
+    tOnda = ESPERA_ONDA;
+    numero(W / 2, 34, 'MAPA ' + mapa + ' — ' + Mapas.info(mapa).nome.toUpperCase(),
+      '#8ce08c', true);
+  }
+
   // Zera números/partículas depois de uma simulação offline.
   function limparEfeitos() {
     nums.length = 0;
@@ -176,30 +209,33 @@ var Batalha = (function () {
   }
 
   // ----------------------------------------------------------- ondas
-  // boss a cada 100 ondas (100, 200, 300...)
+  // a onda FIM_MAPA de cada mapa é o chefe — vencido, passa de mapa
   function ehBoss(n) {
-    return n >= 100 && n % 100 === 0;
+    return n === FIM_MAPA;
   }
 
   function proximaOnda() {
+    if (onda >= FIM_MAPA) { passaMapa(); return; }   // limpo a onda 100
     onda++;
+    var tem = Mapas.info(mapa);
     if (ehBoss(onda)) {
-      // boss + 2 minions: a onda não fica esperando um alvo só
-      spawn('boss');
-      spawn('slime');
-      if (onda >= 3) spawn('visgo');
-      numero(W / 2, 34, 'BOSS! ONDA ' + onda, '#ff6b6b', true);
+      // chefe + 2 minions do próprio mapa: a onda não espera um alvo só
+      spawn(tem.boss);
+      spawn(tem.inimigos.comum);
+      spawn(tem.inimigos.raro);
+      numero(W / 2, 34, 'BOSS! ' + tem.boss.nome, '#ff6b6b', true);
     } else {
       var n = Math.min(3 + Math.floor((onda - 1) / 2), 5);
       for (var k = 0; k < n; k++) {
-        spawn((onda >= 3 && k % 3 === 2) ? 'visgo' : 'slime');
+        spawn((onda >= 3 && k % 3 === 2) ? tem.inimigos.raro : tem.inimigos.comum);
       }
       numero(W / 2, 34, 'ONDA ' + onda, '#e8c86a', true);
     }
   }
 
-  function spawn(tipoId) {
-    var t = TIPOS[tipoId];
+  // def: { tipo, cor?, escala?, forma? } — vindo de Mapas.info(mapa)
+  function spawn(def) {
+    var t = TIPOS[def.tipo] || TIPOS.slime;
     var raio = t.raio || 6;
     var x = W / 2, y = 10, tent = 0;
     do {
@@ -211,18 +247,22 @@ var Batalha = (function () {
       tent++;
     } while (tent < 30 && colideObst(x, y, raio));
 
-    // escala mais suave que a do herói (+4 HP/nível +5 pontos/nível),
-    // senão em ondas altas vira loop de morte sem progresso
-    var escHp = 1 + (onda - 1) * ESC_HP;
-    var escDmg = 1 + (onda - 1) * ESC_DMG;
-    // boss: hp x4 e dano x1.5 sobre a escala da própria onda — desafiador,
+    // dificuldade escala por onda e por mapa (Mapas.forca) — a escala do
+    // herói (+4 HP/nível +5 pontos/nível) é mais suave, senão vira loop
+    var forca = Mapas.forca(mapa);
+    var escHp = forca * (1 + (onda - 1) * ESC_HP);
+    var escDmg = forca * (1 + (onda - 1) * ESC_DMG);
+    // chefe: hp x4 e dano x1.5 sobre a escala da própria onda — desafiador,
     // mas derrotável (ele não regenera e o herói revive com vida cheia)
     var hp = Math.round(t.hp * escHp * (t.boss ? 4 : 1));
     inimigos.push({
       x: x, y: y, tipo: t,
+      cor: def.cor || t.cor,
+      escala: def.escala || t.escala || 1,
+      forma: def.forma || t.forma || 'slime',
       hp: hp, hpMax: hp,
       dmg: Math.max(2, Math.round(t.dmg * escDmg * (t.boss ? 1.5 : 1))),
-      // o boss é pesado: não ganha a corrida de velocidade da onda
+      // o chefe é pesado: não ganha a corrida de velocidade da onda
       vel: t.boss ? t.vel : t.vel + Math.min(12, onda),
       raio: raio,
       frame: 0, frameT: 0,
@@ -288,11 +328,13 @@ var Batalha = (function () {
   }
 
   function mataInimigo(i, en) {
-    faísca(en.x, en.y - 6, en.tipo.cor, 10);
+    faísca(en.x, en.y - 6, en.cor, 10);
     inimigos.splice(i, 1);
-    var ganho = 4 + onda * 2 + en.tipo.xpExtra;
+    // XP escala com o mapa: a onda volta a 1 a cada mapa, sem o multiplicador
+    // a recompensa despenca e o nível trava
+    var ganho = Math.round((4 + onda * 2 + en.tipo.xpExtra) * Mapas.forca(mapa));
     if (en.tipo.boss) {
-      // recompensa de boss: XP de várias ondas de uma vez
+      // recompensa de chefe: XP de várias ondas de uma vez
       ganho = Math.round(ganho * 5);
       numero(en.x, en.y - 40, 'BOSS DERROTADO!', '#ffd866', true);
     }
@@ -505,9 +547,15 @@ var Batalha = (function () {
     ctx.globalAlpha = 1;
   }
 
+  function spriteInimigo(en) {
+    if (en.forma === 'morcego') return Anim.morcego(en.cor, en.frame);
+    if (en.forma === 'aranha') return Anim.aranha(en.cor, en.frame);
+    return Anim.slime(en.cor, en.frame);
+  }
+
   function desenhaInimigo(ctx, en) {
-    var esc = en.tipo.escala || 1;
-    var c = Anim.slime(en.tipo.cor, en.frame);
+    var esc = en.escala;
+    var c = spriteInimigo(en);
     sombra(ctx, en.x, en.y - 1, 9 * esc);
     var pulso = en.lunge > 0 ? 1.15 : 1;
     if (en.hitFlash > 0 && Math.floor(en.hitFlash * 40) % 2 === 0) ctx.globalAlpha = 0.45;
@@ -612,6 +660,7 @@ var Batalha = (function () {
       if (inimigos[i].tipo.boss) { boss = true; break; }
     }
     return {
+      mapa: mapa,
       onda: onda,
       inimigos: inimigos.length,
       boss: boss,
@@ -631,6 +680,7 @@ var Batalha = (function () {
     atualizar: atualizar,
     desenhar: desenhar,
     alternarPausa: alternarPausa,
+    restaurarMapa: restaurarMapa,
     restaurarOnda: restaurarOnda,
     limparEfeitos: limparEfeitos,
     info: info

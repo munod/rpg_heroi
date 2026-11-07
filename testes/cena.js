@@ -253,5 +253,13 @@ for (let i = 0; i < 30; i++) frame(1);
 salvar('tela-boss.png');
 console.log('boss: ' + JSON.stringify(sandbox.Batalha.info()));
 
+// mapa 2: cripta com chão e monstros próprios
+sandbox.Batalha.restaurarMapa(2);
+sandbox.Batalha.restaurarOnda(6);
+for (let i = 0; i < 60 && sandbox.Batalha.info().inimigos === 0; i++) frame(1);
+for (let i = 0; i < 40; i++) frame(1);
+salvar('tela-mapa2.png');
+console.log('mapa 2: ' + JSON.stringify(sandbox.Batalha.info()));
+
 console.log('cena atual: ' + sandbox.Game.cena);
 console.log('batalha: ' + JSON.stringify(sandbox.Batalha.info()));

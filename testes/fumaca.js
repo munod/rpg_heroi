@@ -61,6 +61,12 @@ console.log('1) geração de sprites');
   conf(tree.canvas._pixels > 150, 'árvore desenhada (' + tree.canvas._pixels + ' px)');
   const rock = Sprite.rockCanvas();
   conf(rock.canvas._pixels > 40, 'pedra desenhada (' + rock.canvas._pixels + ' px)');
+  const morcego = Sprite.morcegoCanvas('#7a5aa8', 0);
+  conf(morcego.canvas._pixels > 40,
+    'morcego desenhado (' + morcego.canvas._pixels + ' px)');
+  const aranha = Sprite.aranhaCanvas('#c84a3a', 0);
+  conf(aranha.canvas._pixels > 40,
+    'aranha desenhada (' + aranha.canvas._pixels + ' px)');
 }
 
 console.log('2) status por classe');
@@ -447,13 +453,17 @@ console.log('11) barra de HP dos inimigos');
   conf(alta.includes('strokeRect'), 'barra alta mantém o contorno');
 }
 
-console.log('12) boss a cada 100 ondas');
+console.log('12) chefe do fim de mapa e avanço de mapa');
 {
   const Batalha = sandbox.Batalha;
   const p = Game.personagem;
   // herói forte para o teste não depender de tempo de luta
   p.atributos.for = 999;
   p.atributos.con = 999;
+  conf(Batalha.info().mapa === 1, 'jogo no mapa 1');
+  conf(sandbox.Mapas.info(99) === sandbox.Mapas.info(3) &&
+       sandbox.Mapas.forca(99) > sandbox.Mapas.forca(1),
+    'mapa além da lista reutiliza o tema e segue escalando (modo infinito)');
 
   Batalha.restaurarOnda(100);            // onda 99 + tOnda=0 -> nasce a 100
   let espera = 0;
@@ -464,28 +474,33 @@ console.log('12) boss a cada 100 ondas');
   conf(Batalha.info().onda === 100, 'chegou na onda 100 (onda=' +
     Batalha.info().onda + ')');
   conf(Batalha.info().boss === true,
-    'a onda 100 tem um boss em campo (inimigos=' +
+    'a onda 100 tem o chefe em campo (inimigos=' +
     Batalha.info().inimigos + ')');
 
-  // a onda só passa depois de derrubar boss + minions (não trava)
+  // derrubar o chefe muda de mapa (a onda não sobe para 101)
+  jogoCanvas._textos = [];
   let passou = false;
   for (let i = 0; i < 6000 && !passou; i++) {
     frame(1);
-    if (Batalha.info().onda >= 101) passou = true;
+    if (Batalha.info().mapa >= 2) passou = true;
   }
-  conf(passou, 'a onda 100 passou após derrotar o boss (onda=' +
-    Batalha.info().onda + ')');
-  conf(Batalha.info().boss === false, 'o boss não ficou preso depois de morto');
+  conf(passou, 'vencer o chefe avançou para o mapa 2');
+  conf(Batalha.info().onda <= 1,
+    'o mapa 2 recomeça na onda 1 (onda=' + Batalha.info().onda + ')');
+  conf(Batalha.info().boss === false, 'o chefe não ficou preso depois de morto');
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('MAPA 2') >= 0),
+    'avisa o novo mapa na tela');
 
-  // boss de onda 200 também nasce (regra vale para todo múltiplo de 100)
-  Batalha.restaurarOnda(200);
+  // o mapa 2 tem chefe próprio na onda 100
+  Batalha.restaurarMapa(2);
+  Batalha.restaurarOnda(100);
   espera = 0;
-  while (Batalha.info().onda < 200 && espera < 600) {
+  while (Batalha.info().onda < 100 && espera < 600) {
     frame(1);
     espera++;
   }
-  conf(Batalha.info().onda === 200 && Batalha.info().boss === true,
-    'a onda 200 também tem boss (onda=' + Batalha.info().onda +
+  conf(Batalha.info().onda === 100 && Batalha.info().boss === true,
+    'mapa 2 tem chefe na onda 100 (onda=' + Batalha.info().onda +
     ', boss=' + Batalha.info().boss + ')');
 }
 
@@ -551,14 +566,14 @@ console.log('14) ausência creditada na jogatina + limites do estado');
     'volta da aba na jogatina creditou a ausência (xp ' +
     xp0 + '->' + p.xp + ', nv ' + nv0 + '->' + p.nivel + ')');
 
-  // onda acima do antigo teto de 999 não é mais truncada
-  // (espera com teto: a onda só nasce depois que o herói, possivelmente
-  // caído na simulação anterior, reviver)
-  Batalha.restaurarOnda(1500);
-  let esp = 0;
-  while (Batalha.info().onda < 1500 && esp < 600) { frame(1); esp++; }
-  conf(Batalha.info().onda === 1500,
-    'restaurarOnda preserva onda > 999 (onda=' + Batalha.info().onda + ')');
+  // save legado de antes dos mapas: progresso acima da onda 100 não se
+  // perde — vira mapa/onda equivalentes na leitura (read-side)
+  Salvar.salvarEstado(p.id, 250, Date.now(), false);
+  const est250 = Salvar.lerEstado(p.id);
+  conf(!!est250 && est250.mapa === 3 && est250.onda === 50,
+    'onda 250 legada vira mapa 3, onda 50 (mapa ' +
+    (est250 ? est250.mapa : '?') + ', onda ' +
+    (est250 ? est250.onda : '?') + ')');
 
   // save corrompido: onda absurda é rejeitada na leitura
   Salvar.salvarEstado(p.id, 1e15, Date.now(), false);

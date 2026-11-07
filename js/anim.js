@@ -2,6 +2,8 @@
 var Anim = (function () {
   var heroCache = {};
   var slimeCache = {};
+  var morcegoCache = {};
+  var aranhaCache = {};
   var treeCache = null;
   var rockCache = null;
 
@@ -17,6 +19,18 @@ var Anim = (function () {
     return slimeCache[k];
   }
 
+  function morcego(cor, frame) {
+    var k = cor + '|' + frame;
+    if (!morcegoCache[k]) morcegoCache[k] = Sprite.morcegoCanvas(cor, frame);
+    return morcegoCache[k];
+  }
+
+  function aranha(cor, frame) {
+    var k = cor + '|' + frame;
+    if (!aranhaCache[k]) aranhaCache[k] = Sprite.aranhaCanvas(cor, frame);
+    return aranhaCache[k];
+  }
+
   function tree() {
     if (!treeCache) treeCache = Sprite.treeCanvas();
     return treeCache;
@@ -27,5 +41,5 @@ var Anim = (function () {
     return rockCache;
   }
 
-  return { hero: hero, slime: slime, tree: tree, rock: rock };
+  return { hero: hero, slime: slime, morcego: morcego, aranha: aranha, tree: tree, rock: rock };
 })();

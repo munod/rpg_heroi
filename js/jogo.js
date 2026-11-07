@@ -53,8 +53,8 @@ var Jogo = (function () {
       if (!Salvar.salvar(paraGravar)) return false;
       var dono = Batalha.dono();
       if (dono) {
-        Salvar.salvarEstado(dono, Batalha.info().onda, Date.now(),
-          Batalha.info().pausada);
+        var inf = Batalha.info();
+        Salvar.salvarEstado(dono, inf.onda, Date.now(), inf.pausada, inf.mapa);
       }
       Gravacao.sincronizar(p);
       return true;
@@ -73,6 +73,7 @@ var Jogo = (function () {
     if (!est) return null;
 
     if (restauraTudo) {
+      Batalha.restaurarMapa(est.mapa);
       Batalha.restaurarOnda(est.onda);
       if (est.pausada) Batalha.alternarPausa();
     }
@@ -154,7 +155,8 @@ var Jogo = (function () {
 
     // ---------------- arena automática (esquerda)
     var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';
-    UI.panel(4, 18, 196, 150, p.nome + cursor + ' — AUTO');
+    UI.panel(4, 18, 196, 150, p.nome + cursor + ' — MAPA ' +
+      Batalha.info().mapa);
     Batalha.desenhar(ctx, 6, 32, 192, 134);
 
     // ---------------- gestão (direita)

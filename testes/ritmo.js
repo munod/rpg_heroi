@@ -1,5 +1,6 @@
 // Mede o ritmo de progressão — ferramenta manual para ajustar a curva
-// (Personagem.custoProximo / CUSTO_BASE). Fica fora do todos.js.
+// (Personagem.custoProximo / CUSTO_BASE) e o tempo de fechar o mapa 1.
+// Fica fora do todos.js.
 // Uso: node testes/ritmo.js [minutos]   (padrão 15; use 60 p/ ver o boss)
 // Investe os pontos em Força a cada 10s de jogo para referência estável.
 'use strict';
@@ -35,21 +36,29 @@ gastar();
 
 const marcos = [...new Set([1, 5, 15, 30, 45, 60, 90, 120, minutos])]
   .filter(m => m <= minutos).sort((a, b) => a - b);
-let onda100 = null;
+let onda100 = null, mapa2 = null;
 
 for (const m of marcos) {
   const alvo = Math.round(m * 60 * 1000 / FPS_MS);
   while (total < alvo) {
     run(1);
-    if (onda100 === null && Batalha.info().onda >= 100) {
+    const f = Batalha.info();
+    if (onda100 === null && f.onda >= 100) {
       onda100 = total * FPS_MS / 1000;
+    }
+    if (mapa2 === null && f.mapa >= 2) {
+      mapa2 = total * FPS_MS / 1000;   // chefe do mapa 1 derrubado
     }
   }
   gastar();
   const inf = Batalha.info();
-  console.log(m + 'min: onda ' + inf.onda + ', nv ' + p.nivel +
-    ', xp ' + p.xp + '/' + p.xpProx + (inf.morto ? ' (caído)' : ''));
+  console.log(m + 'min: mapa ' + inf.mapa + ', onda ' + inf.onda +
+    ', nv ' + p.nivel + ', xp ' + p.xp + '/' + p.xpProx +
+    (inf.morto ? ' (caído)' : ''));
 }
 console.log(onda100 !== null
-  ? 'onda 100 em ' + (onda100 / 60).toFixed(1) + 'min'
-  : 'onda 100 não alcançada em ' + minutos + 'min');
+  ? 'chefe do mapa 1 em ' + (onda100 / 60).toFixed(1) + 'min'
+  : 'chefe do mapa 1 não alcançado em ' + minutos + 'min');
+console.log(mapa2 !== null
+  ? 'mapa 1 fechado em ' + (mapa2 / 60).toFixed(1) + 'min'
+  : 'mapa 1 não fechado em ' + minutos + 'min');

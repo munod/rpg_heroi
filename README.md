@@ -17,13 +17,19 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
 ### O que é automático
 
 - O herói **mira, anda e ataca sozinho** nos inimigos mais próximos.
-- Inimigos chegam em **ondas** cada vez maiores (slimes e, da onda 3, visgos
-  sombrios, com vida e dano escalando).
-- A cada **100 ondas** (100, 200, 300...) aparece um **boss**: um slime
-  dourado gigante com **4x de vida** e **1.5x de dano** sobre a escala da
-  própria onda, junto de 2 minions. Ele não regenera vida — com o herói
-  revivendo sozinho, a vitória é garantida (só exige mais tempo); derrotá-lo
-  dá **XP de várias ondas de uma vez** e o jogo avisa "BOSS! ONDA X".
+- Inimigos chegam em **ondas** cada vez maiores (visgos a partir da onda 3,
+  com vida e dano escalando) — e o **chão, os monstros e o chefe mudam a
+  cada mapa**.
+- Cada mapa tem **100 ondas**; a onda 100 é o **chefe** do mapa: um monstro
+  gigante com **4x de vida** e **1.5x de dano** sobre a escala da própria
+  onda, junto de 2 minions. Ele não regenera vida — com o herói revivendo
+  sozinho, a vitória é garantida (só exige mais tempo); derrotá-lo dá **XP
+  de várias ondas de uma vez** e o jogo avisa **"BOSS! \<nome\>"** — e então
+  o herói **avança para o próximo mapa** (onda 1 de novo, monstros novos).
+  São **3 mapas** (Planície Verdejante, Cripta Congelada e Ninho Rubro);
+  depois do último entra o **modo infinito** (o tema repete com a dificuldade
+  crescente). Saves de antes dos mapas migram sozinhos (onda 250 → mapa 3,
+  onda 50).
 - Ao morrer ele **revive sozinho** em 3s e a luta continua.
 - Ele **regenera vida** constantemente.
 - `Pausar`/`Continuar` (botão embaixo) congela a batalha se quiser.
@@ -72,6 +78,7 @@ js/
   personagem.js     classes, atributos, status derivados, validação, níveis
   salvar.js         localStorage + export/import JSON
   gravacao.js       toast, autosave e save do personagem (compartilhado)
+  mapas.js          cada mapa: chão, obstáculos, monstros e chefe
   ui.js             botões, painéis, barras e texto no canvas
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
   gestao.js         painel de gestão (atributos/aparência/classe) compartilhado

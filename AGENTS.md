@@ -51,6 +51,12 @@
   de `Batalha` (`ESC_HP`, `ESPERA_ONDA`). Mudou algum? Meça com
   `node testes/ritmo.js [min]` (fica fora do `todos.js`) antes de achar
   que está bom.
+- Mapas: ciclo de `FIM_MAPA` (100) ondas — a onda 100 é o chefe; vencido,
+  `passaMapa()` faz `mapa++` e volta a onda 1. Dados em `js/mapas.js`
+  (`Mapas.info(n)` p/ tema e `Mapas.forca(n)` p/ dificuldade+XP); cenário
+  reconstruído por `garanteCenario()`. O estado salvo guarda `mapa` e
+  `Salvar.lerEstado` migra saves legados (onda >100 → mapa/onda equivalentes)
+  — a migração é na leitura, sem rewrite.
 
 ## Testes — peculiaridades
 

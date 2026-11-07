@@ -333,6 +333,71 @@ var Sprite = (function () {
     return paraCanvas(g, W, H, pal);
   }
 
+  // Morcego: corpo em pé, asas para cima (frame1) ou abertas (frame0).
+  function morcegoCanvas(cor, frame) {
+    var W = 14, H = 12;
+    var g = new Uint8Array(W * H);
+    var pal = [null, '#1b1424', cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
+    var px = pintorDireto(g, W, H);
+
+    var asaCima = frame === 1;
+    // corpo e cabeça
+    elipse(px, 7, 7, 2.2, 2.6, 2);
+    elipse(px, 7, 9.6, 1.6, 1.4, 3);
+    // orelhas
+    px(5, 3, 2); px(8, 3, 2);
+    px(5, 4, 3); px(8, 4, 3);
+    // asas
+    if (asaCima) {
+      retangulo(px, 1, 3, 4, 2, 2);
+      retangulo(px, 9, 3, 4, 2, 2);
+      retangulo(px, 1, 5, 3, 1, 3);
+      retangulo(px, 10, 5, 3, 1, 3);
+    } else {
+      retangulo(px, 1, 6, 4, 2, 2);
+      retangulo(px, 9, 6, 4, 2, 2);
+      retangulo(px, 2, 8, 3, 1, 3);
+      retangulo(px, 9, 8, 3, 1, 3);
+    }
+    contorna(g, W, H);
+
+    // rosto por cima do contorno
+    px(6, 6, 5); px(8, 6, 5);      // olhos
+    px(6, 7, 6); px(8, 7, 6);      // pupilas
+    px(7, 9, 5);                   // focinho
+    return paraCanvas(g, W, H, pal);
+  }
+
+  // Aranha: abdômen à esquerda, cabeça à direita, 8 pernas.
+  function aranhaCanvas(cor, frame) {
+    var W = 14, H = 12;
+    var g = new Uint8Array(W * H);
+    var pal = [null, '#1b1424', cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
+    var px = pintorDireto(g, W, H);
+
+    var sobe = frame === 1;
+    // abdômen + cabeça
+    elipse(px, 4.5, 6, 3, 2.6, 2);
+    elipse(px, 4.5, 6, 1.6, 1.4, 3);
+    elipse(px, 9.5, 6.5, 2, 1.8, 2);
+    // pernas (4 pares; frame alterna a altura)
+    var d = sobe ? -1 : 0;
+    linha(px, 7, 5, 10, 2 + d, 2);
+    linha(px, 6, 5, 8, 1 + d, 2);
+    linha(px, 5, 4, 6, 1 + d, 2);
+    linha(px, 4, 4, 3, 1 + d, 2);
+    linha(px, 7, 8, 10, 10 - d, 2);
+    linha(px, 6, 8, 8, 11 - d, 2);
+    linha(px, 5, 8, 5, 11 - d, 2);
+    linha(px, 3, 8, 2, 10 - d, 2);
+    contorna(g, W, H);
+
+    // olhos na cabeça, por cima do contorno
+    px(10, 6, 5); px(11, 6, 6);
+    px(10, 7, 6);
+    return paraCanvas(g, W, H, pal);
+  }
+
   // ---- cenário -----------------------------------------------------------
   function treeCanvas() {
     var W = 20, H = 26;
@@ -367,6 +432,8 @@ var Sprite = (function () {
     shade: shade,
     heroCanvas: heroCanvas,
     slimeCanvas: slimeCanvas,
+    morcegoCanvas: morcegoCanvas,
+    aranhaCanvas: aranhaCanvas,
     treeCanvas: treeCanvas,
     rockCanvas: rockCanvas
   };

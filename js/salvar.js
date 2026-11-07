@@ -54,14 +54,16 @@ var Salvar = (function () {
     }
   }
 
-  function salvarEstado(id, onda, ts, pausada) {
+  function salvarEstado(id, onda, ts, pausada, mapa) {
     if (!id) return false;
     try {
       var m = mapaEstado();
       m[id] = {
         onda: onda,
         ts: typeof ts === 'number' ? ts : Date.now(),
-        pausada: !!pausada
+        pausada: !!pausada,
+        // chamadas antigas sem mapa gravam 1 (formato legado continua válido)
+        mapa: (typeof mapa === 'number' && mapa >= 1) ? Math.floor(mapa) : 1
       };
       localStorage.setItem(KEY_ESTADO, JSON.stringify(m));
       return true;
@@ -76,7 +78,17 @@ var Salvar = (function () {
     if (typeof e.onda !== 'number' || !isFinite(e.onda) || e.onda < 0) return null;
     if (e.onda > ONDA_MAX) return null;   // storage corrompido
     if (typeof e.ts !== 'number' || !isFinite(e.ts)) return null;
-    return { onda: Math.floor(e.onda), ts: e.ts, pausada: !!e.pausada };
+    var mapa = (typeof e.mapa === 'number' && e.mapa >= 1 && isFinite(e.mapa))
+      ? Math.floor(e.mapa) : 1;
+    // save legado de antes dos mapas (ondas 101+): vira mapa/onda
+    // equivalentes sem perder progresso (250 -> mapa 3, onda 50)
+    var extra = e.onda > 100 ? Math.floor((e.onda - 1) / 100) : 0;
+    return {
+      onda: Math.floor(e.onda) - extra * 100,
+      ts: e.ts,
+      pausada: !!e.pausada,
+      mapa: mapa + extra
+    };
   }
 
   function apagar(id) {
