@@ -285,7 +285,11 @@ var Gestao = (function () {
     linhas.forEach(function (linha, i) {
       UI.text(linha, 208, 120 + i * 12, { color: '#9a90b8' });
     });
-    UI.text('Arma: ' + cl.armaNome, 208, 156, { color: '#6f678a' });
+    // magia da classe (a arma já aparece no rodapé e na aba Itens)
+    var ativas = Magias.ativas(p.classe, p.nivel);
+    var ult = ativas.length ? ativas[ativas.length - 1] : null;
+    UI.text(ult ? 'Magia: ' + ult.nome : 'Magia aos níveis 5 e 15',
+      208, 156, { color: ult ? ult.cor : '#6f678a' });
   }
 
   // Desenha o painel direito completo (painel + abas + conteúdo).

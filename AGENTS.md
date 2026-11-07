@@ -65,6 +65,12 @@
   as chaves de bônus são espelhadas nos dois arquivos.
 - Gestão tem 4 abas (Atrib/Apar/Classe/Itens): centros dos cliques em
   x = 226/270/314/358, y = 25 — testes que clikam abas dependem dessa grade.
+- Magias automáticas em `js/magias.js` (procs por classe; 2 magias em 5/15):
+  gatilhos em `Batalha` — `golpeia()` conta as 'area' e aplica 'veneno',
+  `atualizaHeroi` roda timers de 'nuke'/'cura' via `magiasPeriodicas`, e o
+  estado fica em `magiasEstado` (zerado em `iniciar()`, criado na
+  preguiça p/ troca de classe em combate). `Batalha` e `Gestao` dependem
+  de magias.js; `personagem.js` não (grade/previa carregam só ele).
 
 ## Testes — peculiaridades
 

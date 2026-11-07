@@ -687,6 +687,92 @@ console.log('15) drops, equipamento e aba de itens');
   if (!estavaPausada) Batalha.alternarPausa();
 }
 
+console.log('16) magias automáticas (procs por classe)');
+{
+  const Magias = sandbox.Magias;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  p.atributos.for = 50;        // herói com dano decente p/ os gatilhos
+  p.atributos.int = 50;
+  p.pontos = 0;
+
+  // --- dados: desbloqueio por nível (5 e 15) e cobertura das classes
+  conf(Magias.ativas('mago', 4).length === 0 &&
+       Magias.ativas('mago', 5).length === 1 &&
+       Magias.ativas('mago', 15).length === 2,
+    'magias desbloqueiam nos níveis 5 e 15');
+  conf(!!Magias.desbloqueada('mago', 5) &&
+       Magias.desbloqueada('mago', 6) === null &&
+       Magias.desbloqueada('ladino', 5).tipo === 'veneno',
+    'desbloqueada devolve a magia exata do nível');
+  conf(['guerreiro', 'mago', 'ladino', 'clerigo']
+       .every(c => Magias.magiasDe(c).length === 2),
+    'toda classe tem 2 magias');
+
+  // --- aviso ao subir de nível (mago: força o nível 4 e espera o kill)
+  p.classe = 'mago';
+  p.nivel = 4;
+  p.xp = p.xpProx - 1;
+  jogoCanvas._textos = [];
+  let desbloqueou = false;
+  for (let i = 0; i < 6000 && !desbloqueou; i++) {
+    frame(1);
+    desbloqueou = (jogoCanvas._textos || [])
+      .some(t => t.indexOf('desbloqueada') >= 0);
+  }
+  conf(desbloqueou, 'subir de nível anuncia a magia desbloqueada');
+
+  // --- nuke periódico do mago dispara sozinho (Bola de Fogo)
+  jogoCanvas._textos = [];
+  let lancou = false;
+  for (let i = 0; i < 900 && !lancou; i++) {
+    frame(1);
+    lancou = (jogoCanvas._textos || []).some(t => t === 'Bola de Fogo');
+  }
+  conf(lancou, 'mago dispara a magia automática (Bola de Fogo)');
+
+  // --- área do guerreiro: varredura a cada 5 golpes
+  p.classe = 'guerreiro';
+  jogoCanvas._textos = [];
+  let varreu = false;
+  for (let i = 0; i < 2500 && !varreu; i++) {
+    frame(1);
+    varreu = (jogoCanvas._textos || []).some(t => t === 'Golpe Embravecido');
+  }
+  conf(varreu, 'guerreiro faz a varredura contando golpes');
+
+  // --- veneno do ladino por acerto
+  p.classe = 'ladino';
+  jogoCanvas._textos = [];
+  let envenenou = false;
+  for (let i = 0; i < 2500 && !envenenou; i++) {
+    frame(1);
+    envenenou = (jogoCanvas._textos || []).some(t => t === 'Veneno');
+  }
+  conf(envenenou, 'ladino aplica veneno nos acertos');
+
+  // --- bênção do clérigo: só anuncia quando cura de verdade
+  p.classe = 'clerigo';
+  p.atributos.con = 1;
+  p.atributos.for = 1;
+  let ferido = false;
+  for (let i = 0; i < 3000 && !ferido; i++) {
+    frame(1);
+    if (!Batalha.info().morto) {
+      ferido = Batalha.info().hp < Personagem.status(p).hpMax - 15;
+    }
+  }
+  conf(ferido, 'herói fraco fica ferido em combate');
+  jogoCanvas._textos = [];
+  let curou = false;
+  for (let i = 0; i < 3000 && !curou; i++) {
+    frame(1);
+    curou = (jogoCanvas._textos || []).some(t => t === 'Bênção');
+  }
+  conf(curou, 'clérigo cura periodicamente (Bênção)');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');

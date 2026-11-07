@@ -18,6 +18,8 @@ var Batalha = (function () {
   var donoId = null;         // personagem dono da batalha em memória
   var mapa = 1;              // mapa atual (ciclo de FIM_MAPA ondas)
   var cenarioMapa = 0;       // mapa para o qual chao/obst já foram construídos
+  var magiasVigentes = [];   // magias ativas do herói (recomputadas por frame)
+  var magiasEstado = {};     // contadores/timers por magia (zerado em iniciar)
 
   // stats/visual por espécie — cor/escala/forma vêm do mapa (Mapas.info)
   var TIPOS = {
@@ -38,7 +40,7 @@ var Batalha = (function () {
 
   // Escala por onda — alavanca do ritmo das ondas (boss incluído).
   // Medir com testes/ritmo.js antes de mexer.
-  var ESC_HP = 1.5;       // vida do inimigo por onda
+  var ESC_HP = 1.85;       // vida do inimigo por onda
   var ESC_DMG = 0.18;     // dano do inimigo por onda
   var ESPERA_ONDA = 2.0;  // respiro depois de limpar a onda (segundos)
 
@@ -155,6 +157,8 @@ var Batalha = (function () {
     inimigos = [];
     nums = [];
     parts = [];
+    magiasEstado = {};
+    magiasVigentes = [];
     onda = 0;
     tOnda = 1.0;
     tFlash = 0;
@@ -291,6 +295,11 @@ var Batalha = (function () {
       if (heroi && !heroi.morto) heroi.hp = heroi.hpMax;
       numero(heroi ? heroi.x : W / 2, (heroi ? heroi.y : H / 2) - 34,
         'NIVEL ' + p.nivel + '!', '#ffd866', true);
+      var nova = Magias.desbloqueada(p.classe, p.nivel);
+      if (nova) {
+        numero(heroi ? heroi.x : W / 2, (heroi ? heroi.y : H / 2) - 46,
+          nova.nome + ' desbloqueada!', nova.cor, true);
+      }
     }
   }
 
@@ -382,7 +391,92 @@ var Batalha = (function () {
       numero(en.x, en.y - 18, String(dmg), crit ? '#ffd866' : '#ffffff', crit);
       faísca(en.x, en.y - 6, crit ? '#ffd866' : '#ffffff', crit ? 8 : 4);
 
+      if (en.hp > 0) aplicaVeneno(en, st);
       if (en.hp <= 0) mataInimigo(i, en);
+    }
+
+    // contadores das magias 'area': a cada N golpes, varredura em tudo
+    for (var m = 0; m < magiasVigentes.length; m++) {
+      var mg = magiasVigentes[m];
+      if (mg.tipo !== 'area') continue;
+      var est = estadoMagia(mg.id);
+      est.cont++;
+      if (est.cont % mg.aCada === 0) varredura(mg);
+    }
+  }
+
+  // ----------------------------------------------------------- magias
+  // Estado por magia (contador de golpes / timer). Criação preguiçosa:
+  // trocar de classe no meio da luta reconta do zero.
+  function estadoMagia(id) {
+    if (!magiasEstado[id]) magiasEstado[id] = { cont: 0, t: 0 };
+    return magiasEstado[id];
+  }
+
+  // Nuke/cura periódicos (rodando a cada frame com alvo em mãos).
+  function magiasPeriodicas(dt, alvo) {
+    for (var i = 0; i < magiasVigentes.length; i++) {
+      var mg = magiasVigentes[i];
+      if (mg.tipo !== 'nuke' && mg.tipo !== 'cura') continue;
+      var st = estadoMagia(mg.id);
+      st.t -= dt;
+      if (st.t > 0) continue;
+      st.t = mg.intervalo;
+      if (mg.tipo === 'nuke') {
+        if (!alvo) continue;
+        var dmg = Math.max(1, Math.round(heroi.stats.dano * mg.mult) +
+          Math.floor(Math.random() * 3));
+        alvo.hp -= dmg;
+        alvo.hitFlash = 0.15;
+        numero(alvo.x, alvo.y - 30, mg.nome, mg.cor, true);
+        numero(alvo.x, alvo.y - 18, String(dmg), '#ffffff', false);
+        faísca(alvo.x, alvo.y - 6, mg.cor, 8);
+        var idx = inimigos.indexOf(alvo);
+        if (alvo.hp <= 0 && idx >= 0) mataInimigo(idx, alvo);
+      } else if (!heroi.morto && heroi.hp < heroi.hpMax) {
+        // cura só anuncia quando realmente cura
+        var cura = Math.max(1, Math.round(heroi.hpMax * mg.pct));
+        var antes = heroi.hp;
+        heroi.hp = Math.min(heroi.hpMax, heroi.hp + cura);
+        var ganho = Math.round(heroi.hp - antes);
+        if (ganho > 0) {
+          numero(heroi.x, heroi.y - 34, '+' + ganho, mg.cor, false);
+          numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
+        }
+      }
+    }
+  }
+
+  // Varredura da magia 'area': acerta todos os inimigos.
+  function varredura(mg) {
+    var st = heroi.stats;
+    numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
+    for (var i = inimigos.length - 1; i >= 0; i--) {
+      var en = inimigos[i];
+      var dmg = Math.max(1, Math.round(st.dano * mg.mult) +
+        Math.floor(Math.random() * 3));
+      en.hp -= dmg;
+      en.hitFlash = 0.12;
+      numero(en.x, en.y - 18, String(dmg), mg.cor, false);
+      faísca(en.x, en.y - 6, mg.cor, 6);
+      if (en.hp <= 0) mataInimigo(i, en);
+    }
+  }
+
+  // Veneno (magia do ladino): chance por acerto aplica dano contínuo.
+  // Recolocar o veneno renova a duração (dps congelado no valor do hit).
+  function aplicaVeneno(en, st) {
+    for (var i = 0; i < magiasVigentes.length; i++) {
+      var mg = magiasVigentes[i];
+      if (mg.tipo !== 'veneno') continue;
+      if (Math.random() >= mg.chance) continue;
+      en.veneno = {
+        t: mg.dur,
+        dps: Math.max(1, Math.round(st.dano * mg.dps)),
+        acc: 0,
+        cor: mg.cor
+      };
+      numero(en.x, en.y - 30, mg.nome, mg.cor, false);
     }
   }
 
@@ -407,6 +501,8 @@ var Batalha = (function () {
       h.hpMax = s.hpMax;
       if (h.hp > h.hpMax) h.hp = h.hpMax;
     }
+    // magias ativas (classe/nível podem mudar em combate)
+    magiasVigentes = Magias.ativas(Game.personagem.classe, Game.personagem.nivel);
 
     if (h.atkCd > 0) h.atkCd -= dt;
     if (h.inv > 0) h.inv -= dt;
@@ -419,6 +515,9 @@ var Batalha = (function () {
       var d2 = dx * dx + dy * dy;
       if (d2 < melhor) { melhor = d2; alvo = e; }
     }
+
+    // magias com timer (nuke/cura) — antes do ciclo de ataque
+    magiasPeriodicas(dt, alvo);
 
     var atacando = h.atkT > 0;
     if (atacando) {
@@ -461,13 +560,32 @@ var Batalha = (function () {
   }
 
   function atualizaInimigos(dt) {
-    for (var i = 0; i < inimigos.length; i++) {
+    // de trás pra frente: o veneno pode matar e remover no meio do laço
+    for (var i = inimigos.length - 1; i >= 0; i--) {
       var en = inimigos[i];
       en.frameT += dt;
       if (en.frameT > 0.3) { en.frameT = 0; en.frame = en.frame ? 0 : 1; }
       if (en.hitFlash > 0) en.hitFlash -= dt;
       if (en.atkCd > 0) en.atkCd -= dt;
       if (en.lunge > 0) en.lunge -= dt;
+
+      // dano contínuo do veneno (magia do ladino)
+      if (en.veneno) {
+        en.veneno.t -= dt;
+        en.veneno.acc += en.veneno.dps * dt;
+        if (en.veneno.acc >= 1) {
+          var v = Math.floor(en.veneno.acc);
+          en.veneno.acc -= v;
+          en.hp -= v;
+          en.hitFlash = 0.1;
+          numero(en.x, en.y - 14, String(v), en.veneno.cor, false);
+          if (en.hp <= 0) {
+            mataInimigo(i, en);
+            continue;
+          }
+        }
+        if (en.veneno.t <= 0) en.veneno = null;
+      }
 
       var alvoX, alvoY;
       if (heroi.morto) {
