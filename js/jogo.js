@@ -121,6 +121,9 @@ var Jogo = (function () {
     // o progresso nunca depende do Enter: toast + autosave
     Gravacao.update(dt, Game.personagem, salvarTudo);
 
+    // painel: clique/segurar nos +/− de atributos
+    Gestao.update(dt, Game.personagem);
+
     if (Input.pressed('Enter')) Gravacao.salvarPersonagem(Game.personagem, true);
   }
 

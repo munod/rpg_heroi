@@ -40,6 +40,9 @@
 - Save/toast/autosave das telas vive em `js/gravacao.js` (instância única;
   o `enter()` de cada tela zera com `Gravacao.entrar(p)`) — mudanças de
   gravação vão para lá, não duplicadas nas telas.
+- Botões de atributo (`+`/`−`) aplicam em `Gestao.update(dt, p)` (clique na
+  hora + segurar-repetir + seletor ×1/×5); os demais botões do jogo agem no
+  render, pelo retorno de `UI.button`.
 - O estado da batalha (onda/ts) é gravado pelo **dono** da batalha em
   memória (`Batalha.dono()`), nunca pelo personagem em foco — na seleção
   os dois podem ser heróis diferentes e gravar pelo focado corrompia o save.

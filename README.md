@@ -38,7 +38,8 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
 - **Atributos** — Força, Destreza, Constituição, Inteligência e Carisma;
   cada ponto muda o dano, a vida, a **velocidade** e o crítico **em tempo real**
   (a Velocidade também **acelera o ataque**, e o Carisma aumenta o **XP ganho
-  por abate**).
+  por abate**). Clique em `+`/`−` para mudar 1 ponto ou **segure** o botão
+  para repetir; o seletor `×1`/`×5` muda quantos pontos cada ação gasta.
 - **Progressão** — cada inimigo derrubado dá **XP**; ao subir de **nível**
   você ganha **+5 pontos** para distribuir e **+4 de vida** (o XP e o nível
   ficam no cabeçalho). Heróis novos nascem com **0 pontos** (atributos base

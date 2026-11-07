@@ -7,7 +7,7 @@ const { carregar } = require('./carga');
 // harness comum: canvas, DOM, localStorage, sandbox e scripts do jogo
 const {
   sandbox, jogoCanvas, ouvintesJanela, ouvintesDocumento, clicados,
-  localStorage: localStorageStub, frame, tecla, clique
+  localStorage: localStorageStub, frame, tecla, clique, pressionar, soltar
 } = carregar();
 
 // ---------------------------------------------------------------- asserções
@@ -153,6 +153,33 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   conf(p0.atributos.for === 51 && p0.pontos === ptsCap - 1,
     'sem teto: Força50 -> 51 (pontos ' + ptsCap + ' -> ' + p0.pontos + ')');
 
+  // --- segurar o + repete (arranque de 0,25s e depois ~10/s)
+  p0.pontos = 50;
+  const ptsSeg = p0.pontos;
+  pressionar(361, 46);          // pressiona sem soltar
+  frame(45);                    // ~0,75s segurado
+  soltar();
+  const gastos = ptsSeg - p0.pontos;
+  conf(gastos >= 3 && gastos <= 15,
+    'segurar repete o + (gastou ' + gastos + ' em ~0,75s)');
+
+  // --- toggle ×5: gasta 5 por clique e volta para ×1
+  clique(354, 117);             // toggle (342,112,25,11)
+  frame(2);
+  p0.pontos = 10;
+  const forT = p0.atributos.for;
+  clique(361, 46);
+  frame(2);
+  conf(p0.atributos.for === forT + 5 && p0.pontos === 5,
+    '×5 gasta 5 por clique (for ' + forT + '->' + p0.atributos.for +
+    ', pts 10->' + p0.pontos + ')');
+  clique(354, 117);             // volta para ×1
+  frame(2);
+  clique(361, 46);
+  frame(2);
+  conf(p0.atributos.for === forT + 6 && p0.pontos === 4,
+    'toggle volta para ×1 (for +1, pts 5->4)');
+
   // digitar o nome (renomeia o herói em foco, antes de jogar)
   tecla('keydown', 'KeyB', 'b');
   tecla('keyup', 'KeyB', 'b');
@@ -160,13 +187,14 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   conf(p0.nome === 'b', 'digitação renomeia o herói (' + p0.nome + ')');
 
   // JOGAR: Enter entra na arena e grava o personagem
+  const forAntesDeJogar = p0.atributos.for;
   tecla('keydown', 'Enter', 'Enter');
   tecla('keyup', 'Enter', 'Enter');
   frame(2);
   conf(Game.cena === 'jogo', 'Enter entrou na jogatina (modo idle)');
   const salvos = Salvar.listar();
   conf(salvos.length === 1 && salvos[0].nome === 'b' &&
-       salvos[0].atributos.for === 51,
+       salvos[0].atributos.for === forAntesDeJogar,
     'JOGAR salvou antes de entrar (nome=' + (salvos[0] && salvos[0].nome) +
     ', for=' + (salvos[0] && salvos[0].atributos.for) + ')');
 

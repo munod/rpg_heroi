@@ -10,7 +10,9 @@
 // carregar() devolve:
 //   sandbox, jogoCanvas, ouvintesJanela, ouvintesDocumento, clicados,
 //   localStorage (stub), storage (objeto cru),
-//   frame(n), tecla(tipo, code, key), clique(xJogo, yJogo)
+//   frame(n), tecla(tipo, code, key), clique(xJogo, yJogo),
+//   pressionar(xJogo, yJogo) sem soltar (para testar segurar o botão),
+//   soltar() (soltura o mouse)
 'use strict';
 
 const fs = require('fs');
@@ -220,11 +222,17 @@ function carregar(opcoes) {
     (ouvintesJanela[tipo] || []).forEach(fn => fn(ev));
   }
 
-  function clique(xJogo, yJogo) {
-    // o retângulo do canvas no teste é o dobro do canvas (escala 2)
+  // o retângulo no teste é o dobro do canvas (escala 2 do harness)
+  function pressionar(xJogo, yJogo) {
     const ev = { clientX: xJogo * 2, clientY: yJogo * 2, preventDefault() {} };
     (jogoCanvas._listeners.mousedown || []).forEach(fn => fn(ev));
+  }
+  function soltar() {
     (ouvintesJanela.mouseup || []).forEach(fn => fn({}));
+  }
+  function clique(xJogo, yJogo) {
+    pressionar(xJogo, yJogo);
+    soltar();
   }
 
   return {
@@ -238,7 +246,9 @@ function carregar(opcoes) {
     storage,
     frame,
     tecla,
-    clique
+    clique,
+    pressionar,
+    soltar
   };
 }
 

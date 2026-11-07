@@ -93,6 +93,9 @@ var Selecao = (function () {
     // toast + autosave (só o personagem; sem estado de batalha aqui)
     Gravacao.update(dt, Game.personagem);
 
+    // painel: clique/segurar nos +/− de atributos
+    Gestao.update(dt, Game.personagem);
+
     // digitar o nome do herói em foco (qualquer tecla)
     var p = Game.personagem;
     if (p) {

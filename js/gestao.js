@@ -3,6 +3,12 @@
 // as duas telas terem exatamente o mesmo comportamento.
 var Gestao = (function () {
   var aba = 'atributos';   // atributos | aparencia | classe
+  var passo = 1;           // quantos pontos por ação (toggle ×1/×5)
+  var repT = 0;            // tempo segurando um botão +/−
+  var repI = 0;            // tempo desde a última repetição
+  var REP_ATRASO = 0.25;   // segurar antes de começar a repetir
+  var REP_PASSO = 0.1;     // cadência da repetição (~10/s)
+  var RECT_TOGGLE = { x: 342, y: 112, w: 25, h: 11 };
 
   function ciclo(arr, atual) {
     var i = arr.indexOf(atual);
@@ -31,6 +37,73 @@ var Gestao = (function () {
     return linhas;
   }
 
+  function dentro(m, r) {
+    return m.x >= r.x && m.x < r.x + r.w && m.y >= r.y && m.y < r.y + r.h;
+  }
+
+  // Linhas dos atributos com retângulos dos botões +/− — fonte única de
+  // geometria: o update aplica as ações e o render só desenha por cima.
+  function linhasAtributos() {
+    return Personagem.ATRIBUTOS.map(function (at, i) {
+      var y = 46 + i * 14;
+      return {
+        at: at.id,
+        nome: at.nome,
+        y: y,
+        menos: { x: 342, y: y - 5, w: 11, h: 11 },
+        mais:  { x: 356, y: y - 5, w: 11, h: 11 }
+      };
+    });
+  }
+
+  // Move `passo` pontos no sentido dir, com as guardas em cada unidade
+  // (não gasta mais do que tem, não leva atributo abaixo de 1).
+  function aplicar(p, at, dir) {
+    for (var i = 0; i < passo; i++) {
+      if (dir > 0) {
+        if (p.pontos <= 0) return;
+        p.atributos[at] += 1;
+        p.pontos -= 1;
+      } else {
+        if (p.atributos[at] <= 1) return;
+        p.atributos[at] -= 1;
+        p.pontos += 1;
+      }
+    }
+  }
+
+  // As ações do painel acontecem aqui (fora do render): o clique aplica
+  // na hora e, segurado, repete depois do arranque — em vez de um ponto
+  // por clique, só.
+  function update(dt, p) {
+    if (!p || aba !== 'atributos') { repT = 0; repI = 0; return; }
+    var m = Input.mouse;
+    var linhas = linhasAtributos();
+    var alvo = null, dir = 0;
+    for (var i = 0; i < linhas.length; i++) {
+      if (dentro(m, linhas[i].menos)) { alvo = linhas[i].at; dir = -1; break; }
+      if (dentro(m, linhas[i].mais)) { alvo = linhas[i].at; dir = 1; break; }
+    }
+
+    if (alvo && m.clicked) aplicar(p, alvo, dir);
+
+    if (alvo && m.down) {
+      repT += dt;
+      if (repT >= REP_ATRASO) {
+        repI += dt;
+        while (repI >= REP_PASSO) {
+          repI -= REP_PASSO;
+          aplicar(p, alvo, dir);
+        }
+      }
+    } else {
+      repT = 0;
+      repI = 0;
+    }
+
+    if (m.clicked && dentro(m, RECT_TOGGLE)) passo = passo === 1 ? 5 : 1;
+  }
+
   function desenhaAbas() {
     var lista = [
       ['atributos', 'Atributos'],
@@ -50,20 +123,23 @@ var Gestao = (function () {
   }
 
   function desenhaAtributos(ctx, p) {
-    Personagem.ATRIBUTOS.forEach(function (at, i) {
-      var y = 46 + i * 14;
-      var v = p.atributos[at.id];
-      UI.text(at.nome, 208, y, {});
-      UI.text(String(v), 332, y, { align: 'right', color: '#e8c86a' });
-      if (UI.button(342, y - 5, 11, 11, '-', { disabled: v <= 1 })) {
-        p.atributos[at.id] -= 1;
-        p.pontos += 1;
-      }
-      if (UI.button(356, y - 5, 11, 11, '+', { disabled: p.pontos <= 0 })) {
-        p.atributos[at.id] += 1;
-        p.pontos -= 1;
-      }
+    linhasAtributos().forEach(function (linha) {
+      var v = p.atributos[linha.at];
+      UI.text(linha.nome, 208, linha.y, {});
+      UI.text(String(v), 332, linha.y, { align: 'right', color: '#e8c86a' });
+      // visual apenas: clicar/segurar aplica em Gestao.update
+      UI.button(linha.menos.x, linha.menos.y, 11, 11, '-',
+        { disabled: v <= 1 });
+      UI.button(linha.mais.x, linha.mais.y, 11, 11, '+',
+        { disabled: p.pontos <= 0 });
     });
+
+    // toggle de quantos pontos cada clique/segurar gasta
+    UI.button(RECT_TOGGLE.x, RECT_TOGGLE.y, RECT_TOGGLE.w, RECT_TOGGLE.h,
+      '×' + passo, {
+        ativo: passo === 5,
+        color: passo === 5 ? '#e8c86a' : undefined
+      });
 
     var cl = Personagem.CLASSES[p.classe];
     var bonus = Personagem.ATRIBUTOS.filter(function (at) {
@@ -182,6 +258,7 @@ var Gestao = (function () {
 
   return {
     desenhar: desenhar,
+    update: update,
     quebra: quebra
   };
 })();
