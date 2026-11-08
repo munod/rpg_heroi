@@ -138,6 +138,9 @@ js/
   jogo.js           tela de jogo: arena + gestão + cabeçalho + botões
   loop.js           game loop (requestAnimationFrame)
   main.js           bootstrap e troca de cenas
+.specs/             specs: projeto, codebase e features (rastreabilidade)
+CHANGELOG.md        o que mudou, por versão (Keep a Changelog)
+AGENTS.md           convenções e armadilhas para quem mexe no código
 testes/             ferramentas de verificação (ver abaixo)
 ```
 
@@ -162,6 +165,21 @@ desligado.
 `preventDefault` contra rolagem/zoom), alvos de toque de 24px nos
 atributos, `touch-action: none` e viewport travado; em retrato aparece
 a dica **"Gire o celular para jogar"** (o layout é paisagem).
+
+## Versão, changelog e specs
+
+- **Versão atual: 0.1.0** — publicada em
+  https://munod.github.io/rpg_heroi/ (deploy automático a cada push na
+  `main`, via Actions).
+- **[CHANGELOG.md](CHANGELOG.md)** — o que mudou em cada versão, no
+  formato *Keep a Changelog*, em pt-BR.
+- **[.specs/](.specs/project/PROJECT.md)** — visão/roadmap/memória
+  (`project/`), documentação brownfield (`codebase/`) e **uma spec por
+  feature** com IDs de requisito rastreando **requisito → commit**
+  (`features/`).
+- Versionamento **Semantic Versioning em 0.x** + **Conventional Commits**
+  a partir da v0.1.0 — política e checklist de release em
+  `.specs/project/VERSIONING.md`.
 
 ## Testes
 

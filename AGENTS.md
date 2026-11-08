@@ -186,3 +186,21 @@
   sufixo `_v1` e/ou normalize na leitura (`Personagem.normalizar`) — não
   quebre saves antigos em silêncio (hoje: `p.stats` via
   `Personagem.normalizaStats`).
+
+## Versionamento e documentação
+
+- Specs e memória do projeto em `.specs/`: `project/` (PROJECT, ROADMAP,
+  STATE — decisões/adiados/preferências — e VERSIONING), `codebase/` (7
+  docs brownfield) e **`features/<nome>/spec.md` ANTES do código** de
+  cada feature nova (IDs de requisito rastreando requisito→commit). Ao
+  concluir uma leva: atualizar `STATE.md`/`ROADMAP.md` e o
+  `CHANGELOG.md`.
+- `CHANGELOG.md` (raiz, Keep a Changelog, pt-BR): o que muda o jogo entra
+  em `[Unreleased]`; a release move para `## [X.Y.Z] — data` com os
+  SHAs. Histórico backfilled até a v0.1.0.
+- Commits em **Conventional Commits** (`feat:`/`fix:`/`docs:`/`test:`/
+  `chore:`… com resumo em pt-BR) — a partir da v0.1.0; mensagens antigas
+  não se reescrevem. Versão em 0.x; checklist completo de release em
+  `.specs/project/VERSIONING.md` (gate `todos.js` → changelog → commit
+  `chore(release)` → tag `vX.Y.Z` → **push com aval do mantenedor** →
+  `gh release create` → Pages re-deploya sozinho).
