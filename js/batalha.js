@@ -351,6 +351,10 @@ var Batalha = (function () {
   }
 
   function proximaOnda() {
+    // lendários de onda: a 2ª vida renasce e, com o Cetro da
+    // Tempestade, os timers das skills zeram a cada passagem de onda
+    if (heroi) heroi.fenixUsada = false;
+    if (Itens.temEfeito(Game.personagem, 'tempestade')) skillsEstado = {};
     if (onda >= FIM_MAPA) {
       stat('ondas');                       // onda 100 (chefe) limpa
       passaMapa(); return;
@@ -530,6 +534,16 @@ var Batalha = (function () {
     var p = Game.personagem;
     if (!p || !p.stats) return;
     p.stats[chave] = (p.stats[chave] || 0) + (n === undefined ? 1 : n);
+    // vampirismo lendário (Sangue Frio): 4% do dano causado vira vida —
+    // silencioso, sem popup (bate a cada golpe)
+    if (chave === 'danoCausado' && typeof n === 'number' && n > 0 &&
+        heroi && !heroi.morto) {
+      var pv = Itens.pctVamp(p);
+      if (pv > 0) {
+        heroi.hp = Math.min(heroi.hpMax,
+          heroi.hp + Math.max(1, Math.round(n * pv)));
+      }
+    }
   }
 
   function danoHeroi(dmg) {
@@ -540,6 +554,16 @@ var Batalha = (function () {
     shake = 0.15;
     numero(heroi.x, heroi.y - 26, '-' + dmg, '#ff6b6b', false);
     if (heroi.hp <= 0) {
+      // 2ª vida lendária (Véu da Fênix): 1× por onda, revive com metade
+      if (!heroi.fenixUsada &&
+          Itens.temEfeito(Game.personagem, 'fenix')) {
+        heroi.hp = Math.max(1, Math.round(heroi.hpMax * 0.5));
+        heroi.fenixUsada = true;
+        heroi.inv = 1.2;
+        numero(heroi.x, heroi.y - 36, '2ª VIDA!', '#ffd866', true);
+        Efeitos.cura(heroi.x, heroi.y - 6, '#ffd866');
+        return;
+      }
       heroi.hp = 0;
       heroi.morto = true;
       stat('mortes');
@@ -588,6 +612,7 @@ var Batalha = (function () {
     // moeda sustenta venda/sucata/aprimoramento/re-roll da aba Itens
     var ouro = Math.round((1 + Math.random() * 2) * Mapas.forca(mapa) *
       (1 + (ondaTotal() + 1) * 0.04) * (en.tipo.boss ? 8 : 1));
+    ouro = Math.round(ouro * Itens.multOuro(Game.personagem));  // mercador
     Game.personagem.ouro = (Game.personagem.ouro || 0) + ouro;
     numero(en.x, en.y - 24, '+' + ganho + ' XP · +' + ouro + ' ouro',
       '#ffd866', false);
@@ -608,7 +633,7 @@ var Batalha = (function () {
       var equipou = Itens.equiparSeMelhor(p, it);
       if (!equipou) Itens.guardar(p, it);
       numero(en.x, en.y - 34,
-        equipou ? it.nome + '!' : '+' + it.nome,
+        (it.rar >= 4 ? '★ ' : '') + (equipou ? it.nome + '!' : '+' + it.nome),
         Itens.corRar(it.rar), false);
     }
   }
@@ -780,8 +805,29 @@ var Batalha = (function () {
           Efeitos.cura(heroi.x, heroi.y - 6, mg.cor);
           numero(heroi.x, heroi.y - 34, '+' + ganho, mg.cor, false);
           numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
+          // égide santificada: a cura respinga o mesmo valor nos
+          // inimigos próximos (laço descendente, igual à varredura)
+          if (Itens.temEfeito(Game.personagem, 'santificado')) {
+            fereProximos(ganho);
+          }
         }
       }
+    }
+  }
+
+  function fereProximos(dano) {
+    var raio2 = 64 * 64;
+    for (var i = inimigos.length - 1; i >= 0; i--) {
+      var en = inimigos[i];
+      var dx = en.x - heroi.x, dy = en.y - heroi.y;
+      if (dx * dx + dy * dy > raio2) continue;
+      var dmg = Math.max(1, dano);
+      en.hp -= dmg;
+      stat('danoCausado', dmg);
+      en.hitFlash = 0.12;
+      numero(en.x, en.y - 18, String(dmg), '#ffe89a', false);
+      faísca(en.x, en.y - 6, '#ffe89a', 5);
+      if (en.hp <= 0) mataInimigo(i, en);
     }
   }
 
@@ -931,6 +977,9 @@ var Batalha = (function () {
 
     // stats vivos: classe e atributos podem mudar durante a luta
     var s = Personagem.status(Game.personagem);
+    // fúria lendária (Lâmina Espectral): HP < 30% => dano ×1,5
+    var fd = Itens.multDano(Game.personagem, s.hpMax > 0 ? h.hp / s.hpMax : 1);
+    if (fd !== 1) s.dano = Math.max(1, Math.round(s.dano * fd));
     h.stats = s;
     if (s.hpMax !== h.hpMax) {
       h.hpMax = s.hpMax;
@@ -1406,6 +1455,7 @@ var Batalha = (function () {
     }
     return {
       mapa: mapa,
+      dano: (heroi && heroi.stats) ? Math.round(heroi.stats.dano) : 0,
       onda: onda,
       janela: { w: VW, h: VH },
       mundo: { w: MW, h: MH },

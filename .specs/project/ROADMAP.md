@@ -24,8 +24,9 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
   ✅ **A `itens-afixos`** (afixos, negativos, smart-loot, deltas) ·
   ✅ **B `economia-ouro`** (ouro, venda/sucata, aprimoramento, re-roll) ·
   ✅ **C `skills-estrategicas`** (loadout 3, keystone/classe, respec) ·
-  ⬜ D `lendarios-equilibrio` (lendários que mudam mecânica + re-medição,
-  release 0.2.0).
+  ✅ **D `lendarios-equilibrio`** (6 lendários com efeito mecânico +
+  re-medição final) — **plano completo; falta a release 0.2.0** (com
+  aval, checklist do VERSIONING).
 - **Ranking de jogadores** — *adiado pelo mantenedor até as
   estatísticas existirem* (já entregues em `estatisticas`; base `p.stats`
   pronta: nível/mapa/ondas/abates/bosses). Escopo local (heróis do
@@ -44,4 +45,8 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 - Inimigos à distância em mapas profundos (exige re-medir ritmo).
 - Decompor `js/batalha.js` (1445 linhas) em módulos menores — dívida
   registrada em `.specs/codebase/CONCERNS.md`.
+- **Regeneração fora de combate ou teto no `recuar`** — impasse raro
+  descoberto pelo flake da seção 21: build gênia (INT alta) fraca em
+  dano entra em `recuar` permanente (não ataca, não se cura fora do
+  clérigo) e a progressão trava. Candeia do IA; mexe no ritmo (medir).
 - Ajustes finos de IA (novos estados, memória maior de perseguição).

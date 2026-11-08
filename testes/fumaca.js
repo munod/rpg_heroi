@@ -1225,9 +1225,13 @@ console.log('21) estatísticas do jogador (Personagem.stats)');
   conf(chaves.every(k => antigo.stats[k] === 0),
     'save antigo sem stats ganha os campos zerados');
 
-  // --- contagem ao vivo: luta forte soma abates/ondas/dano/tempo
+  // --- contagem ao vivo: luta forte soma abates/ondas/dano/tempo.
+  // INT 8 (agu ~0,25) de propósito: INT alta ligava os estados
+  // kite/recuar do cérebro e, sem regeneração, o herói fraco ficava
+  // fugindo sem atacar — a onda nunca limpava (flake ~1 em 6). Ver
+  // lição em .specs/project/STATE.md.
   p.atributos.for = 50;
-  p.atributos.int = 50;
+  p.atributos.int = 8;
   p.atributos.con = 50;
   p.pontos = 0;
   const a0 = JSON.parse(JSON.stringify(p.stats));
@@ -1711,6 +1715,174 @@ console.log('25) gestão de skills: loadout e keystone');
   frame(2);
   conf(!p.keystoneOn && p.ouro === 790,
     'botão do keystone desliga no respec (10)');
+}
+
+console.log('26) itens lendários: raridade 4, efeitos e equilíbrio');
+{
+  const Itens = sandbox.Itens;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // --- estrutura: rar 4, exatamente 1 neg + 1 pos, efeito da tabela
+  const idsLeg = Itens.LEGENDARIOS.map(l => l.efeito);
+  let estruturaOk = true;
+  for (let i = 0; i < 60; i++) {
+    const it = Itens.geraItem(4, 1 + (i % 3), 'mago');
+    const negs = it.afixos.filter(a => a.neg).length;
+    if (it.rar !== 4 || it.afixos.length !== 2 || negs !== 1 ||
+        !it.efeito || idsLeg.indexOf(it.efeito) < 0 ||
+        !it.base || !it.escala || !Itens.corRar(4)) {
+      estruturaOk = false;
+    }
+  }
+  conf(estruturaOk,
+    'lendário: rar 4, exatamente 1 neg + 1 pos, efeito da tabela');
+
+  const legNome = Itens.geraItem(4, 1, 'mago');
+  const basesT1 = Itens.LEGENDARIOS.filter(l => l.tema === 1)
+    .map(l => l.nome);
+  conf(basesT1.some(n => legNome.nome.indexOf(n) >= 0),
+    'nome lendário monta sobre a base autorada');
+
+  // --- pool por tema (o clamp espelha Mapas.info: mapa 4+ = tema 3,
+  // o mesmo cenário do cenário/procedural)
+  const t1 = ['vampiro', 'fenix'], t2 = ['furia', 'mercador'],
+        t3 = ['tempestade', 'santificado'];
+  let temaOk = true;
+  for (let i = 0; i < 25; i++) {
+    if (t1.indexOf(Itens.geraItem(4, 1, 'guerreiro').efeito) < 0) temaOk = false;
+    if (t2.indexOf(Itens.geraItem(4, 2, 'guerreiro').efeito) < 0) temaOk = false;
+    if (t3.indexOf(Itens.geraItem(4, 3, 'guerreiro').efeito) < 0) temaOk = false;
+    if (t3.indexOf(Itens.geraItem(4, 4, 'guerreiro').efeito) < 0) temaOk = false;
+  }
+  conf(temaOk, 'pool por tema (mapa 4+ clampa no tema 3, como Mapas.info)');
+
+  // --- chefe com 15% de elevar (stub 0 prova) e rar 1-3 intactos
+  const rnd0 = Math.random;
+  Math.random = function () { return 0; };
+  const sdLeg = Itens.sorteiaDrop(1, true, 'mago');
+  const comum = Itens.sorteiaDrop(1, false, 'mago');
+  Math.random = rnd0;
+  conf(sdLeg.length === 2 && sdLeg.every(i => i.rar === 4),
+    'drop do chefe: 15% eleva a lendário (stub 0 provoca)');
+  conf(comum.length === 1 && comum[0].rar === 1,
+    'drop comum segue igual (regressão dos rar 1-3)');
+
+  // --- matemática dos efeitos pura
+  p.equip = { arma: null, armadura: null };
+  conf(!Itens.temEfeito(p, 'vampiro') && Itens.pctVamp(p) === 0 &&
+       Itens.multOuro(p) === 1 && Itens.multDano(p, 0.1) === 1,
+    'sem lendário: efeitos inertes');
+  conf(!Itens.temEfeito(p, 'nao-existe'),
+    'id de efeito desconhecido é inerte (save corrompido)');
+  p.equip.arma = { nome: 'Lâmina Espectral', slot: 'arma', rar: 4,
+    escala: 1, up: 0, afixos: [], efeito: 'furia', bonus: { dano: 7 } };
+  conf(Itens.multDano(p, 0.29) === 1.5 && Itens.multDano(p, 0.3) === 1 &&
+       Itens.multDano(p, 0.9) === 1,
+    'fúria: ×1,5 só abaixo de 30% de HP');
+  p.equip.armadura = { nome: 'Manto do Mercador', slot: 'armadura',
+    rar: 4, escala: 1, up: 0, afixos: [], efeito: 'mercador',
+    bonus: { hp: 20 } };
+  conf(Itens.multOuro(p) === 1.5 && Itens.temEfeito(p, 'mercador'),
+    'mercador: ouro ×1,5 (arma e armadura contam)');
+  p.equip.arma = { nome: 'Sangue Frio', slot: 'arma', rar: 4, escala: 1,
+    up: 0, afixos: [], efeito: 'vampiro', bonus: { dano: 8 } };
+  conf(Itens.pctVamp(p) === 0.04, 'vampiro: 4% do dano causado vira vida');
+
+  // --- migração: rar 4/efeito válidos preservados; lixo cai no padrão
+  const mig = Personagem.importarJSON(JSON.stringify({
+    nome: 'L',
+    equip: {
+      arma: { nome: 'Espada do Eclipse', slot: 'arma', rar: 4,
+              bonus: { dano: 10 }, efeito: 'vampiro' },
+      armadura: { nome: 'X', slot: 'armadura', rar: 9,
+                  efeito: '<script>', bonus: {} }
+    }
+  }));
+  conf(mig.equip.arma.rar === 4 && mig.equip.arma.efeito === 'vampiro',
+    'migração preserva rar 4 e efeito válido');
+  conf(mig.equip.armadura.rar === 1 && !mig.equip.armadura.efeito,
+    'raridade inválida e efeito malformado caem no padrão');
+
+  // --- ★ do efeito na linha da UI (aba Itens)
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  Itens.guardar(p, Itens.geraItem(4, 1, 'mago'));
+  jogoCanvas._textos = [];
+  clique(655, 50);                 // aba Itens (a 25 saiu na Classe)
+  frame(2);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('★') >= 0),
+    'linha da bolsa mostra o ★ do efeito lendário');
+
+  // --- ouro ×1,5 ao vivo (fórmula determinística com RNG zerado)
+  p.equip = { arma: null,
+    armadura: { nome: 'Manto', slot: 'armadura', rar: 4, escala: 1,
+                up: 0, afixos: [], efeito: 'mercador', bonus: { hp: 20 } } };
+  p.bolsa = [];
+  p.atributos.for = 50;
+  p.atributos.int = 8;             // sem fuga: mata direto
+  p.atributos.con = 50;
+  p.pontos = 0;
+  Batalha.restaurarOnda(1);         // onda 1 sem chefe
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  const ouroA = p.ouro || 0;
+  const infA = Batalha.info();
+  const otA = (infA.mapa - 1) * 100 + infA.onda;
+  const baseA = Math.round(1 * sandbox.Mapas.forca(infA.mapa) *
+    (1 + (otA + 1) * 0.04));
+  const rndM = Math.random;
+  Math.random = function () { return 0; };
+  let mudou = false;
+  for (let i = 0; i < 6000 && !mudou; i++) {
+    frame(1);
+    mudou = (p.ouro || 0) > ouroA;
+  }
+  Math.random = rndM;
+  const delta = (p.ouro || 0) - ouroA;
+  conf(mudou && delta === Math.round(baseA * 1.5),
+    'mercador ao vivo: abate paga ouro ×1,5 (' + delta + ' = ' +
+    Math.round(baseA * 1.5) + ')');
+  if (!Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- fúria ao vivo: HP < 30% => info().dano = status × 1,5
+  p.equip = { arma: { nome: 'Lâmina', slot: 'arma', rar: 4, escala: 1,
+               up: 0, afixos: [], efeito: 'furia', bonus: { dano: 50 } },
+              armadura: null };
+  p.bolsa = [];
+  p.classe = 'mago';
+  p.nivel = 10;
+  p.atributos.for = 1;             // dano controlado (só o bônus da arma)
+  p.atributos.con = 50;            // hp 244: o herói DESCE degrau a
+                                   // degrau até a faixa < 30% (limiar 73)
+  p.atributos.int = 8;
+  p.pontos = 0;
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  let furia = null;
+  let mortos = 0, amostras = [];
+  for (let i = 0; i < 24000 && furia === null; i++) {
+    frame(1);
+    const inf = Batalha.info();
+    if (inf.morto) mortos++;
+    // status AO VIVO: níveis e equipamento mudam durante a luta (armadura
+    // dropada entra sozinha), então o esperado é recalculado por frame
+    const st = Personagem.status(p);
+    if (!inf.morto && inf.hp > 0 && inf.hp < st.hpMax * 0.3) {
+      const esp = Math.round(st.dano * 1.5);
+      // lag de 1 frame: no frame do hit, os stats ainda usam o hp antigo
+      // — confirmamos no frame seguinte (atualizaHeroi reprocessa)
+      if (inf.dano === esp) {
+        furia = true;
+      } else if (amostras.length < 3) {
+        amostras.push([inf.hp, inf.dano, esp]);
+      }
+    }
+  }
+  if (furia !== true) console.log('     -> debug furia:', JSON.stringify({
+    mortos, furia, amostras, onda: Batalha.info().onda
+  }));
+  conf(furia === true,
+    'fúria ao vivo: com HP < 30%, dano do herói = status × 1,5');
+  if (!Batalha.info().pausada) Batalha.alternarPausa();
 }
 
 console.log('');

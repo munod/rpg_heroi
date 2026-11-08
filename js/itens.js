@@ -9,8 +9,10 @@
 var Itens = (function () {
   var BOLSA_MAX = 10;
   var CHANCE = 0.25;      // chance de drop por abate (chefes: sempre)
-  var PESO_RAR = [0.65, 0.92];  // <0.65 comum; <0.92 incomum; senão raro
-  var QTD_AFIXOS = [0, 1, 2];   // afixos por raridade (índice rar - 1)
+  var PESO_RAR = [0.65, 0.92, 0.99];  // <.65 comum; <.92 incomum;
+                             // <.99 raro; senão lendário (1% dos drops)
+  var QTD_AFIXOS = [0, 1, 2, 2];  // afixos por raridade (índice rar - 1)
+  var LEG_CHEFE = 0.15;   // chance de o drop do chefe virar lendário
   var CHANCE_NEG = 0.3;   // por rolagem de afixo (rar >= 2)
   var MULT_NEG = 1.5;     // magnitude do negativo (o tradeoff compensa)
   var PESO_CLASSE = 0.7;  // chance de afixo positivo sair na chave da classe
@@ -49,7 +51,34 @@ var Itens = (function () {
   var ARMAS_OK = ['espada', 'adaga', 'cajado', 'martelo'];
   var CHAVES = ['dano', 'hp', 'vel', 'crit'];
   var SIGLAS = { dano: 'D', hp: 'HP', vel: 'V', crit: 'C' };
-  var CORES = { 1: '#c9c2dd', 2: '#8ce08c', 3: '#e8c86a' };
+  var CORES = { 1: '#c9c2dd', 2: '#8ce08c', 3: '#e8c86a', 4: '#ff9d4d' };
+
+  // Lendários: 2 por tema de mapa (o clamp do tema espelha Mapas.info,
+  // que para em 3). Efeito > número (filosofia Last Epoch) — cada um
+  // muda uma mecânica com identidade própria; a matemática dos efeitos
+  // é `temEfeito/multDano/multOuro/pctVamp` lá embaixo, e os gatilhos
+  // comportamentais (2ª vida, ondas renovam, cura fere) moram em
+  // batalha.js. Todo lendário rola exatamente 1 neg + 1 pos: o preço.
+  var LEGENDARIOS = [
+    { id: 'sangue-frio', tema: 1, slot: 'arma', nome: 'Sangue Frio',
+      arma: 'espada', bonus: { dano: 8 },
+      efeito: 'vampiro', efeitoTxt: 'vampirismo 4%' },
+    { id: 'veu-fenix', tema: 1, slot: 'armadura', nome: 'Véu da Fênix',
+      bonus: { hp: 24 },
+      efeito: 'fenix', efeitoTxt: '2ª vida por onda' },
+    { id: 'lamina-espectral', tema: 2, slot: 'arma', nome: 'Lâmina Espectral',
+      arma: 'adaga', bonus: { dano: 7, crit: 8 },
+      efeito: 'furia', efeitoTxt: 'fúria <30% HP' },
+    { id: 'manto-mercador', tema: 2, slot: 'armadura', nome: 'Manto do Mercador',
+      bonus: { hp: 20, vel: 6 },
+      efeito: 'mercador', efeitoTxt: 'ouro +50%' },
+    { id: 'cetro-tempestade', tema: 3, slot: 'arma', nome: 'Cetro da Tempestade',
+      arma: 'cajado', bonus: { dano: 6, crit: 10 },
+      efeito: 'tempestade', efeitoTxt: 'ondas renovam' },
+    { id: 'egide-santificada', tema: 3, slot: 'armadura', nome: 'Égide Santificada',
+      bonus: { hp: 26, dano: 2 },
+      efeito: 'santificado', efeitoTxt: 'cura fere' }
+  ];
 
   // smart-loot: chaves que a classe quer (os outros 30% fogem do viés
   // para o drop não virar monótono)
@@ -119,6 +148,8 @@ var Itens = (function () {
   // linha da lista (nome com afixos + deltas) cortada p/ caber no botão
   function linha(item, atual, max) {
     var d = deltas(item, atual);
+    // lendário: o efeito é a identidade — entra na linha com ★
+    if (item.efeito) d += (d ? ' ' : '') + '★' + efeitoTxt(item.efeito);
     var nome = item.nome || '';
     var corte = (max || 40) - d.length - (d ? 2 : 0);
     if (nome.length > corte) nome = nome.slice(0, Math.max(3, corte - 1)) + '…';
@@ -127,7 +158,33 @@ var Itens = (function () {
 
   function sorteiaRaridade() {
     var r = Math.random();
-    return r < PESO_RAR[0] ? 1 : (r < PESO_RAR[1] ? 2 : 3);
+    if (r < PESO_RAR[0]) return 1;
+    if (r < PESO_RAR[1]) return 2;
+    if (r < PESO_RAR[2]) return 3;
+    return 4;
+  }
+
+  // tema do mapa: mesmo clamp de Mapas.info (LISTA com 3 temas)
+  function temaDe(mapa) {
+    var m = (typeof mapa === 'number' && mapa >= 1 && isFinite(mapa))
+      ? Math.floor(mapa) : 1;
+    return m > 3 ? 3 : m;
+  }
+
+  function sorteiaLendario(mapa) {
+    var t = temaDe(mapa);
+    var pool = [];
+    for (var i = 0; i < LEGENDARIOS.length; i++) {
+      if (LEGENDARIOS[i].tema === t) pool.push(LEGENDARIOS[i]);
+    }
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function efeitoTxt(id) {
+    for (var i = 0; i < LEGENDARIOS.length; i++) {
+      if (LEGENDARIOS[i].efeito === id) return LEGENDARIOS[i].efeitoTxt;
+    }
+    return 'lendário';
   }
 
   // pool de afixos positivos com o tipo (pre/suf) ainda livre, com
@@ -162,7 +219,9 @@ var Itens = (function () {
     if (rar < 2) return out;
     var tipos = {}, negs = 0;
     for (var i = 0; i < QTD_AFIXOS[rar - 1]; i++) {
-      var ehNeg = negs < 1 && Math.random() < CHANCE_NEG;
+      // lendário: o 1º afixo é SEMPRE negativo — o preço do poder
+      var forcar = rar >= 4 && i === 0;
+      var ehNeg = negs < 1 && (forcar || Math.random() < CHANCE_NEG);
       var pool = ehNeg ? poolNeg() : poolPos(tipos, classe);
       if (!pool.length) continue;
       var af = pool[Math.floor(Math.random() * pool.length)];
@@ -180,13 +239,20 @@ var Itens = (function () {
   }
 
   function geraItem(rar, mapa, classe) {
-    var slot = Math.random() < 0.5 ? 'arma' : 'armadura';
-    var fonte = slot === 'arma' ? ARMAS : ARMADURAS;
-    var pool = [];
-    for (var i = 0; i < fonte.length; i++) {
-      if (fonte[i].rar === rar) pool.push(fonte[i]);
+    var modelo, slot;
+    if (rar >= 4) {
+      // lendário: modelo autorado do tema do mapa (não vem das listas)
+      modelo = sorteiaLendario(mapa);
+      slot = modelo.slot;
+    } else {
+      slot = Math.random() < 0.5 ? 'arma' : 'armadura';
+      var fonte = slot === 'arma' ? ARMAS : ARMADURAS;
+      var pool = [];
+      for (var i = 0; i < fonte.length; i++) {
+        if (fonte[i].rar === rar) pool.push(fonte[i]);
+      }
+      modelo = pool[Math.floor(Math.random() * pool.length)];
     }
-    var modelo = pool[Math.floor(Math.random() * pool.length)];
     var mult = Math.round(Mapas.forca(mapa));   // item já nasce escalado
     var bonus = {};
     for (var k in modelo.bonus) {
@@ -211,6 +277,7 @@ var Itens = (function () {
       escala: mult         // mult. de Mapas.forca: faixas de afixo/re-roll
     };
     if (modelo.arma) out.arma = modelo.arma;
+    if (modelo.efeito) out.efeito = modelo.efeito;
     return out;
   }
 
@@ -222,7 +289,10 @@ var Itens = (function () {
     var out = [];
     for (var i = 0; i < qtd; i++) {
       var rar = sorteiaRaridade();
-      if (ehChefe && rar < 2) rar = 2;
+      if (ehChefe) {
+        // 15% de o drop do chefe virar lendário; senão, piso rar 2
+        rar = Math.random() < LEG_CHEFE ? 4 : (rar < 2 ? 2 : rar);
+      }
       out.push(geraItem(rar, mapa, classe));
     }
     return out;
@@ -384,9 +454,39 @@ var Itens = (function () {
     return true;
   }
 
+  // ---- efeitos lendários: a MATEMÁTICA mora aqui (pura e testável);
+  // os gatilhos comportamentais estão em batalha.js (1 hook cada)
+  function temEfeito(p, id) {
+    if (!p || !p.equip || !id) return false;
+    var valido = false;
+    for (var j = 0; j < LEGENDARIOS.length; j++) {
+      if (LEGENDARIOS[j].efeito === id) { valido = true; break; }
+    }
+    if (!valido) return false;              // id de save corrompido é inerte
+    var lista = [p.equip.arma, p.equip.armadura];
+    for (var i = 0; i < lista.length; i++) {
+      if (lista[i] && lista[i].efeito === id) return true;
+    }
+    return false;
+  }
+  function multDano(p, fracHp) {  // lâmina espectral: fúria abaixo de 30%
+    return (temEfeito(p, 'furia') && fracHp < 0.3) ? 1.5 : 1;
+  }
+  function multOuro(p) {          // manto do mercador
+    return temEfeito(p, 'mercador') ? 1.5 : 1;
+  }
+  function pctVamp(p) {           // sangue frio: 4% do dano vira vida
+    return temEfeito(p, 'vampiro') ? 0.04 : 0;
+  }
+
   return {
     ARMAS: ARMAS,
     ARMADURAS: ARMADURAS,
+    LEGENDARIOS: LEGENDARIOS,
+    temEfeito: temEfeito,
+    multDano: multDano,
+    multOuro: multOuro,
+    pctVamp: pctVamp,
     AFIXOS: AFIXOS,
     AFINS: AFINS,
     QTD_AFIXOS: QTD_AFIXOS,

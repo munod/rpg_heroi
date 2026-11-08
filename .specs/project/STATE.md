@@ -61,6 +61,16 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   cliques); o espaço de uma linha por classe virou 2 colunas p/ caber
   loadout + keystone dentro do painel de 300px (clique do Mago
   atualizado: 673,102).
+- **Lendário = 1 negativo forçado + 1 positivo + efeito** — regra
+  única e testável (o tradeoff mora na estrutura, não em texto);
+  pool de 2 por tema espelhando o CLAMP de `Mapas.info` (mapa 4+ = tema
+  3, igual ao cenário); efeitos com matemática pura em `itens.js`
+  (testável sem arena) e gatilhos comportamentais em `batalha.js`
+  (1 hook cada — padrão keystone/efeito).
+- **Teste de efeito ao vivo precisa ler o status AO VIVO** — congelar
+  `stBase` quebra com nivelamento/drop de armadura no meio; e o frame do
+  hit tem lag de 1 (stats calculados antes do dano do inimigo) — só
+  confirmar no frame seguinte (lição da seção 26).
 
 
 ## Bloqueios
@@ -87,6 +97,12 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 
 - Testes usam `Math.random` real: flakes raros são possíveis (já houve1
   aparente em leva de IA) — repetir a fumaça 3× antes de concluir.
+- **Fixture de luta precisa fixar a agudeza**: a seção 21 flakava ~1 em
+  6 porque herdava INT 50 → estados `kite/recuar` do cérebro e, sem
+  regeneração, o herói fraco fugia sem atacar (1 abate/67s — trace
+  diagnosticou). Luta de teste = INT 8 (burro agressivo). Achado
+  correlato registrado no ROADMAP (impasse potencial de build gênia
+  fraca: `recuar` não ataca e não cura).
 - Coordenadas de UI viram contrato de teste (grade de abas, ×2 do
   harness): mudar layout exige atualizar `fumaca.js`/`cena.js` juntos.
 - Âncoras de texto em scripts de edição de docs quebram por quebra de

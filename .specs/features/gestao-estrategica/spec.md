@@ -1,7 +1,8 @@
 # Spec: Gestão estratégica — itens, economia, skills (umbrella)
 
-Status: **em execução** — Levas A (`itens-afixos`), B (`economia-ouro`) e C (`skills-estrategicas`) concluídas; D planejada
-· Data: 2026-11-08 · Versão alvo: 0.2.0 (em 4 levas)
+Status: **entregue** — 4/4 levas concluídas (A `itens-afixos`,
+B `economia-ouro`, C `skills-estrategicas`, D `lendarios-equilibrio`);
+falta só a release 0.2.0 (com aval) · Data: 2026-11-08
 Decisões do usuário: afixos + mods negativos + UI de deltas (sem slots novos
 na 1ª leva) · skills = loadout + keystone · economia com ouro em leva própria ·
 lendários na leva final, após equilíbrio.
@@ -61,7 +62,7 @@ com valor mínimo (loop econômico).
 - **R-GES-3.4**: IA/`Batalha` leem só o loadout ativo; testes de skills
   atualizados (gatilhos não mudam, só quem está elegível).
 
-### Leva D — `lendarios-equilibrio` (R-GES-4)
+### Leva D — `lendarios-equilibrio` (R-GES-4) ✅ (ver spec própria)
 - **R-GES-4.1**: 4-6 **itens lendários** com efeito que muda mecânica
   (filosofia Last Epoch: tradeoff + identidade), pool por mapa.
 - **R-GES-4.2**: re-**medição completa** do ritmo (afixos + ouro + keystone

@@ -49,6 +49,19 @@ vive em `.specs/features/`.
   — spec `.specs/features/skills-estrategicas/` (R-SKL-1..4). Ritmo com
   o teto de 3 skills na faixa (39,9s · nv34/onda55 · mapa 1 em 30,4min);
   seção 16 (gatilhos) passou sem tocar nela.
+- **Itens lendários (Leva D da gestão estratégica)**: raridade 4 com 1%
+  dos drops + chefe com 15% de elevar (cor laranja, `★` na linha da UI),
+  **exatamente 1 afixo negativo + 1 positivo** (o preço do poder) e
+  **6 lendários — 2 por tema de mapa**: *Sangue Frio* (vampirismo 4%),
+  *Véu da Fênix* (2ª vida 1×/onda), *Lâmina Espectral* (fúria: dano ×1,5
+  com HP < 30%), *Manto do Mercador* (ouro ×1,5), *Cetro da Tempestade*
+  (ondas renovam os timers das skills) e *Égide Santificada* (a cura
+  respinga o mesmo valor nos inimigos próximos) — matemática pura em
+  `Itens` (`temEfeito/multDano/multOuro/pctVamp`), 1 gatilho cada em
+  `Batalha`, `info().dano` novo e migração de `rar ≤ 4`/`efeito`
+  sanitizado — spec `.specs/features/lendarios-equilibrio/` (R-LEG-1..5).
+  Ritmo final na faixa (42,3s · nv34/onda54 · mapa 1 em 32,4min); gate
+  3×.
 
 ## [0.1.0] — 2026-11-08
 

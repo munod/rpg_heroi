@@ -309,8 +309,8 @@ var Personagem = (function () {
       // 40 chars: nome com prefixo/sufixo de afixo (itens antigos ≤ 24)
       nome: it.nome.slice(0, 40),
       slot: slot,
-      rar: (typeof it.rar === 'number' && it.rar >= 1 && it.rar <= 3)
-        ? Math.floor(it.rar) : 1,
+      rar: (typeof it.rar === 'number' && it.rar >= 1 && it.rar <= 4)
+        ? Math.floor(it.rar) : 1,          // 4 = lendário
       bonus: {},
       afixos: [],
       // economia (Leva B) — defaults p/ saves anteriores
@@ -319,6 +319,11 @@ var Personagem = (function () {
       escala: Math.min(num(it.escala, 1, 1), 999)
     };
     if (typeof it.base === 'string' && it.base) out.base = it.base.slice(0, 24);
+    // efeito lendário: só formato (a validação de id é de Itens — id
+    // desconhecido fica inerte em temEfeito)
+    if (typeof it.efeito === 'string' && /^[a-z][a-z0-9-]{0,15}$/.test(it.efeito)) {
+      out.efeito = it.efeito;
+    }
     if (typeof it.arma === 'string' && it.arma) out.arma = it.arma.slice(0, 12);
     for (var i = 0; i < BONUS_ITENS.length; i++) {
       var k = BONUS_ITENS[i];

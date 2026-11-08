@@ -109,7 +109,14 @@
   sucateia sozinha), `aprimorar` (`custoAprim`, +8%/nível via
   `pontuarEfet` no auto-equip) e `reroll` (neg sai só com rol positivo);
   UI na aba Itens: `V`/`S` por linha, `A+`/`R+` nos slots, linha de ouro
-  e legenda. **`personagem.js` não pode depender de `itens.js`**
+  e legenda. **Lendários (rar 4)**: `LEGENDARIOS` (2 por tema, clamp
+  `Math.min(mapa,3)` como `Mapas.info`), 1% dos drops + 15% no chefe,
+  **1 neg forçado + 1 pos**; efeitos = matemática pura em `Itens`
+  (`temEfeito/multDano/multOuro/pctVamp`) + gatilhos em `Batalha`
+  (vampiro em `stat`, fúria no refresh de stats, ouro em `mataInimigo`,
+  2ª vida em `danoHeroi`, reset em `proximaOnda`, cura fere em
+  `skillsPeriodicas`); testes ao vivo leem o `status` AO VIVO (lag de 1
+  frame no hit). **`personagem.js` não pode depender de `itens.js`**
   (grade/previa carregam só sprite+personagem) — chaves de bônus **e**
   `APR`/`MAX_UP` são espelhadas nos dois arquivos.
 - Gestão tem 5 abas (Atrib/Apar/Classe/Itens/Stats): botões de 66px com
