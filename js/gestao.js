@@ -74,6 +74,20 @@ var Gestao = (function () {
     }
   }
 
+  // O que cada estatística conta (tooltip da aba Stats, Leva 4)
+  var DESC_STATS = {
+    'Abates': 'Monstros derrotados pelo herói',
+    'Chefes derrotados': 'Chefes da onda 100 derrubados',
+    'Açougueiros abatidos': 'Vitórias sobre o evento lendário (ouro ×10)',
+    'Gatunos pegos': 'Ladrões abatidos antes da fuga (resgate ×1,2)',
+    'Ondas limpas': 'Ondas completadas — morte não conta (só perde)',
+    'Dano causado': 'PV total tirado dos monstros',
+    'Dano recebido': 'PV total perdidos pelo herói',
+    'Mortes': 'Quedas — cada uma paga −10% de ouro e −5 ondas',
+    'Itens dropados': 'Drops coletados (equipados ou guardados)',
+    'Tempo de jogo': 'Tempo em jogatina ativa — offline não conta'
+  };
+
   // Tooltip dos atributos (Leva 3): o que cada um alimenta — o detalhe
   // numérico por fonte vive no tooltip do rodapé
   function dicasAtributo(linha, p) {
@@ -408,6 +422,7 @@ var Gestao = (function () {
         })) {
         alternarSkill(p, sk.id);
       }
+      UI.dica({ x: 416, y: y, w: 340, h: 24 }, Skills.dicas(sk));
     });
 
     // keystone da classe: efeito e custo no rótulo (11px p/ caber)
@@ -425,6 +440,16 @@ var Gestao = (function () {
           ? 'ATIVO (desl ' + Personagem.KEY_RESPEC + ')'
           : 'ligar (' + Personagem.KEY_RESPEC + ')');
       dis = (p.ouro || 0) < Personagem.KEY_RESPEC;
+    }
+    if (k) {
+      UI.dica({ x: 416, y: 306, w: 340, h: 24 }, [
+        ['K: ' + k.nome + ' — ' + k.efeito + ' (tradeoff)',
+          p.keystoneOn ? '#8ce08c' : '#e8c86a'],
+        ['Libera no nível ' + Personagem.KEY_NIVEL + ' · compra ' +
+          Personagem.KEY_CUSTO + ' de ouro · alternar ' +
+          Personagem.KEY_RESPEC, '#9a90b8'],
+        ['Aparece no detalhe do Dano/HP do rodapé quando ativo', '#6f678a']
+      ]);
     }
     if (UI.button(416, 306, 340, 24, rot, {
       disabled: dis,
@@ -480,6 +505,8 @@ var Gestao = (function () {
       var y = 120 + i * 22;   // 10 linhas cabem no painel de 300px
       UI.text(l[0], 416, y, { color: '#c9c2dd' });
       UI.text(l[1], 752, y, { align: 'right', color: '#e8c86a' });
+      UI.dica({ x: 416, y: y - 11, w: 340, h: 22 },
+        [[l[0] + ': ' + (DESC_STATS[l[0]] || '—'), '#e8c86a']]);
     });
   }
 

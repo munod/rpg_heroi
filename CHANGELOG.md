@@ -55,7 +55,18 @@ vive em `.specs/features/`.
   aprimoramento, deltas, venda/sucata/custos) — spec
   `.specs/features/tooltip-infra/` (R-TIP-1..4). Testes: seção 30 (13
   confs: somas exatas, hover, DPS, item, INT, long-press retido e
-  fechamento). Pacing ajustado com dados do `ritmo.js` (chegada na
+  fechamento).
+- **Estatísticas completas + tooltips de skill/keystone (Leva 4)**:
+  aba Stats **+7 chaves de economia** (`ouroGanho`, `ouroGasto`,
+  `vendidos`, `sucateados`, `aprimoramentos`, `rerolls`, `lendarios`)
+  incrementadas nos pontos exatos de mudança de ouro/investimento
+  (venda, sucata, auto-sucata, aprimoramento, re-roll, keystone, abates
+  e resgates) com migração automática; cada linha da aba ganha tooltip
+  do que conta; **tooltip de skill** (`Skills.dicas`: nível, tipo, o que
+  faz com os números dos campos) e **tooltip do keystone** (tradeoff +
+  custos + onde aparece no breakdown) — spec
+  `.specs/features/stats-completos/`. Testes: seção 31 (11 confs:
+  increments exatos +3 tooltips). Pacing ajustado com dados do `ritmo.js` (chegada na
   onda30, hp×3/dano×1,35, 30s, gatuno 1,5%): mapa 1 em **44,6/48,6min**
   (2 runs) mantendo a faixa 40-55. Testes: seções 28/29 (47 confs) com
   eventos **desligados do harness nas seções 1-27** (senão disparavam em

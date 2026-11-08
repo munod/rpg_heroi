@@ -2416,6 +2416,97 @@ console.log('30) tooltips: breakdown do rodapé, atributos e item');
     'clique fora fecha a caixa retida');
 }
 
+console.log('31) estatísticas de economia e tooltips de skill/keystone/stats');
+{
+  const Itens = sandbox.Itens;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- increments das ações de economia (chaves espelhadas em STATS)
+  p.ouro = 1000;
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  const s0 = p.stats;
+  const g0 = s0.ouroGanho || 0, gT = s0.ouroGasto || 0;
+  const v0 = s0.vendidos || 0, sc0 = s0.sucateados || 0;
+  const a0 = s0.aprimoramentos || 0, r0 = s0.rerolls || 0;
+  const itV = { nome: 'V', slot: 'arma', rar: 2, escala: 1, up: 0,
+                afixos: [], bonus: { dano: 10 } };
+  Itens.guardar(p, itV);
+  Itens.vender(p, itV);
+  conf(s0.vendidos === v0 + 1 && s0.ouroGanho === g0 + 15,
+    'venda conta em vendidos + ouroGanho (+15)');
+  const itS = { nome: 'S', slot: 'arma', rar: 1, escala: 1, up: 0,
+                afixos: [], bonus: { dano: -8 } };
+  Itens.guardar(p, itS);
+  Itens.sucatear(p, itS);
+  conf(s0.sucateados === sc0 + 1 && s0.ouroGanho === g0 + 18,
+    'sucata conta em sucateados + ouroGanho (+3)');
+  p.ouro = 0;
+  for (let i = 0; i < Itens.BOLSA_MAX; i++) {
+    Itens.guardar(p, { nome: 'X' + i, slot: 'arma', rar: 1, escala: 1,
+                       up: 0, afixos: [], bonus: { dano: 1 } });
+  }
+  Itens.guardar(p, { nome: 'Novo', slot: 'arma', rar: 1, escala: 1,
+                     up: 0, afixos: [], bonus: { dano: 2 } });
+  conf(s0.sucateados === sc0 + 2 && s0.ouroGanho === g0 + 21,
+    'bolsa cheia conta a sucata automática (+3 de ouro)');
+  p.ouro = 1000;
+  const itA = { nome: 'A', slot: 'arma', rar: 2, escala: 1, up: 0,
+                afixos: [], bonus: { dano: 10 } };
+  Itens.aprimorar(p, itA);
+  conf(s0.aprimoramentos === a0 + 1 && s0.ouroGasto === gT + 25,
+    'aprimoramento conta em aprimoramentos + ouroGasto (+25)');
+  const itR = { nome: 'R', base: 'R', slot: 'arma', rar: 3, escala: 1,
+                up: 0, rerolls: 0, bonus: { dano: 8 },
+                afixos: [{ nome: 'Poderoso', tipo: 'pre', chave: 'dano',
+                           neg: false, valor: 5 }] };
+  const rndR = Math.random;
+  Math.random = function () { return 0.99; };
+  Itens.reroll(p, itR);
+  Math.random = rndR;
+  conf(s0.rerolls === r0 + 1 && s0.ouroGasto === gT + 25 + 30,
+    're-roll conta em rerolls + ouroGasto (+30 = 10×3×1)');
+  conf((s0.lendarios || 0) >= 1,
+    'drop lendário contado (vitória do Açougueiro na seção 28)');
+  conf((s0.ouroGanho || 0) > 0, 'ouro de abates contado em ouroGanho');
+
+  // --- tooltip da linha de estatística (aba Stats)
+  jogoCanvas._textos = [];
+  clique(412 + 4 * 70 + 33, 54);          // aba Stats
+  frame(1);
+  clique(500, 120);                        // linha 'Abates' (y=120)
+  for (let i = 0; i < 25; i++) frame(1);
+  conf((jogoCanvas._textos || [])
+       .some(t => t.indexOf('Monstros derrotados') >= 0),
+    'tooltip da estatística explica o que ela conta');
+
+  // --- tooltip da skill (linha da aba Classe)
+  p.nivel = 45;
+  clique(585, 50);                         // aba Classe
+  frame(2);
+  jogoCanvas._textos = [];
+  clique(500, 190);                        // 1ª skill da classe (y=178..202)
+  for (let i = 0; i < 25; i++) frame(1);
+  conf((jogoCanvas._textos || [])
+       .some(t => t.indexOf('golpes') >= 0),
+    'tooltip da skill explica o efeito (a cada N golpes)');
+
+  // --- tooltip do keystone (sem ouro: botão desativado não alterna)
+  p.ouro = 0;
+  const keOn = p.keystoneOn;
+  jogoCanvas._textos = [];
+  clique(500, 318);                        // botão keystone (y=306..330)
+  for (let i = 0; i < 25; i++) frame(1);
+  conf((jogoCanvas._textos || [])
+       .some(t => t.indexOf('tradeoff') >= 0),
+    'tooltip do keystone expõe o tradeoff e os custos');
+  conf(p.keystoneOn === keOn,
+    'botão desativado sem ouro não alterna o keystone');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');

@@ -707,6 +707,7 @@ var Batalha = (function () {
       (en.tipo.boss ? 8 : (en.acougueiro ? Eventos.MULT_OURO_ACO : 1)));
     ouro = Math.round(ouro * Itens.multOuro(Game.personagem));  // mercador
     Game.personagem.ouro = (Game.personagem.ouro || 0) + ouro;
+    stat('ouroGanho', ouro);
     numero(en.x, en.y - 24, '+' + ganho + ' XP · +' + ouro + ' ouro',
       '#ffd866', false);
     ganhaXP(ganho);
@@ -714,6 +715,7 @@ var Batalha = (function () {
     if (en.gatuno) {
       var resg = Eventos.gatAbatido();
       Game.personagem.ouro = (Game.personagem.ouro || 0) + resg;
+      stat('ouroGanho', resg);
       numero(en.x, en.y - 40, '+' + resg + ' OURO DE VOLTA!', '#8ce08c',
         true);
     } else {
@@ -734,6 +736,7 @@ var Batalha = (function () {
     for (var i = 0; i < drops.length; i++) {
       stat('itens');
       var it = drops[i];
+      if (it.rar >= 4) stat('lendarios');
       var equipou = Itens.equiparSeMelhor(p, it);
       if (!equipou) Itens.guardar(p, it);
       numero(en.x, en.y - 34,

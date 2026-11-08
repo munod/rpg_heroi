@@ -167,7 +167,8 @@
   (grade/previa carregam só ele).
 - Estatísticas do jogador em `p.stats` (`Personagem.STATS`: abates,
   mortes, dano causado/recebido, ondas, bosses, itens, tempo, gatunos,
-  acougueiros) incrementadas
+  acougueiros, ouroGanho, ouroGasto, vendidos, sucateados,
+  aprimoramentos, rerolls, lendarios) incrementadas
   por `Batalha.stat()` nos pontos certos (aplicação de dano, morte, onda
   limpa, drop) e exibidas na 5ª aba de `Gestao` (Stats, `milhar`/`tempoHumano`
   em pt-BR). O `tempo` só corre em `atualizar(dt, true)` — o `true` vem do

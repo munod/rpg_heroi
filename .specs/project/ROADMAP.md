@@ -46,8 +46,9 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    lendário) + Gatuno fugitivo (roubo contrariável, prioridade na IA)
 3. ✅ `tooltip-infra` — tooltips (hover + long-press retido), rodapé
    segmentado com breakdown por fonte + DPS básico
-4. ⬜ `stats-completos` — aba Stats +7 (ouro ganho/gasto, vendas,
-   sucateados, aprimoramentos, re-rolls, lendários)
+4. ✅ `stats-completos` — aba Stats +7 (ouro ganho/gasto, vendas,
+   sucateados, aprimoramentos, re-rolls, lendários) + tooltips de
+   skill/keystone/linha de stat
 5. ⬜ **release v0.3.0** (push/tag/gh release com aval)
 
 ## Backlog de ideias (sem compromisso)

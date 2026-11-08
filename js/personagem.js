@@ -163,6 +163,9 @@ var Personagem = (function () {
     }
     if ((p.ouro || 0) < KEY_CUSTO) return false;
     p.ouro -= KEY_CUSTO;
+    if (p.stats) {
+      p.stats.ouroGasto = (p.stats.ouroGasto || 0) + KEY_CUSTO;
+    }
     p.keystoneLib = true;
     p.keystoneOn = true;
     return true;
@@ -172,6 +175,9 @@ var Personagem = (function () {
   function alternarKeystone(p) {
     if (!p.keystoneLib || (p.ouro || 0) < KEY_RESPEC) return false;
     p.ouro -= KEY_RESPEC;
+    if (p.stats) {
+      p.stats.ouroGasto = (p.stats.ouroGasto || 0) + KEY_RESPEC;
+    }
     p.keystoneOn = !p.keystoneOn;
     return true;
   }
@@ -367,7 +373,10 @@ var Personagem = (function () {
   // espelho acima: grade/previa carregam só sprite+personagem)
   var STATS = ['abates', 'mortes', 'danoCausado', 'danoRecebido',
                'ondas', 'bosses', 'itens', 'tempo',
-               'gatunos', 'acougueiros'];   // +eventos (Leva 2)
+               'gatunos', 'acougueiros',
+               // economia (Leva 4) — normalizaStats zera saves antigos
+               'ouroGanho', 'ouroGasto', 'vendidos', 'sucateados',
+               'aprimoramentos', 'rerolls', 'lendarios'];
 
   // Preenche as 8 chaves: valor válido do save, ou 0 (save antigo que não
   // tinha stats). Teto defensivo igual ao do xp p/ storage corrompido, e

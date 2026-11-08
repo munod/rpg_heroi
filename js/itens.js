@@ -326,6 +326,13 @@ var Itens = (function () {
     return pontuar(item) * (1 + APR * ((item && item.up) || 0));
   }
 
+  // contagem de economia p/ a aba Stats (Leva 4) — espelho direto em
+  // p.stats (normalizaStats já cuida das chaves de saves antigos)
+  function conta(p, chave, n) {
+    if (!p || !p.stats) return;
+    p.stats[chave] = (p.stats[chave] || 0) + (n === undefined ? 1 : n);
+  }
+
   // remoção da bolsa paga ouro; null se o item não está na bolsa
   function vender(p, item) {
     var i = p.bolsa.indexOf(item);
@@ -333,6 +340,8 @@ var Itens = (function () {
     p.bolsa.splice(i, 1);
     var g = precoVenda(item);
     p.ouro = (p.ouro || 0) + g;
+    conta(p, 'vendidos');
+    conta(p, 'ouroGanho', g);
     return g;
   }
   function sucatear(p, item) {
@@ -341,6 +350,8 @@ var Itens = (function () {
     p.bolsa.splice(i, 1);
     var g = precoSucata(item);
     p.ouro = (p.ouro || 0) + g;
+    conta(p, 'sucateados');
+    conta(p, 'ouroGanho', g);
     return g;
   }
 
@@ -349,6 +360,8 @@ var Itens = (function () {
     if (c < 0 || (p.ouro || 0) < c) return false;
     p.ouro -= c;
     item.up = (item.up || 0) + 1;
+    conta(p, 'aprimoramentos');
+    conta(p, 'ouroGasto', c);
     return true;
   }
 
@@ -418,17 +431,25 @@ var Itens = (function () {
     item.rerolls = (item.rerolls || 0) + 1;
     item.nome = montaNome(base, lista);
     p.ouro -= c;
+    conta(p, 'rerolls');
+    conta(p, 'ouroGasto', c);
     return true;
   }
 
   function guardar(p, item) {
     p.bolsa.push(item);
     var pago = 0;
+    var sucateados = 0;
     while (p.bolsa.length > BOLSA_MAX) {
       // o mais antigo sai — vira ouro (sucata), nunca lixo silencioso
       pago += precoSucata(p.bolsa.shift());
+      sucateados++;
     }
-    if (pago) p.ouro = (p.ouro || 0) + pago;
+    if (pago) {
+      p.ouro = (p.ouro || 0) + pago;
+      conta(p, 'sucateados', sucateados);
+      conta(p, 'ouroGanho', pago);
+    }
     return true;
   }
 

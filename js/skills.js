@@ -122,8 +122,54 @@ var Skills = (function () {
     return null;
   }
 
+  // ---- tooltip da skill (Leva 3): identidade + o que ela faz, com os
+  // números dos próprios campos (sem texto solto em asserção de valor)
+  var TIPO_TXT = {
+    area: 'área', nuke: 'impacto', cura: 'cura', veneno: 'veneno',
+    mobilidade: 'mobilidade', medo: 'medo'
+  };
+
+  function efeitoLinha(sk) {
+    if (sk.tipo === 'area') {
+      return 'a cada ' + sk.aCada + ' golpes: varredura ×' + sk.mult +
+        ' dano em tudo';
+    }
+    if (sk.tipo === 'nuke') {
+      return 'a cada ' + sk.intervalo + 's: impacto ×' + sk.mult +
+        ' dano no alvo';
+    }
+    if (sk.tipo === 'cura') {
+      return 'a cada ' + sk.intervalo + 's: cura ' +
+        Math.round(sk.pct * 100) + '% da vida máxima';
+    }
+    if (sk.tipo === 'veneno') {
+      return Math.round(sk.chance * 100) +
+        '% por golpe: veneno por ' + sk.dur + 's (dano contínuo)';
+    }
+    if (sk.tipo === 'mobilidade') {
+      return 'foge/quando o bando chega a ' + sk.gatilho +
+        'px (intervalo ' + sk.intervalo + 's)';
+    }
+    if (sk.tipo === 'medo') {
+      return 'afasta os inimigos por ' + sk.dur + 's quando chegam a ' +
+        sk.gatilho + 'px';
+    }
+    return '';
+  }
+
+  function dicas(sk) {
+    var out = [[sk.nome, sk.cor]];
+    out.push(['Nível ' + sk.nivel + ' · ' + (TIPO_TXT[sk.tipo] || sk.tipo),
+      '#9a90b8']);
+    var f = efeitoLinha(sk);
+    if (f) out.push([f, '#f2eef8']);
+    out.push(['Dispara sozinha — sem botão (100% automático)', '#6f678a']);
+    return out;
+  }
+
   return {
     LISTA: LISTA,
+    dicas: dicas,
     LIMITE: LIMITE,
     daClasse: daClasse,
     ativas: ativas,

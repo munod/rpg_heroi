@@ -125,6 +125,11 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 - **`statusDetalhado` numérico (não string)** — UI formata, teste soma:
   Σpartes × keystone === status é assert exato; string de tooltip nunca
   entra em asserção de valor.
+- **Stats de economia: incremento onde o ouro MUDA, não em ponto único**
+  — `conta()` em `itens.js` + `Batalha.stat(n)` em `mataInimigo`; as
+  chaves vivem no espelho `Personagem.STATS` (normalizaStats zera save
+  antigo de graça). Contar `ouroGanho` em TODO ganho (inclui resgate e
+  auto-sucata) e `ouroGasto` em TODO gasto (inclui keystone/respec).
 
 
 ## Bloqueios
