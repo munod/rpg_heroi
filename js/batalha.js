@@ -425,7 +425,13 @@ var Batalha = (function () {
       frame: 0, frameT: 0,
       atkCd: 0.5 + Math.random() * 0.8,
       hitFlash: 0, lunge: 0,
-      medo: null, empurra: null
+      medo: null, empurra: null,
+      // astúcia da espécie no mapa atual (IA.decideInimigo), slot do
+      // cerco (estável, dá a volta a cada 6) e esquiva com cooldown
+      // inicial escalonado — a onda inteira não desvia junto
+      astucia: IA.astucia(def.tipo, mapa),
+      slot: inimigos.length % 6,
+      esquivaCd: 1.5 + Math.random() * 2
     });
   }
 
@@ -630,6 +636,11 @@ var Batalha = (function () {
       var dx = en.x - heroi.x, dy = en.y - heroi.y;
       var d = Math.sqrt(dx * dx + dy * dy);
       if (d > st.alcance + 6) continue;
+      // monstro esquivando: o golpe passa raspando (janela de 0,16s)
+      if (en.esquiva) {
+        numero(en.x, en.y - 22, 'ESQUIVOU', '#c9c2dd', false);
+        continue;
+      }
 
       var crit = Math.random() * 100 < st.crit;
       var dmg = st.dano + Math.floor(Math.random() * 3);
@@ -678,6 +689,10 @@ var Batalha = (function () {
       function () {
         var idx = inimigos.indexOf(alvo);
         if (idx < 0) return;              // alvo morreu durante o voo
+        if (alvo.esquiva) {               // deslizou: o projétil erra
+          numero(alvo.x, alvo.y - 22, 'ESQUIVOU', '#c9c2dd', false);
+          return;
+        }
         alvo.hp -= dmg;
         stat('danoCausado', dmg);
         alvo.hitFlash = 0.12;
@@ -848,6 +863,8 @@ var Batalha = (function () {
     if (!n) return;   // o gatilho viu alguém; o bando saiu do raio (raro)
     var d = Math.sqrt(sx * sx + sy * sy) || 1;
     var ux = -sx / d, uy = -sy / d;          // direção oposta ao bando
+    // direção da fuga fica registrada 0,6s: monstros astutos antecipam
+    heroi.escapa = { x: ux, y: uy, t: 0.6 };
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
     if (sk.modo === 'blink') {
       Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 0.9);
@@ -906,6 +923,10 @@ var Batalha = (function () {
 
     if (h.atkCd > 0) h.atkCd -= dt;
     if (h.inv > 0) h.inv -= dt;
+    if (h.escapa) {
+      h.escapa.t -= dt;
+      if (h.escapa.t <= 0) h.escapa = null;
+    }
 
     // cérebro tático (IA): alvo/estado/destino decididos por tick, com
     // qualidade escalada pela INT (agudeza) — o alvo escolhido alimenta
@@ -1027,16 +1048,29 @@ var Batalha = (function () {
         continue;
       }
 
-      var alvoX, alvoY;
-      if (heroi.morto) {
-        // herói caído: se agrupam no local da morte (o centro do mundo
-        // grande não estaria nem perto de onde ele caiu)
-        alvoX = morte.x; alvoY = morte.y;
-      } else {
-        alvoX = heroi.x; alvoY = heroi.y;
+      // cérebro do monstro: cerco/antecipação/esquiva pela astúcia
+      IA.decideInimigo(en, heroi, dt);
+
+      // esquiva em curso: desliza lateral e não reage à IA na janela
+      if (en.esquiva) {
+        en.esquiva.t -= dt;
+        mover(en, en.esquiva.vx * dt, en.esquiva.vy * dt, en.raio || 6);
+        if (en.esquiva.t <= 0) en.esquiva = null;
+        continue;
+      }
+
+      // destino do movimento: slot do cerco/antecipação da IA, ou — no
+      // burro — o herói vivo na hora (herói caído: local da morte)
+      var hx = heroi.morto ? morte.x : heroi.x;
+      var hy = heroi.morto ? morte.y : heroi.y;
+      var vhx = hx - en.x, vhy = hy - en.y;
+      var distH = Math.sqrt(vhx * vhx + vhy * vhy) || 1;
+      var alvoX = hx, alvoY = hy;
+      if (!heroi.morto && en.ia && en.ia.destino) {
+        alvoX = en.ia.destino.x;
+        alvoY = en.ia.destino.y;
       }
       var vx = alvoX - en.x, vy = alvoY - en.y;
-      var dist = Math.sqrt(vx * vx + vy * vy) || 1;
 
       // medo (Amedronta): corre para longe do herói e não ataca —
       // o cronômetro anda mesmo com o herói caído, senão trava em 100%
@@ -1048,14 +1082,16 @@ var Batalha = (function () {
       }
 
       if (comMedo) {
-        mover(en, -(vx / dist) * en.vel * 0.9 * dt,
-          -(vy / dist) * en.vel * 0.9 * dt, en.raio || 6);
+        mover(en, -(vhx / distH) * en.vel * 0.9 * dt,
+          -(vhy / distH) * en.vel * 0.9 * dt, en.raio || 6);
       } else if (heroi.morto) {
-        if (dist > 20) mover(en, (vx / dist) * en.vel * 0.5 * dt,
-          (vy / dist) * en.vel * 0.5 * dt, en.raio || 6);
-      } else if (dist > 13) {
-        mover(en, (vx / dist) * en.vel * dt,
-          (vy / dist) * en.vel * dt, en.raio || 6);
+        if (distH > 20) mover(en, (vhx / distH) * en.vel * 0.5 * dt,
+          (vhy / distH) * en.vel * 0.5 * dt, en.raio || 6);
+      } else if (distH > 13) {
+        // se aproxima do alvo (slot do cerco/antecipação/herói) — A*
+        // quando a reta está bloqueada e a astúcia >= 0,4
+        moverPara(en, { x: alvoX, y: alvoY }, en.raio || 6, dt,
+          (en.astucia || 0) >= 0.4);
       } else if (en.atkCd <= 0) {
         en.atkCd = 1.4;
         en.lunge = 0.18;
@@ -1186,6 +1222,7 @@ var Batalha = (function () {
         0.26 + 0.14 * (0.5 + 0.5 * Math.sin(en.veneno.t * 8))) : null);
     var pulso = en.lunge > 0 ? 1.15 : 1;
     if (en.hitFlash > 0 && Math.floor(en.hitFlash * 40) % 2 === 0) ctx.globalAlpha = 0.45;
+    if (en.esquiva && Math.floor(en.esquiva.t * 30) % 2 === 0) ctx.globalAlpha = 0.5;
     var w = Math.round(14 * esc), h = Math.round(12 * esc * pulso);
     ctx.drawImage(c.canvas, Math.round(en.x - w / 2),
       Math.round(en.y - h - (pulso - 1) * 8), w, h);
@@ -1343,10 +1380,11 @@ var Batalha = (function () {
     for (var i = 0; i < inimigos.length; i++) {
       if (inimigos[i].tipo.boss) { boss = true; break; }
     }
-    var medo = 0, empurra = 0;
+    var medo = 0, empurra = 0, esquivando = 0;
     for (i = 0; i < inimigos.length; i++) {
       if (inimigos[i].medo) medo++;
       if (inimigos[i].empurra) empurra++;
+      if (inimigos[i].esquiva) esquivando++;
     }
     return {
       mapa: mapa,
@@ -1368,6 +1406,7 @@ var Batalha = (function () {
       ultimaSkill: ultimaSkill,
       medo: medo,
       empurra: empurra,
+      esquivando: esquivando,
       fuga: !!(heroi && heroi.fuga),
       pausada: pausada,
       morto: heroi ? heroi.morto : false,

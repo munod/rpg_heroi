@@ -1260,6 +1260,70 @@ console.log('22) IA tática: agudeza, alvo, estados, skills e A*');
   conf(!algumaVez, 'burro (INT 1) nunca recua — vai na raça');
 }
 
+console.log('23) IA dos NPCs: astúcia, cerco, antecipação e esquiva');
+{
+  const IA = sandbox.IA;
+  const Batalha = sandbox.Batalha;
+  const heroi = { x: 100, y: 100, morto: false, hp: 100, escapa: null };
+
+  // --- burro (slime do mapa 1): segue o herói vivo na hora, sem slot
+  const burro = { x: 60, y: 100, astucia: IA.astucia('slime', 1), slot: 0 };
+  IA.decideInimigo(burro, heroi, 0.0167);
+  conf(burro.ia.destino === null,
+    'slime do mapa 1 (astúcia 0) vai direto no herói (sem slot)');
+
+  // --- astuto: slot do cerco a 11px, ângulo próprio por inimigo
+  const a1 = { x: 60, y: 100, astucia: 0.5, slot: 0 };
+  const a2 = { x: 60, y: 140, astucia: 0.5, slot: 1 };
+  IA.decideInimigo(a1, heroi, 0.0167);
+  IA.decideInimigo(a2, heroi, 0.0167);
+  const d1 = a1.ia.destino, d2 = a2.ia.destino;
+  const raio = Math.sqrt((d1.x - 100) ** 2 + (d1.y - 100) ** 2);
+  conf(Math.abs(raio - 11) < 0.01,
+    'astuto mira um slot a 11px do herói (raio ' + raio.toFixed(1) + ')');
+  conf(d1.x !== d2.x || d1.y !== d2.y,
+    'cada inimigo tem seu slot (cerco em vez de fila)');
+
+  // --- antecipação da fuga: mira 40px à frente para cortar o caminho
+  heroi.escapa = { x: 1, y: 0, t: 0.5 };
+  const ant = { x: 60, y: 100, astucia: 0.5, slot: 0 };
+  IA.decideInimigo(ant, heroi, 0.0167);
+  conf(ant.ia.destino && ant.ia.estado === 'antecipar' &&
+       ant.ia.destino.x >= 140,
+    'astuto antecipa a fuga e mira à frente (x=' +
+    (ant.ia.destino ? Math.round(ant.ia.destino.x) : '?') + ')');
+  const ing = { x: 60, y: 100, astucia: 0.2, slot: 0 };
+  IA.decideInimigo(ing, heroi, 0.0167);
+  conf(ing.ia.estado !== 'antecipar',
+    'ingênuo (astúcia baixa) segue o herói como está');
+  heroi.escapa = null;
+
+  // --- esquiva: só monstro astuto (>= 0,55) desvia, com cooldown
+  const esq = { x: 130, y: 100, astucia: 0.6, slot: 2, esquivaCd: 0 };
+  let desviou = false;
+  for (let i = 0; i < 6000 && !desviou; i++) {
+    IA.decideInimigo(esq, heroi, 0.0167);
+    if (esq.esquiva) desviou = true;
+  }
+  conf(desviou, 'astúcia >= 0,55 dispara a esquiva do monstro');
+  const burro2 = { x: 130, y: 100, astucia: 0, slot: 3, esquivaCd: 0 };
+  let nunca = false;
+  for (let i = 0; i < 600; i++) IA.decideInimigo(burro2, heroi, 0.0167);
+  nunca = !burro2.esquiva && burro2.ia.estado !== 'esquivar';
+  conf(nunca, 'burro (astúcia 0) não esquiva nunca');
+
+  // --- na arena: mapa profundo => esquivas acontecendo de verdade
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  Batalha.restaurarMapa(6);              // slime com astúcia 0,6
+  Batalha.restaurarOnda(1);
+  let esquivando = false;
+  for (let i = 0; i < 9000 && !esquivando; i++) {
+    frame(1);
+    esquivando = Batalha.info().esquivando > 0;
+  }
+  conf(esquivando, 'na arena, monstro astuto esquiva dos golpes');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');

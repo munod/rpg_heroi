@@ -145,6 +145,63 @@ var IA = (function () {
     }
   }
 
+  // --------------------------------------------------------- inimigos
+  // Cérebro inimigo por frame (5 linhas × ~6 monstros = nada):
+  //  - astúcia < 0,35: destino nulo => a batalha segue o herói vivo na
+  //    hora (comportamento burro de sempre, linha reta + escorregão);
+  //  - astúcia >= 0,35: CERCO — cada um tem um slot próprio a 11px do
+  //    herói (faixa de ataque) em vez de formar fila;
+  //  - astúcia >= 0,45 + herói escapando (esquiva/teleporte): ANTICIPA —
+  //    mira 40px à frente na direção da fuga para cortar o caminho;
+  //  - astúcia >= 0,55 + herói por perto: ESQUIVA — deslize lateral com
+  //    cooldown; durante a janela o golpe do herói erra.
+  function decideInimigo(en, heroi, dt) {
+    if (!en.ia) en.ia = { estado: 'aproximar', destino: null };
+    var ia = en.ia;
+    if (en.slot === undefined) en.slot = Math.floor(Math.random() * 6);
+    var ast = en.astucia || 0;
+
+    if (en.esquiva) { ia.estado = 'esquivar'; return; }
+
+    // antecipação (a cada frame: a janela da fuga é curta)
+    if (ast >= 0.45 && heroi.escapa && heroi.escapa.t > 0 && !heroi.morto) {
+      ia.estado = 'antecipar';
+      ia.destino = { x: heroi.x + heroi.escapa.x * 40,
+                     y: heroi.y + heroi.escapa.y * 40 };
+      return;
+    }
+
+    // esquiva: só o instinto astuto, com cooldown próprio
+    if (ast >= 0.55 && !en.medo && !heroi.morto && heroi.hp > 0) {
+      en.esquivaCd = (en.esquivaCd || 0) - dt;
+      var dxh = heroi.x - en.x, dyh = heroi.y - en.y;
+      if (en.esquivaCd <= 0 && dxh * dxh + dyh * dyh <= 40 * 40 &&
+          Math.random() < 0.02) {
+        var dh = Math.sqrt(dxh * dxh + dyh * dyh) || 1;
+        var lado = Math.random() < 0.5 ? 1 : -1;
+        en.esquiva = { t: 0.16,
+          vx: (-dyh / dh) * 160 * lado, vy: (dxh / dh) * 160 * lado };
+        en.esquivaCd = 3.5 - 1.5 * ast;   // astuto desvia mais seguido
+        ia.estado = 'esquivar';
+        return;
+      }
+    }
+
+    if (heroi.morto) { ia.estado = 'aguarda'; ia.destino = null; return; }
+
+    var dx = heroi.x - en.x, dy = heroi.y - en.y;
+    var d = Math.sqrt(dx * dx + dy * dy) || 1;
+    if (ast >= 0.35) {
+      // slot do cerco: ângulo fixo por inimigo + jitter pela astúcia
+      var ang = (en.slot % 6) * 1.0472 + (ast - 0.35) * 1.4;
+      ia.destino = { x: heroi.x + Math.cos(ang) * 11,
+                     y: heroi.y + Math.sin(ang) * 11 };
+    } else {
+      ia.destino = null;                 // reto no herói vivo (na hora)
+    }
+    ia.estado = d > 13 ? 'aproximar' : 'combate';
+  }
+
   // --------------------------------------------------- skills (INT)
   // Gênio usa as skills mais cedo (raio de gatilho maior) e com menos
   // espera (cooldown efetivo menor); burro, ao contrário.
@@ -300,6 +357,7 @@ var IA = (function () {
     astucia: astucia,
     ruido: ruido,
     decideHeroi: decideHeroi,
+    decideInimigo: decideInimigo,
     skillEfeito: skillEfeito,
     linhaLivre: linhaLivre,
     caminho: caminho
