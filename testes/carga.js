@@ -86,6 +86,9 @@ function novoCtxCaptura(cv) {
 // opcoes.novoCtx  : fábrica do contexto 2d (padrão: contador)
 // opcoes.scripts  : caminhos relativos a RAIZ (padrão: ordem do index.html)
 // opcoes.larg/alt : dimensões do JOGO em coordenadas lógicas (768x432)
+//
+// JANELA=WxH (env) define o tamanho da janela falsificada — ex.:
+//   JANELA=1280x400 node testes/cena.js   # QA do layout em tela larga
 function carregar(opcoes) {
   opcoes = opcoes || {};
   const fabricaCtx = opcoes.novoCtx || novoCtxContador;
@@ -111,10 +114,12 @@ function carregar(opcoes) {
         (cv._listeners[ev] = cv._listeners[ev] || []).push(fn);
       },
       getBoundingClientRect() {
-        // exibição "2×": as dimensões de JOGO ocupam o dobro na tela, e os
-        // cliques dos testes são coordenadas de jogo ×2 — independente do
-        // tamanho do backing store (esc do devicePixelRatio)
-        return { left: 0, top: 0, width: GL * 2, height: GA * 2 };
+        // exibição "2×" das dimensões de JOGO ATUAIS (Game.W é dinâmico em
+        // telas largas), e os cliques continuam coordenadas de jogo ×2.
+        // Só é chamado depois do carregar() — Game já existe (ou é um
+        // canvas de sprite, que cai no fallback GL).
+        const larg = (sandbox.Game && sandbox.Game.W) || GL;
+        return { left: 0, top: 0, width: larg * 2, height: GA * 2 };
       }
     };
     return cv;
@@ -124,10 +129,11 @@ function carregar(opcoes) {
   jogoCanvas.width = GL;
   jogoCanvas.height = GA;
 
+  const janela = (process.env.JANELA || '1280x720').split('x');
   const ouvintesJanela = {};
   const windowStub = {
-    innerWidth: 1280,
-    innerHeight: 720,
+    innerWidth: parseInt(janela[0], 10) || 1280,
+    innerHeight: parseInt(janela[1], 10) || 720,
     addEventListener(ev, fn) {
       (ouvintesJanela[ev] = ouvintesJanela[ev] || []).push(fn);
     },

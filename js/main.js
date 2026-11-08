@@ -1,6 +1,11 @@
 // Bootstrap: canvas, cenas, personagem atual.
 var Game = (function () {
-  var W = 768, H = 432;      // espaço do jogo (coordenadas de UI e mundo)
+  // Espaço do jogo: altura fixa, largura DINÂMICA (>=768) — cresce com o
+  // aspecto da viewport para o layout preencher telas mais largas que
+  // 16:9 (celular em paisagem com barra do browser fica ~3:1 e o 16:9
+  // fixo sobrava com barra preta lateral). Em 16:9, W = 768 = o layout
+  // de referência (coordenadas e testes inalterados).
+  var W = 768, H = 432;
   var esc = 1;               // escala do backing store (nítida em retina)
   var canvas = null;
   var ctx = null;
@@ -27,6 +32,8 @@ var Game = (function () {
     scenes.jogo = Jogo;
 
     window.addEventListener('resize', resize);
+    // celular nem sempre dispara resize na rotação (só orientationchange)
+    window.addEventListener('orientationchange', resize);
 
     setScene('selecao');
     Loop.start();
@@ -45,6 +52,10 @@ var Game = (function () {
     var tel = document.getElementById('tela');
     var pw = (tel && tel.clientWidth) || window.innerWidth;
     var ph = (tel && tel.clientHeight) || window.innerHeight;
+    if (!(pw > 0) || !(ph > 0)) return;   // janela oculta: mantém o estado
+    // largura lógica segue o aspecto (mín. 768 = 16:9, teto 1728 = 4:1
+    // p/ não abrir um vale absurdo no meio em aspectos extremos)
+    W = Math.max(768, Math.min(1728, Math.round(432 * pw / ph)));
     var escala = Math.min(pw / W, ph / H);
     if (!(escala > 0)) escala = 1;
     esc = Math.max(1, Math.floor(escala * dpr));
@@ -53,6 +64,7 @@ var Game = (function () {
     var bw = W * esc, bh = H * esc;
     if (canvas.width !== bw) canvas.width = bw;
     if (canvas.height !== bh) canvas.height = bh;
+    Input.ajusta(W, H);      // ponteiro mapeia na largura vigente
   }
 
   function setScene(name, params) {
@@ -78,7 +90,7 @@ var Game = (function () {
   }
 
   return {
-    W: W,
+    get W() { return W; },    // largura vigente (dinâmica)
     H: H,
     init: init,
     update: update,

@@ -114,17 +114,18 @@ var Selecao = (function () {
   // -------------------------------------------------------------- render
   function render(ctx) {
     var p = Game.personagem;
+    var W = Game.W;           // largura dinâmica (768 em 16:9)
 
     ctx.fillStyle = '#141020';
-    ctx.fillRect(0, 0, 768, 432);
+    ctx.fillRect(0, 0, W, 432);
 
-    // ---------------- cabeçalho: título + nome digitável
+    // ---------------- cabeçalho: título + nome digitável (direita)
     ctx.fillStyle = '#191326';
-    ctx.fillRect(0, 0, 768, 30);
+    ctx.fillRect(0, 0, W, 30);
     UI.text('RPG HERÓI', 6, 16, { color: '#e8c86a', font: 'bold 16px monospace' });
     UI.text('crie ou escolha um herói', 152, 16, { color: '#9a90b8' });
     var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';
-    UI.text('Nome: ' + (p ? p.nome : '') + cursor, 756, 16, {
+    UI.text('Nome: ' + (p ? p.nome : '') + cursor, W - 12, 16, {
       align: 'right', color: '#f2eef8'
     });
 
@@ -208,17 +209,18 @@ var Selecao = (function () {
 
   function desenhaRodape(ctx, p) {
     if (!p) return;
+    var W = Game.W;           // JOGAR âncora à esquerda, trio à direita
     UI.linhaStatus(Personagem.status(p));
 
     if (UI.button(8, 372, 220, 32, 'JOGAR', {
       color: '#8ce08c', font: 'bold 16px monospace'
     })) jogar();
-    if (UI.button(240, 372, 132, 32, 'Importar')) importar();
-    if (UI.button(384, 372, 132, 32, 'Exportar')) {
+    if (UI.button(W - 528, 372, 132, 32, 'Importar')) importar();
+    if (UI.button(W - 384, 372, 132, 32, 'Exportar')) {
       Salvar.exportar(p);
       Gravacao.msg('Arquivo .json exportado!');
     }
-    if (UI.button(528, 372, 232, 32, 'Salvar')) {
+    if (UI.button(W - 240, 372, 232, 32, 'Salvar')) {
       Gravacao.salvarPersonagem(p, true);
     }
   }

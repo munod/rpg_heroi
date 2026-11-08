@@ -1,2 +1,4 @@
 # PNGs regenerados pelos testes (previa.js, cena.js)
 testes/*.png
+# screenshots/QA não versionados (regenerados)
+testes/*.jpg

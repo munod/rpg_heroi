@@ -52,11 +52,21 @@
   `node testes/ritmo.js [min]` (fica fora do `todos.js`) antes de achar
   que está bom. Alvos medidos hoje: 1º nível ~42s · 15min = nv 30-35 /
   onda 40-60 · mapa 1 fechado em 25-35min.
-- Canvas **768×432** (espaço de jogo) × escala de exibição: `main.js
-  resize()` calcula escala fracionária que preenche a janela (CSS) e
+- Canvas **768×432 de base com largura adaptativa**: altura fixa,
+  `W = clamp(432 × aspecto, 768, 1728)` recalculado em `main.js
+  resize()` (também no `orientationchange`); `Game.W` expõe a largura
+  vigente e `Input.ajusta` acompanha o mapeamento do ponteiro. Em 16:9
+  **W = 768 e tudo cai exatamente nas coordenadas de referência** (os
+  cliques dos testes seguem válidos); em tela larga o layout se
+  expande **ancorado**: cabeçalho/rodapé/status/toast em largura toda
+  (centro = `W/2`), arena à esquerda, gestão à direita — o painel
+  direito inteiro desloca com `ctx.translate(dx)` + `UI.deslocar(dx)`
+  (dx = W − 768) e `Gestao.update` desconta dx do ponteiro (retângulos
+  são locais ao painel). × escala de exibição: `resize()` também calcula
+  escala fracionária que preenche a janela (CSS) e
   `esc = floor(escala × devicePixelRatio)` para o backing store —
   `ctx.setTransform(esc,...)` por frame. **Nunca** desenhar em
-  coordenadas de tela cheia: tudo é coordenada de jogo (768×432).
+  coordenadas de tela cheia: tudo é coordenada de jogo (W × 432).
 - Mundo × janela: `VW/VH` (192×134, janela do painel — o layout NÃO muda)
   × `MW/MH` (384×268, mundo). A janela é desenhada com `k = vw/VW`
   (=2 na tela nova): `translate(vx,vy) → scale(k) → translate(-cam)`.
@@ -120,6 +130,13 @@
   clientY}]` — em `touchend`, `e.touches` são os toques que **restam**.
 - `main.js resize()` precisa rodar **antes** de `getContext()` no init:
   o rasterizador de `cena.js` aloca o buffer na primeira chamada.
+- Janela falsificada do harness = env `JANELA=WxH` (padrão 1280x720 =
+  16:9). A **fumaça fixa 1280×720** antes do load (valida o layout de
+  referência) e a **seção 19** simula a tela do celular (1280×400,
+  ~3.2:1) para testar o layout ancorado — ou seja, `JANELA` só muda o
+  `cena.js`. Para QA visual em tela larga:
+  `JANELA=1280x400 node testes/cena.js`. O `getBoundingClientRect` do
+  harness devolve `Game.W × 2` (dinâmico).
 
 ## Persistência
 

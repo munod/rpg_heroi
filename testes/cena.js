@@ -271,6 +271,9 @@ function salvar(nome) {
 // ------------------------------------------------------------- roteiro
 (ouvintesJanela.load || []).forEach(fn => fn({}));
 frame(12);
+// deslocamento do painel direito (0 em 16:9; JANELA larga => dx > 0)
+const dxL = sandbox.Game.W - 768;
+
 // a tela inicial é a seleção/criação (a jogatina é outra tela)
 salvar('tela-selecao.png');
 
@@ -289,13 +292,13 @@ for (let i = 0; i < 150; i++) frame(1);
 salvar('tela-jogo-luta.png');
 console.log('luta: ' + JSON.stringify(sandbox.Batalha.info()));
 
-// gestao: aba aparência
-clique(540, 50);
+// gestao: aba aparência (âncora direita em tela larga)
+clique(540 + dxL, 50);
 frame(4);
 salvar('tela-aparencia.png');
 
-// gestão: aba classe
-clique(628, 50);
+// gestão: aba classe (âncora direita em tela larga)
+clique(628 + dxL, 50);
 frame(4);
 salvar('tela-classe.png');
 

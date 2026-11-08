@@ -22,6 +22,11 @@ function conf(cond, msg) {
 }
 
 // ---------------------------------------------------------------- testes
+// a fumaça valida o layout de referência (16:9): fixa a janela antes do
+// load, independente do env JANELA (a seção 19 simula tela larga e volta)
+sandbox.window.innerWidth = 1280;
+sandbox.window.innerHeight = 720;
+
 const Game = sandbox.Game;
 const Personagem = sandbox.Personagem;
 const Salvar = sandbox.Salvar;
@@ -933,6 +938,59 @@ console.log('18) toque, resolução e escala responsiva');
   conf(Input.mouse.down, 'touchstart liga de novo');
   dispara('touchcancel', []);
   conf(!Input.mouse.down, 'touchcancel solta o ponteiro');
+}
+
+console.log('19) viewport larga: layout ancorado e preenchido (celular)');
+{
+  // celular em paisagem COM as barras do navegador: viewport ~3.2:1
+  sandbox.window.innerWidth = 1280;
+  sandbox.window.innerHeight = 400;
+  (ouvintesJanela.resize || []).forEach(fn => fn({}));
+
+  conf(Game.W === 1382,
+    'largura lógica seguiu o aspecto (432×3.2 -> 1382, dentro do teto 1728)');
+  conf(jogoCanvas.style.width === '1280px' &&
+       jogoCanvas.style.height === '400px',
+    'CSS preenche a viewport inteira (1280×400, sem barra lateral)');
+  conf(jogoCanvas.width === 1382 && jogoCanvas.height === 432,
+    'backing store 1382×432 (esc=1)');
+
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+  const dx = Game.W - 768;   // 614
+
+  // botão do rodapé ancorado à direita: Pausar vive em (W-180, 372, 112,32)
+  const pausada0 = Batalha.info().pausada;
+  clique(Game.W - 180 + 56, 388);
+  frame(2);
+  conf(Batalha.info().pausada === !pausada0,
+    'Pausar ancorado à direita responde (x=' + (Game.W - 180 + 56) + ')');
+  clique(Game.W - 180 + 56, 388);   // restaura o estado
+  frame(2);
+
+  // botão + do painel de gestão: retângulos locais + ponteiro deslocado
+  p.pontos = 5;
+  const for0 = p.atributos.for;
+  clique(716 + 12 + dx, 96);        // centro do + (local 728 + dx)
+  frame(2);
+  conf(p.atributos.for === for0 + 1 && p.pontos === 4,
+    'botão + do painel deslocado aplica (dx=' + dx + ', for ' +
+    for0 + '->' + p.atributos.for + ')');
+
+  // aba desenhada sob translate: UI.deslocar compensa no hit-test
+  jogoCanvas._textos = [];
+  clique(410 + 3 * 88 + 42 + dx, 54);   // aba Itens (local 674..758)
+  frame(2);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('Bolsa') >= 0),
+    'aba Itens clicável com o painel ancorado à direita');
+
+  // volta ao normal e confere que tudo reancora
+  sandbox.window.innerWidth = 1280;
+  sandbox.window.innerHeight = 720;
+  (ouvintesJanela.resize || []).forEach(fn => fn({}));
+  conf(Game.W === 768 && jogoCanvas.width === 768 &&
+       jogoCanvas.style.width === '1280px',
+    'restaurou 768×432 em 16:9');
 }
 
 console.log('');

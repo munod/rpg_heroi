@@ -1,8 +1,13 @@
 // UI imediata desenhada direto no canvas (botões, painéis, barras, texto).
 var UI = (function () {
   var ctx = null;
+  // deslocamento horizontal do grupo em desenho (painel de gestão âncora
+  // à direita em tela larga): o hit-test do button desconta a origem
+  var deslocX = 0;
 
   function setContext(c) { ctx = c; }
+
+  function deslocar(x) { deslocX = x || 0; }
 
   function text(str, x, y, o) {
     o = o || {};
@@ -33,8 +38,9 @@ var UI = (function () {
   function button(x, y, w, h, label, o) {
     o = o || {};
     var m = Input.mouse;
+    var mx = m.x - deslocX;   // botão desenhado deslocado: testa na origem
     var hover = !o.disabled &&
-      m.x >= x && m.x < x + w && m.y >= y && m.y < y + h;
+      mx >= x && mx < x + w && m.y >= y && m.y < y + h;
 
     var ativo = !!o.ativo;
     // pressionado = dedo/mouse em cima: feedback visual no toque (antes
@@ -89,19 +95,21 @@ var UI = (function () {
 
   // Linha de status derivado dos rodapés das duas telas (HP/dano/vel/...).
   function linhaStatus(s) {
+    var W = Game.W;           // largura dinâmica (main.js resize)
     // divisor entre painéis e rodapé (cromo, só fillRect)
     ctx.fillStyle = 'rgba(90, 79, 120, 0.45)';
-    ctx.fillRect(8, 344, 752, 1);
+    ctx.fillRect(8, 344, W - 16, 1);
     text(
       'HP ' + s.hpMax + '  ·  Dano ' + s.dano + '  ·  Vel ' + s.vel +
       '  ·  Crítico ' + s.crit + '%  ·  Alcance ' + s.alcance +
       '  ·  ' + s.arma,
-      384, 356, { align: 'center', color: '#c9c2dd' }
+      W / 2, 356, { align: 'center', color: '#c9c2dd' }
     );
   }
 
   return {
     setContext: setContext,
+    deslocar: deslocar,
     text: text,
     panel: panel,
     button: button,

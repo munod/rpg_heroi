@@ -72,6 +72,13 @@ var Input = (function () {
     atualizaPonteiro(e.clientX, e.clientY);
   }
 
+  // A largura do jogo muda com o aspecto da tela (main.js resize); o
+  // ponteiro é mapeado contra larg/alt, então precisa acompanhar.
+  function ajusta(jLarg, jAlt) {
+    larg = jLarg;
+    alt = jAlt;
+  }
+
   // ------------------------------------------------------------ toque
   // Touch -> mesmo ponteiro do mouse: touchstart = mousedown (down +
   // clicked), touchmove arrasta, touchend/touchcancel solta. O
@@ -114,6 +121,7 @@ var Input = (function () {
 
   return {
     init: init,
+    ajusta: ajusta,
     isDown: function (code) { return !!down[code]; },
     pressed: function (code) { return !!pressed[code]; },
     typed: typed,

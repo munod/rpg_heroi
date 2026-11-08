@@ -79,7 +79,11 @@ var Gestao = (function () {
   // por clique, só.
   function update(dt, p) {
     if (!p || aba !== 'atributos') { repT = 0; repI = 0; return; }
-    var m = Input.mouse;
+    // em tela larga o painel ancora à direita: os retângulos são locais
+    // e o ponteiro é deslocado para o espaço do painel (dx = W - 768)
+    var dx = Game.W - 768;
+    var m = { x: Input.mouse.x - dx, y: Input.mouse.y,
+              clicked: Input.mouse.clicked, down: Input.mouse.down };
     var linhas = linhasAtributos();
     var alvo = null, dir = 0;
     for (var i = 0; i < linhas.length; i++) {
@@ -296,12 +300,21 @@ var Gestao = (function () {
   // Desenha o painel direito completo (painel + abas + conteúdo).
   // o.criacao ajusta as dicas de texto para a tela de seleção.
   function desenhar(ctx, p, o) {
+    // âncora direita em tela larga: o grupo inteiro desloca por dx
+    // (desenho via translate; hit-test via UI.deslocar e o m - dx do
+    // update). Em 16:9, dx = 0 e nada muda.
+    var dx = Game.W - 768;
+    ctx.save();
+    ctx.translate(dx, 0);
+    UI.deslocar(dx);
     UI.panel(408, 36, 352, 300);
     desenhaAbas();
     if (aba === 'atributos') desenhaAtributos(ctx, p);
     else if (aba === 'aparencia') desenhaAparencia(ctx, p, o);
     else if (aba === 'itens') desenhaItens(ctx, p);
     else desenhaClasse(ctx, p);
+    UI.deslocar(0);
+    ctx.restore();
   }
 
   return {

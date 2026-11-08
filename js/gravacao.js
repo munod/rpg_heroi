@@ -63,14 +63,15 @@ var Gravacao = (function () {
     var txt = toast ? toast.txt : dica;
     if (!txt) return;
     // mini-painel atrás do aviso: 16px monospace ≈ 9.6px por caractere
-    var larg = Math.min(760, Math.ceil(txt.length * 9.6) + 28);
-    var x = 384 - larg / 2;
+    var cx = Math.round(Game.W / 2);   // centrado na largura dinâmica
+    var larg = Math.min(Game.W - 8, Math.ceil(txt.length * 9.6) + 28);
+    var x = Math.round(cx - larg / 2);
     ctx.fillStyle = 'rgba(16, 12, 24, 0.94)';
     ctx.fillRect(x, 405, larg, 26);
     ctx.strokeStyle = toast ? '#4c8a5a' : '#5a4f78';
     ctx.lineWidth = 1;
     ctx.strokeRect(x + 0.5, 405.5, larg - 1, 25);
-    UI.text(txt, 384, 418, {
+    UI.text(txt, cx, 418, {
       align: 'center', color: toast ? '#8ce08c' : '#9a90b8'
     });
   }

@@ -137,18 +137,20 @@ var Jogo = (function () {
 
   function desenhaFundo(ctx) {
     var p = Game.personagem;
+    var W = Game.W;           // largura dinâmica (768 em 16:9)
 
     ctx.fillStyle = '#141020';
-    ctx.fillRect(0, 0, 768, 432);
+    ctx.fillRect(0, 0, W, 432);
 
-    // ---------------- cabeçalho: nível, XP e pontos
+    // ---------------- cabeçalho: nível, XP (centrado) e pontos (direita)
     ctx.fillStyle = '#191326';
-    ctx.fillRect(0, 0, 768, 30);
+    ctx.fillRect(0, 0, W, 30);
     UI.text('HERÓI IDLE', 6, 16, { color: '#e8c86a', font: 'bold 16px monospace' });
     UI.text('Nv ' + p.nivel, 152, 16, { color: '#f2eef8' });
-    UI.bar(216, 10, 168, 14, p.xp / p.xpProx, '#e8c86a');
-    UI.text(p.xp + '/' + p.xpProx, 396, 16, { color: '#c9c2dd' });
-    UI.text('Pontos: ' + p.pontos, 756, 16, {
+    var cx = Math.round(W / 2);
+    UI.bar(cx - 168, 10, 168, 14, p.xp / p.xpProx, '#e8c86a');
+    UI.text(p.xp + '/' + p.xpProx, cx + 12, 16, { color: '#c9c2dd' });
+    UI.text('Pontos: ' + p.pontos, W - 12, 16, {
       align: 'right',
       color: p.pontos > 0 ? '#8ce08c' : '#9a90b8'
     });
@@ -166,6 +168,7 @@ var Jogo = (function () {
   }
 
   function desenhaRodape(ctx, p) {
+    var W = Game.W;           // âncoras: esquerda fixa, direita em W-k
     UI.linhaStatus(Personagem.status(p));
 
     if (UI.button(8, 372, 128, 32, 'Salvar')) {
@@ -176,12 +179,12 @@ var Jogo = (function () {
       salvarTudo();
       Game.setScene('selecao');
     }
-    if (UI.button(340, 372, 112, 32, 'Exportar')) {
+    if (UI.button(W - 428, 372, 112, 32, 'Exportar')) {
       Salvar.exportar(p);
       Gravacao.msg('Arquivo .json exportado!');
     }
-    if (UI.button(464, 372, 112, 32, 'Importar')) importar();
-    if (UI.button(588, 372, 112, 32,
+    if (UI.button(W - 304, 372, 112, 32, 'Importar')) importar();
+    if (UI.button(W - 180, 372, 112, 32,
       Batalha.info().pausada ? 'Continuar' : 'Pausar')) {
       var pausou = Batalha.alternarPausa();
       Gravacao.msg(pausou ? 'Batalha pausada.' : 'Batalha retomada!');
