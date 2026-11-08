@@ -36,7 +36,7 @@ gastar();
 
 const marcos = [...new Set([1, 5, 15, 30, 45, 60, 90, 120, minutos])]
   .filter(m => m <= minutos).sort((a, b) => a - b);
-let onda100 = null, mapa2 = null;
+let onda100 = null, mapa2 = null, onda10m2 = null;
 
 for (const m of marcos) {
   const alvo = Math.round(m * 60 * 1000 / FPS_MS);
@@ -48,6 +48,10 @@ for (const m of marcos) {
     }
     if (mapa2 === null && f.mapa >= 2) {
       mapa2 = total * FPS_MS / 1000;   // chefe do mapa 1 derrubado
+    }
+    if (mapa2 !== null && onda10m2 === null &&
+        f.mapa >= 2 && f.onda >= 10) {
+      onda10m2 = total * FPS_MS / 1000 - mapa2;   // ritmo do 2º mapa
     }
   }
   gastar();
@@ -62,3 +66,8 @@ console.log(onda100 !== null
 console.log(mapa2 !== null
   ? 'mapa 1 fechado em ' + (mapa2 / 60).toFixed(1) + 'min'
   : 'mapa 1 não fechado em ' + minutos + 'min');
+if (onda10m2 !== null) {
+  console.log('mapa 2: onda 10 em +' + onda10m2.toFixed(0) + 's após o troco');
+} else if (mapa2 !== null) {
+  console.log('mapa 2 não chegou na onda 10 em ' + minutos + 'min');
+}

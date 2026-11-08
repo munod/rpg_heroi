@@ -43,6 +43,15 @@ var Batalha = (function () {
 
   var FIM_MAPA = 100;        // ondas por mapa; a100 é o chefe
 
+  // Onda como se o jogo fosse um só: total de ondas vencidas desde o
+  // mapa 1 (0 na primeira onda). É a base da escala CONTÍNUA de
+  // dificuldade/XP — sem ela a onda 1 de cada mapa novo recomeçava do
+  // zero e as primeiras ondas dos mapas seguintes eram papel picado
+  // (o herói chegava lá com dano de fim de mapa anterior).
+  function ondaTotal() {
+    return (mapa - 1) * FIM_MAPA + (onda - 1);
+  }
+
   // Escala por onda — alavanca do ritmo das ondas (boss incluído).
   // Medir com testes/ritmo.js antes de mexer.
   var ESC_HP = 1.85;       // vida do inimigo por onda
@@ -306,9 +315,12 @@ var Batalha = (function () {
       spawn(tem.inimigos.raro);
       aviso('BOSS! ' + tem.boss.nome, '#ff6b6b');
     } else {
-      var n = Math.min(3 + Math.floor((onda - 1) / 2), 5);
+      // nº de inimigos e raro também seguem o total: o mapa 2 já nasce
+      // cheio (5 por onda) em vez de recomeçar com 3
+      var tot = ondaTotal();
+      var n = Math.min(3 + Math.floor(tot / 2), 5);
       for (var k = 0; k < n; k++) {
-        spawn((onda >= 3 && k % 3 === 2) ? tem.inimigos.raro : tem.inimigos.comum);
+        spawn((tot >= 2 && k % 3 === 2) ? tem.inimigos.raro : tem.inimigos.comum);
       }
       aviso('ONDA ' + onda, '#e8c86a');
     }
@@ -338,11 +350,15 @@ var Batalha = (function () {
       y = heroi.y < MH / 2 ? MH - 14 : 14;
     }
 
-    // dificuldade escala por onda e por mapa (Mapas.forca) — a escala do
-    // herói (+4 HP/nível +5 pontos/nível) é mais suave, senão vira loop
-    var forca = Mapas.forca(mapa);
-    var escHp = forca * (1 + (onda - 1) * ESC_HP);
-    var escDmg = forca * (1 + (onda - 1) * ESC_DMG);
+    // dificuldade em escala CONTÍNUA entre mapas: ondaTotal soma as
+    // ondas dos mapas anteriores, então a onda 1 do mapa 2 nasce no
+    // mesmo patamar da onda 100 do mapa 1 (antes recomeçava em ~2× o
+    // base — as primeiras ondas dos mapas seguintes eram fáceis demais).
+    // A escala do herói (+4 HP/nível +5 pontos/nível) é mais suave,
+    // senão vira loop. Mapas.forca ficou só nos drops (itens.js).
+    var tot = ondaTotal();
+    var escHp = 1 + tot * ESC_HP;
+    var escDmg = 1 + tot * ESC_DMG;
     // chefe: hp x4 e dano x1.5 sobre a escala da própria onda — desafiador,
     // mas derrotável (ele não regenera e o herói revive com vida cheia)
     var hp = Math.round(t.hp * escHp * (t.boss ? 4 : 1));
@@ -354,7 +370,7 @@ var Batalha = (function () {
       hp: hp, hpMax: hp,
       dmg: Math.max(2, Math.round(t.dmg * escDmg * (t.boss ? 1.5 : 1))),
       // o chefe é pesado: não ganha a corrida de velocidade da onda
-      vel: t.boss ? t.vel : t.vel + Math.min(12, onda),
+      vel: t.boss ? t.vel : t.vel + Math.min(12, tot),
       raio: raio,
       frame: 0, frameT: 0,
       atkCd: 0.5 + Math.random() * 0.8,
@@ -448,9 +464,11 @@ var Batalha = (function () {
   function mataInimigo(i, en) {
     faísca(en.x, en.y - 6, en.cor, 10);
     inimigos.splice(i, 1);
-    // XP escala com o mapa: a onda volta a 1 a cada mapa, sem o multiplicador
-    // a recompensa despenca e o nível trava
-    var ganho = Math.round((4 + onda * 2 + en.tipo.xpExtra) * Mapas.forca(mapa));
+    // XP na mesma escala contínua das ondas: a recompensa não despenca
+    // no primeiro kill de cada mapa novo (o nível travava no troco de
+    // mapa). (+ondaTotal+1 reproduz exatamente o 4+onda×2 de sempre no
+    // mapa 1.)
+    var ganho = Math.round(4 + (ondaTotal() + 1) * 2 + en.tipo.xpExtra);
     if (en.tipo.boss) {
       // recompensa de chefe: XP de várias ondas de uma vez
       ganho = Math.round(ganho * 5);

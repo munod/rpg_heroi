@@ -76,8 +76,10 @@ var Mapas = (function () {
     return LISTA[Math.min(m, LISTA.length) - 1];
   }
 
-  // Dificuldade (vida/dano) e recompensa (XP) do mapa n. Medir com
-  // testes/ritmo.js antes de mexer — mapa 1 = 1 (a Config A vale sem troco).
+  // Multiplicador do mapa n — hoje só nos DROPs de item (itens.js). A
+  // dificuldade/XP de combate vem da escala contínua de ondas (ondaTotal
+  // em batalha.js). Medir com testes/ritmo.js antes de mexer em qualquer
+  // das duas alavancas — mapa 1 = 1 (a Config A vale sem troco).
   function forca(n) {
     var m = (typeof n === 'number' && n >= 1 && isFinite(n)) ? Math.floor(n) : 1;
     return 1 + (m - 1) * 1.0;

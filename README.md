@@ -25,7 +25,11 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   onda, junto de 2 minions. Ele não regenera vida — com o herói revivendo
   sozinho, a vitória é garantida (só exige mais tempo); derrotá-lo dá **XP
   de várias ondas de uma vez** e o jogo avisa **"BOSS! \<nome\>"** — e então
-  o herói **avança para o próximo mapa** (onda 1 de novo, monstros novos).
+  o herói **avança para o próximo mapa** (onda 1 de novo, monstros novos)
+  e a **dificuldade continua de onde parou** — a onda 1 de cada mapa nasce
+  no mesmo patamar da onda 100 anterior (escala contínua de ondas), sem o
+  "reset" que deixava as primeiras ondas dos mapas seguintes fáceis demais
+  (a recompensa de XP segue a mesma curva).
   São **3 mapas** (Planície Verdejante, Cripta Congelada e Ninho Rubro);
   depois do último entra o **modo infinito** (o tema repete com a dificuldade
   crescente). Saves de antes dos mapas migram sozinhos (onda 250 → mapa 3,
