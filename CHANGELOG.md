@@ -10,6 +10,25 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Added
+
+- **Sistema punitivo — Leva 1 de 4 (ritmo punitivo)**: pontos por nível
+  **5 → 3**; morte cobra **−10% do ouro** (piso de 1) e **volta de 5
+  ondas** (piso: onda 1 do mapa atual — nunca sai do mapa), com a onda
+  reduzida renascendo fresca no renascimento **sem contar em
+  `stats.ondas`** (`spawnaOnda` extraída de `proximaOnda`) — o Véu da
+  Fênix escapa da penalidade; **re-equilíbrio medido** para a morte voltar
+  a ser evento (ESC_HP 1,85→**1,30**, ESC_DMG 0,18→**0,10** + sustento
+  **4%/s sem apanhar** sobre a regen constante): sem isso os dados
+  mostravam esteira (67 mortes/50min, mapa 1 >100min) — com o combo,
+  ~35 mortes/50min e mapa 1 ~45min; **`ritmo.js` agora gasta ouro**
+  (keystone nv30 + aprimoramento do slot mais barato — baseline = jogador
+  que gerencia) e mostra mortes/ouro por marco — spec
+  `.specs/features/ritmo-punitivo/` (R-PUN-1..5). Alvos novos medidos (6
+  runs): 1º nível ~35-45s · 15min nv 40-48/onda 40-55 · mapa 1 em
+  40-55min (média ~45) · mortes ~30-40 aos 50min. Testes: seção 27 (17
+  confs) + fixtures com `restaurarOnda` de pressão.
+
 ## [0.2.0] — 2026-11-08
 
 Gestão estratégica completa: itens com afixos, economia com ouro,

@@ -163,7 +163,7 @@ var Gestao = (function () {
     linhas.forEach(function (linha, i) {
       UI.text(linha, 416, 268 + i * 24, { color: '#9a90b8' });
     });
-    UI.text('Cada nível: +5 pontos', 416, 268 + linhas.length * 24 + 12,
+    UI.text('Cada nível: +3 pontos', 416, 268 + linhas.length * 24 + 12,
       { color: '#6f678a' });
   }
 

@@ -41,8 +41,13 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   herói nascer/reviver.
 - Ao morrer ele **revive sozinho** em 3s — em **local aleatório do mapa**
   (longe de obstáculos e inimigos) — e a luta continua; os inimigos se
-  agrupam onde ele caiu e a câmera acompanha o renascimento.
-- Ele **regenera vida** constantemente.
+  agrupam onde ele caiu e a câmera acompanha o renascimento. **A morte
+  cobra preço**: **−10% do ouro** e **volta de 5 ondas** (piso: onda 1 do
+  mapa) — a onda perdida renasce ao reviver (o lendário Véu da Fênix
+  escapa da penalidade).
+- Ele **regenera vida**: **2 por segundo** sempre e **4% do máximo por
+  segundo** enquanto não apanha — segurar a fronteira é questão de
+  build e gestão.
 - **Skills automáticas** — cada classe tem **5 skills** que desbloqueiam
   nos níveis **5, 15, 25, 35 e 45** e disparam sozinhas, sem botão:
   varredura do guerreiro (a cada N golpes), bola de fogo/nova arcana do
@@ -81,9 +86,9 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   por abate** e a Inteligência **refina a IA do herói** em combate). Clique em `+`/`−` para mudar 1 ponto ou **segure** o botão
   para repetir; o seletor `×1`/`×5` muda quantos pontos cada ação gasta.
 - **Progressão** — cada inimigo derrubado dá **XP**; ao subir de **nível**
-  você ganha **+5 pontos** para distribuir e **+4 de vida** (o XP e o nível
+  você ganha **+3 pontos** para distribuir e **+4 de vida** (o XP e o nível
   ficam no cabeçalho). Heróis novos nascem com **0 pontos** (atributos base
-  em 8) — os primeiros +5 vêm já no primeiro nível.
+  em 8) — os primeiros +3 vêm já no primeiro nível.
 - **Classe** — Guerreiro, Mago, Ladino ou Clérigo, com bônus e arma próprios;
   trocar no meio da luta altera o herói na hora. O guerreiro briga no
   **corpo a corpo**; mago, ladino e clérigo atacam **à distância** com
@@ -203,8 +208,9 @@ que permite rodar o jogo inteiro dentro do Node.
 
 O teste de fumaça cobre desde a geração dos 180 frames de sprite até o loop
 completo do idle: abrir na **tela de seleção**, entrar na jogatina pelo
-**JOGAR**, limpar a onda 1 sozinho, subir de nível com +5 pontos, trocar de
-classe/aparência, pausar, cair e reviver, **trocar de tela** (a batalha fica
+**JOGAR**, limpar a onda 1 sozinho, subir de nível com +3 pontos, trocar de
+classe/aparência, pausar, cair e reviver (com a penalidade de ondas/ouro),
+subir de nível com +3 pontos, **trocar de tela** (a batalha fica
 parada fora da arena), autosave, exportação sem manglear acento, progresso
 offline, a **velocidade acelerando o ataque**, a **barra de HP dos inimigos**
 sem contorno que a tapava, o **chefe do fim de mapa** (nasce na onda 100, o

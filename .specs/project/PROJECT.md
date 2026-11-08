@@ -12,8 +12,10 @@ sem cadastro, sem servidor.
 - Versão **0.1.0** — jogo completo publicado em
   https://munod.github.io/rpg_heroi/
 - Suíte: **193 asserções** (`node testes/todos.js`), fumaça estável 3×.
-- Ritmo calibrado: 1º nível ≈42s · 15min ≈nv30-35/onda40-60 · mapa 1 em
-  25-35min (medir sempre com `node testes/ritmo.js [min]`).
+- Ritmo calibrado (sistema punitivo): 1º nível ≈35-45s · 15min ≈nv40-48/
+  onda40-55 · mapa 1 em 40-55min (média ~45; runs variam ±7min) · mortes
+  ~30-40 aos 50min (medir sempre com `node testes/ritmo.js [min]` — o
+  ritmo gasta ouro: keystone + aprimoramentos).
 
 ## Objetivos
 

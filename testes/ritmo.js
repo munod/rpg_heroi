@@ -14,12 +14,38 @@ const h = carregar();
 h.frame(5);
 const Game = h.sandbox.Game;
 const Batalha = h.sandbox.Batalha;
+const Personagem = h.sandbox.Personagem;
+const Itens = h.sandbox.Itens;
 Game.setScene('jogo');
 const p = Game.personagem;
 
 let total = 0;
 function gastar() {
   while (p.pontos > 0) { p.atributos.for++; p.pontos--; }
+  // gestão de ouro (Leva 1): o baseline medido é o do jogador que GASTA —
+  // sem gestão, a penalidade de morte (−5 ondas) cria uma esteira na
+  // fronteira (morre/re-limpa sem progredir). Mesma cadência dos pontos.
+  // 1) keystone no nv 30 (tradeoff da classe, 200 de ouro)
+  if (p.nivel >= Personagem.KEY_NIVEL && !p.keystoneLib &&
+      (p.ouro || 0) >= Personagem.KEY_CUSTO) {
+    Personagem.comprarKeystone(p);
+  }
+  // 2) aprimoramento: sempre o slot de MENOR custo (custo sobe com o
+  //    nível do item → os dois alternam sozinhos até o teto 8)
+  let guarda = 0;
+  while (guarda++ < 100) {
+    let alvo = null, melhor = -1;
+    for (const slot of ['arma', 'armadura']) {
+      const it = p.equip[slot];
+      if (!it) continue;
+      const c = Itens.custoAprim(it);
+      if (c > 0 && (p.ouro || 0) >= c && (melhor < 0 || c < melhor)) {
+        alvo = it;
+        melhor = c;
+      }
+    }
+    if (!alvo || !Itens.aprimorar(p, alvo)) break;
+  }
 }
 function run(n) {
   for (let i = 0; i < n; i++) {
@@ -58,6 +84,8 @@ for (const m of marcos) {
   const inf = Batalha.info();
   console.log(m + 'min: mapa ' + inf.mapa + ', onda ' + inf.onda +
     ', nv ' + p.nivel + ', xp ' + p.xp + '/' + p.xpProx +
+    ' | mortes ' + (p.stats.mortes || 0) +
+    ' | ouro ' + Math.round(p.ouro || 0) +
     (inf.morto ? ' (caído)' : ''));
 }
 console.log(onda100 !== null

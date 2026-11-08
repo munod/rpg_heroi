@@ -46,12 +46,26 @@
 - O estado da batalha (onda/ts) é gravado pelo **dono** da batalha em
   memória (`Batalha.dono()`), nunca pelo personagem em foco — na seleção
   os dois podem ser heróis diferentes e gravar pelo focado corrompia o save.
+- Sistema punitivo (specs `ritmo-punitivo`/`eventos-aleatorios`): morte →
+  `penalizaMorte(mult)` — **−10%×mult do ouro** (piso de 1) e **−5×mult
+  ondas** (piso: onda 1 do mapa); a onda reduzida só nasce no
+  renascimento (`rollbackPend` → limpa inimigos + `spawnaOnda()`,
+  extração de `proximaOnda`) e **NÃO conta `stats.ondas`**. Regen: 2hp/s
+  constante + **4%/s sem apanhar** (inv=0). Pontos **+3/nível**. O Véu da
+  Fênix (fenix) escapa da penalidade. Leva 2: eventos em `js/eventos.js`
+  (Açougueiro chamará `penalizaMorte(2)`). Escalas reequilibradas na
+  Leva 1 (medido): **ESC_HP 1,30 · ESC_DMG 0,10**.
 - Curva de progressão com fonte única em `Personagem.custoProximo`
   (`CUSTO_INICIAL` + `CUSTO_BASE × nível`); ritmo das ondas em constantes
   de `Batalha` (`ESC_HP`, `ESPERA_ONDA`). Mudou algum? Meça com
   `node testes/ritmo.js [min]` (fica fora do `todos.js`) antes de achar
-  que está bom. Alvos medidos hoje: 1º nível ~42s · 15min = nv 30-35 /
-  onda 40-60 · mapa 1 fechado em 25-35min.
+  que está bom. **O `ritmo.js` gasta ouro** (keystone no nv 30 +
+  aprimoramento do slot mais barato a cada 10s — o baseline é o do
+  jogador que GERENCIA; sem gestão a penalidade de morte cria esteira na
+  fronteira: morre −5 / re-limpa +1). Alvos medidos hoje (sistema
+  punitivo): 1º nível ~35-45s · 15min = nv 40-48 / onda 40-55 · mapa 1
+  fechado em 40-55min (média ~45; variância de RNG ±7min entre runs —
+  decidir pela média de ≥4 runs) · mortes ~30-40 aos 50min.
 - Canvas **768×432 de base com largura adaptativa**: altura fixa,
   `W = clamp(432 × aspecto, 768, 1728)` recalculado em `main.js
   resize()` (também no `orientationchange`); `Game.W` expõe a largura

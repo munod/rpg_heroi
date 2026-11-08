@@ -261,7 +261,7 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     'batalha automática limpou a onda 1 (onda=' + info.onda +
     ', xp=' + info.xp + ', hp=' + info.hp + ')');
 
-  // --- progressão: próximo abate dá nível e +5 pontos
+  // --- progressão: próximo abate dá nível e +3 pontos
   const p1 = Game.personagem;
   p1.xp = p1.xpProx - 1;
   const nivel0 = p1.nivel, pts1 = p1.pontos;
@@ -270,8 +270,8 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     frame(1);
     if (p1.nivel > nivel0) subiu = true;
   }
-  conf(p1.nivel === nivel0 + 1 && p1.pontos === pts1 + 5,
-    'abate dá nível e +5 pontos (nv ' + nivel0 + '->' + p1.nivel +
+  conf(p1.nivel === nivel0 + 1 && p1.pontos === pts1 + 3,
+    'abate dá nível e +3 pontos (nv ' + nivel0 + '->' + p1.nivel +
     ', pts ' + pts1 + '->' + p1.pontos + ')');
 
   // --- abas de gestão
@@ -440,6 +440,11 @@ console.log('9) progresso offline (ausência creditada ao reabrir)');
 {
   const pOff = Game.personagem;
   const xp0 = pOff.xp, nv0 = pOff.nivel;
+  // herói capaz p/ 10min offline sem morte: a penalidade (Leva 1) regride
+  // a onda, e este teste mede PROGRESSO offline, não punição
+  pOff.atributos.for = 50;
+  pOff.atributos.con = 50;
+  pOff.atributos.int = 8;
   // finga que o herói ficou 10 minutos fora na onda 4
   Salvar.salvarEstado(pOff.id, 4, Date.now() - 10 * 60 * 1000, false);
   jogoCanvas._textos = [];
@@ -504,6 +509,11 @@ console.log('12) chefe do fim de mapa e avanço de mapa');
        sandbox.Mapas.forca(99) > sandbox.Mapas.forca(1),
     'mapa além da lista reutiliza o tema e segue escalando (modo infinito)');
 
+  // estado explícito: sem herói vivo/rodando o tOnda não corre e a
+  // onda 100 nunca nasce (seções anteriores deixam estado variável)
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  let espV12 = 0;
+  while (Batalha.info().morto && espV12 < 900) { frame(1); espV12++; }
   Batalha.restaurarOnda(100);            // onda 99 + tOnda=0 -> nasce a 100
   let espera = 0;
   while (Batalha.info().onda < 100 && espera < 600) {
@@ -648,7 +658,7 @@ console.log('15) drops, equipamento e aba de itens');
   while (!s.length && tent++ < 500) s = Itens.sorteiaDrop(1, false);
   conf(s.length === 1 && !!s[0].nome && !!s[0].bonus &&
        (s[0].slot === 'arma' || s[0].slot === 'armadura') &&
-       s[0].rar >= 1 && s[0].rar <= 3,
+       s[0].rar >= 1 && s[0].rar <= 4,
     'sorteio devolve 1 item válido');
   const sd = Itens.sorteiaDrop(1, true);
   conf(sd.length === 2 && sd.every(i => i.rar >= 2),
@@ -833,6 +843,7 @@ console.log('16) skills automáticas (procs por classe)');
   p.classe = 'mago';
   p.nivel = 4;
   p.xp = p.xpProx - 1;
+  Batalha.restaurarOnda(3);      // onda fraca: 1 kill garante o aviso
   jogoCanvas._textos = [];
   Batalha.limparEfeitos();        // some com textos/efeitos pendentes
   let desbloqueou = false;
@@ -870,10 +881,16 @@ console.log('16) skills automáticas (procs por classe)');
 
   // --- veneno do ladino por acerto
   p.classe = 'ladino';
+  // onda 3 calma:1º golpe sempre não-lethal (30 contra ~40 de HP) →
+  // ~5 rolagens de 30% por onda e ondas ciclam rápido — o 1º golpe de
+  // cada inimigo é elegível, então P(falha) ≈ 0,7^40 ≈ 0
+  Batalha.restaurarOnda(3);
+  let espL = 0;
+  while (Batalha.info().morto && espL < 900) { frame(1); espL++; }
   jogoCanvas._textos = [];
   Batalha.limparEfeitos();
   let envenenou = false;
-  for (let i = 0; i < 2500 && !envenenou; i++) {
+  for (let i = 0; i < 6000 && !envenenou; i++) {
     frame(1);
     envenenou = (jogoCanvas._textos || []).some(t => t === 'Veneno');
   }
@@ -885,6 +902,9 @@ console.log('16) skills automáticas (procs por classe)');
   p.classe = 'clerigo';
   p.atributos.con = 1;
   p.atributos.for = 1;
+  // pressão de onda 40: um golpe ≥15 garante a janela "ferido" mesmo
+  // com regenerador (Leva 1); a bênção annuncia na primeira oportunidade
+  Batalha.restaurarOnda(40);
   let ferido = false;
   for (let i = 0; i < 3000 && !ferido; i++) {
     frame(1);
@@ -903,6 +923,7 @@ console.log('16) skills automáticas (procs por classe)');
   conf(curou, 'clérigo cura periodicamente (Bênção)');
   conf(Efeitos.qtd() > 0,
     'a bênção solta os motes de cura (efeito visual)');
+  Batalha.restaurarOnda(3);      // calmaria p/ os próximos passos
 
   // --- ataque à distância: mago de nível 4 (SEM skills) — o projétil do
   // golpe básico é o único jeito de nascer efeito aqui
@@ -981,9 +1002,17 @@ console.log('17) câmera, mundo maior e renascimento aleatório');
     (inf.cam.x - ax) + ' dy=' + (inf.cam.y - ay) + ')');
   Batalha.alternarPausa();
 
-  // --- renascimento aleatório: 3 ciclos de morte em locais distintos
+  // --- renascimento aleatório: 3 ciclos de morte em locais distintos.
+  // Fixture determinística: nv 4 (SEM skills → sem bênção que out-heala)
+  // e INT 8 (agu baixo → sem kite/recuar, o herói fica e apanha — mesma
+  // lição da seção 21; com o ritmo mais lento os heróis herdados eram
+  // fortes demais p/ morrer sozinhos)
   p.atributos.con = 1;
   p.atributos.for = 1;
+  p.atributos.int = 8;
+  p.nivel = 4;
+  Batalha.restaurarOnda(30);     // pressão: sem onda forte o con1 não
+                                 // morre (combo/rega da Leva 1)
   const locais = [];
   let completo = true;
   for (let ciclo = 0; ciclo < 3 && completo; ciclo++) {
@@ -1009,6 +1038,8 @@ console.log('17) câmera, mundo maior e renascimento aleatório');
   conf(completo, 'renascimento dentro dos limites do mundo (3 ciclos)');
   conf(new Set(locais).size >= 2,
     'renascimento em locais distintos (' + locais.join(' | ') + ')');
+  p.nivel = 25;               // devolve o nv da seção 16 (a fixture desceu
+                              // só p/ garantir as 3 mortes — sem vazamento)
 
   // --- a câmera viajou junto do renascimento (assenta na pausa)
   Batalha.alternarPausa();
@@ -1264,6 +1295,9 @@ console.log('21) estatísticas do jogador (Personagem.stats)');
   const m0 = p.stats.mortes;
   p.atributos.con = 1;
   p.atributos.for = 1;
+  // ondas fortes: com o combo (Leva 1) a pressão vira insustentável só
+  // em onda alta — aqui o teste QUER a morte
+  Batalha.restaurarOnda(50);
   let morreu = false;
   for (let i = 0; i < 12000 && !morreu; i++) {
     frame(1);
@@ -1344,6 +1378,13 @@ console.log('22) IA tática: agudeza, alvo, estados, skills e A*');
   p.atributos.for = 60;                 // dano alto p/ a luta nunca parar
   p.atributos.int = 40;                 // gênio (efetivo >= 40)
   p.pontos = 0;
+  // guerreiro de propósito: sem bênção (clérigo herda da 16) — com a
+  // penalidade de morte regredindo ondas, cura > dano em onda fácil e o
+  // HP nunca chegaria perto de 35%
+  p.classe = 'guerreiro';
+  // onda 60: com o combo (Leva 1) o herói só cai abaixo de 35% sob
+  // pressão forte — sem isso o regenerador o mantém saudável
+  Batalha.restaurarOnda(60);
   const hpMax = Personagem.status(p).hpMax;
   let recuou = false;
   for (let i = 0; i < 12000 && !recuou; i++) {
@@ -1856,6 +1897,8 @@ console.log('26) itens lendários: raridade 4, efeitos e equilíbrio');
                                    // degrau até a faixa < 30% (limiar 73)
   p.atributos.int = 8;
   p.pontos = 0;
+  Batalha.restaurarOnda(20);       // pressão garantida: sem ela o
+                                   // regenerador segura HP > 30% (Leva 1)
   if (Batalha.info().pausada) Batalha.alternarPausa();
   let furia = null;
   let mortos = 0, amostras = [];
@@ -1883,6 +1926,149 @@ console.log('26) itens lendários: raridade 4, efeitos e equilíbrio');
   conf(furia === true,
     'fúria ao vivo: com HP < 30%, dano do herói = status × 1,5');
   if (!Batalha.info().pausada) Batalha.alternarPausa();
+}
+
+console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
+{
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  let espV = 0;
+  while (Batalha.info().morto && espV < 900) { frame(1); espV++; }
+
+  // --- a aba Atributos anuncia o novo patamar de pontos
+  jogoCanvas._textos = [];
+  clique(445, 50);                 // aba Atributos (1ª coluna)
+  frame(2);
+  conf((jogoCanvas._textos || [])
+       .some(t => t.indexOf('Cada nível: +3 pontos') >= 0),
+    'rodapé da aba Atributos anuncia +3 pontos por nível');
+
+  // fixture: guerreiro de vidro, sem cura e sem fuga — o teste QUER
+  // mortes determinísticas (mesma lição das seções 17/21/22)
+  p.classe = 'guerreiro';
+  p.nivel = 4;
+  p.atributos.con = 1;
+  p.atributos.for = 1;
+  p.atributos.int = 8;
+  p.pontos = 0;
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+
+  const esperaMorte = (max) => {
+    for (let i = 0; i < max && !Batalha.info().morto; i++) frame(1);
+    return Batalha.info().morto;
+  };
+  const esperaVida = (max) => {
+    for (let i = 0; i < max && Batalha.info().morto; i++) frame(1);
+    return !Batalha.info().morto;
+  };
+  const esperaOnda = (n) => {
+    for (let i = 0; i < 120 &&
+         (Batalha.info().onda !== n || Batalha.info().inimigos === 0); i++) {
+      frame(1);
+    }
+  };
+
+  // --- 1) morte: −10% do ouro e −5 ondas (sem contar onda limpa)
+  Batalha.restaurarOnda(12);
+  esperaOnda(12);
+  conf(Batalha.info().onda === 12 && Batalha.info().inimigos > 0,
+    'onda 12 assentada antes do teste');
+  p.ouro = 100;
+  const s1 = p.stats.ondas, m1 = p.stats.mortes;
+  // relativas ao frame da morte: pathing livre pode dar kills (ouro) e
+  // até limpar ondas antes do contato — a penalidade é o delta
+  let oAu = p.ouro, oOn = Batalha.info().onda, morte1 = false;
+  for (let i = 0; i < 9000 && !morte1; i++) {
+    oAu = p.ouro;
+    oOn = Batalha.info().onda;
+    frame(1);
+    morte1 = Batalha.info().morto;
+  }
+  conf(morte1, 'herói de vidro morre sob pressão (onda 12)');
+  conf(p.ouro === oAu - Math.max(1, Math.floor(oAu * 0.1)),
+    'morte cobra 10% do ouro (' + oAu + ' → ' + p.ouro + ')');
+  conf(Batalha.info().onda === Math.max(1, oOn - 5),
+    'morte volta 5 ondas (' + oOn + ' → ' + Batalha.info().onda + ')');
+  conf(p.stats.mortes === m1 + 1, 'morte conta em stats.mortes');
+  conf(esperaVida(600), 'renasce em 3s');
+  conf(Batalha.info().onda === Math.max(1, oOn - 5) &&
+       Batalha.info().inimigos > 0,
+    'a onda reduzida renasce fresca no renascimento');
+  conf(p.stats.ondas === s1,
+    'rollback NÃO conta como onda limpa (stats.ondas intacto)');
+
+  // --- 2) piso: onda baixa nunca sai do mapa atual
+  esperaVida(900);                 // nunca entra caído (estado herdado)
+  Batalha.restaurarOnda(3);
+  esperaOnda(3);
+  conf(Batalha.info().onda === 3 && Batalha.info().inimigos > 0,
+    'onda 3 assentada antes do teste do piso');
+  p.ouro = 4;
+  let oAntes = p.ouro, oOn2 = Batalha.info().onda, morte2 = false;
+  for (let i = 0; i < 9000 && !morte2; i++) {
+    oAntes = p.ouro;                 // estado do frame ANTES da morte
+    oOn2 = Batalha.info().onda;
+    frame(1);
+    morte2 = Batalha.info().morto;
+  }
+  conf(morte2, 'morre de novo (onda 3)');
+  conf(Batalha.info().onda === Math.max(1, oOn2 - 5),
+    'piso: volta no mínimo p/ onda 1 (' + oOn2 + ' → ' +
+    Batalha.info().onda + ')');
+  conf(p.ouro === oAntes - Math.max(1, Math.floor(oAntes * 0.1)),
+    'ouro pequeno perde o piso de 1 (perda ≥1: ' + oAntes + ' → ' +
+    p.ouro + ')');
+  esperaVida(600);
+
+  // --- 3) cofre vazio não vira dívida
+  Batalha.restaurarOnda(12);
+  esperaOnda(12);
+  p.ouro = 0;
+  let o0 = p.ouro, morte3 = false;
+  for (let i = 0; i < 9000 && !morte3; i++) {
+    o0 = p.ouro;                     // abordagem longa pode render kills
+    frame(1);                        // (ouro) antes da morte
+    morte3 = Batalha.info().morto;
+  }
+  conf(morte3, 'morre com o cofre vazio');
+  conf(p.ouro === (o0 > 0
+      ? o0 - Math.max(1, Math.floor(o0 * 0.1)) : 0),
+    'ouro zero não vira dívida (base ' + o0 + ' → ' + p.ouro + ')');
+  esperaVida(600);
+
+  // --- 4) Véu da Fênix: a 1ª letalidade NÃO paga; a 2ª paga
+  p.equip = { arma: null,
+    armadura: { nome: 'Véu da Fênix', slot: 'armadura', rar: 4,
+                escala: 1, up: 0, afixos: [], efeito: 'fenix',
+                bonus: { hp: 20 } } };
+  Batalha.restaurarOnda(8);
+  esperaOnda(8);
+  p.ouro = 100;
+  const m4 = p.stats.mortes;
+  let ondaLast = Batalha.info().onda, pagou = null;
+  for (let i = 0; i < 15000 && pagou === null; i++) {
+    const antes = p.ouro;
+    frame(1);
+    if (p.ouro < antes) {
+      pagou = { onda: Batalha.info().onda,
+                esperada: Math.max(1, ondaLast - 5),
+                mortes: p.stats.mortes - m4,
+                oAntes: antes };
+    }
+    ondaLast = Batalha.info().onda;
+  }
+  conf(pagou !== null, 'a 2ª letalidade enfim paga a penalidade');
+  if (pagou) {
+    conf(pagou.mortes === 1 && pagou.onda === pagou.esperada,
+      'Fênix segurou a 1ª: só a morte real paga (onda ' +
+      pagou.onda + '/' + pagou.esperada + ', mortes +' + pagou.mortes + ')');
+    conf(p.ouro === pagou.oAntes -
+         Math.max(1, Math.floor(pagou.oAntes * 0.1)),
+      'ouro caiu só na morte real (' + pagou.oAntes + ' → ' + p.ouro + ')');
+  }
 }
 
 console.log('');

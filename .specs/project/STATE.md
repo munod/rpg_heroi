@@ -45,6 +45,19 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 - **Re-roll assimétrico** — sair de maldição (rol positivo garantido) é
   seguro; mexer em afixo positivo é aposta (pode virar neg): custo
   escala com tentativas p/ conter spam.
+- **Combo de balanço medido (ESC_HP 1,30 · ESC_DMG 0,10 · regen 4%/s)** —
+  com 3 pontos/nível a luta na fronteira era mais longa que a
+  sobrevivência (~1 morte/min) e o −5/morte virou esteira (67 mortes/
+  50min, mapa 1 >100min). Experimentos isolados não bastavam (só dano:
+  53 mortes; só HP: 68; só regen: 52) — só o combo devolveu ~45min e
+  ~35 mortes. **Morte frequente anula a própria punição** (lição D2:
+  morte = evento). Aprovado pelo usuário com a tabela de dados.
+- **O `ritmo.js` gasta ouro** (keystone nv30 + aprimoramento do slot mais
+  barato) — o baseline medido é o do jogador que GERENCIA; sem gestão o
+  jogo tropeça na fronteira de propósito (é a tese da leva).
+- **XP intacto** — a desaceleração real já vem dos 3 pontos (orçamento de
+  atributos −40%); alvo de nv redefinido empiricamente (40-48 @15min).
+  Pendência original do plano: abrir o `AGENTS` quando mexer em alvos.
 - **Loadout com teto 3 e automático = 3 mais avançadas** — decisão só
   cria dilema com escassez (pesquisa: points ≪ nodes); o automático
   preserva saves antigos e os gatilhos (seção 16 intacta). Medido:
@@ -71,6 +84,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   `stBase` quebra com nivelamento/drop de armadura no meio; e o frame do
   hit tem lag de 1 (stats calculados antes do dano do inimigo) — só
   confirmar no frame seguinte (lição da seção 26).
+- **Fixtures de morte/HP-baixo exigem `restaurarOnda` de pressão** — com
+  sustento + ondas fracas herdadas o herói não morre nem cai de HP:
+  seções 12/16(×2)/17/21/22/27/veneno agora forçam onda alta ou calma
+  explicitamente; asserts de onda/ouro na morte são **relativos ao frame
+  anterior** (pathing livre dá kills e limpa ondas antes do contato).
+- **Ritmo varia ±7min entre runs** (RNG/drops/mortes) — alvo de ritmo só
+  pela média de ≥4 runs; e guarda velho tipo `rar <= 3` vira flake de 1%
+  quando nasce raridade nova (lendário) — revisar guards a cada raridade.
+- **`p.nivel`/`p.classe` alterados numa fixture vazam p/ seções
+  seguintes** — restaurar o valor logo após o teste (precedente: 17 →
+  `p.nivel = 25`).
 
 
 ## Bloqueios

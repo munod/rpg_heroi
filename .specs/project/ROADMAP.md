@@ -38,6 +38,18 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 - **Specs contínuas** — toda feature nova começa com
   `.specs/features/<nome>/spec.md` antes do primeiro commit.
 
+## Em execução — v0.3.0: sistema punitivo + stats/tooltips
+
+1. ✅ `ritmo-punitivo` — pontos 5→3, morte −5 ondas/−10% ouro, combo
+   reequilibrado (HP/dano/regen), ritmo gasta ouro, alvos novos medidos
+2. ⬜ `eventos-aleatorios` — Açougueiro (penalidade dobrada) + Gatuno
+   fugitivo (roubo contrariável)
+3. ⬜ `tooltip-infra` — sistema de tooltips (hover + long-press), rodapé
+   segmentado com breakdown de modificadores + DPS básico
+4. ⬜ `stats-completos` — aba Stats +7 (ouro ganho/gasto, vendas,
+   sucateados, aprimoramentos, re-rolls, lendários)
+5. ⬜ **release v0.3.0** (push/tag/gh release com aval)
+
 ## Backlog de ideias (sem compromisso)
 
 - Mais mapas/temas no ciclo infinito com mecânicas próprias.

@@ -54,8 +54,13 @@ var Batalha = (function () {
 
   // Escala por onda — alavanca do ritmo das ondas (boss incluído).
   // Medir com testes/ritmo.js antes de mexer.
-  var ESC_HP = 1.85;       // vida do inimigo por onda
-  var ESC_DMG = 0.18;     // dano do inimigo por onda
+  // Escalas reequilibradas na Leva 1 (medido com ritmo.js 50):
+  // com 3 pontos/nível, a luta na fronteira era mais longa que a
+  // sobrevivência → ~1 morte/min → −5 ondas/morte virava esteira
+  // (mapa 1 >100min, 67 mortes/50min). HP 1,30 + dano 0,10 + a
+  // regeneração abaixo devolvem progressão ~47min e morte como evento.
+  var ESC_HP = 1.30;       // vida do inimigo por onda
+  var ESC_DMG = 0.10;     // dano do inimigo por onda
   var ESPERA_ONDA = 2.0;  // respiro depois de limpar a onda (segundos)
 
   // ------------------------------------------------------------ cenário
@@ -351,16 +356,22 @@ var Batalha = (function () {
   }
 
   function proximaOnda() {
-    // lendários de onda: a 2ª vida renasce e, com o Cetro da
-    // Tempestade, os timers das skills zeram a cada passagem de onda
-    if (heroi) heroi.fenixUsada = false;
-    if (Itens.temEfeito(Game.personagem, 'tempestade')) skillsEstado = {};
     if (onda >= FIM_MAPA) {
       stat('ondas');                       // onda 100 (chefe) limpa
       passaMapa(); return;
     }
     if (onda > 0) stat('ondas');           // a 1ª onda do jogo não conta
     onda++;
+    spawnaOnda();
+  }
+
+  // Nasce a onda ATUAL (contagem e incremento ficam em proximaOnda).
+  // Chamada direto no renascimento com rollback: a onda reduzida pela
+  // morte nasce fresca SEM contar como onda limpa. Os resets de onda
+  // (2ª vida, Cetro da Tempestade) são efeitos de nascimento.
+  function spawnaOnda() {
+    if (heroi) heroi.fenixUsada = false;
+    if (Itens.temEfeito(Game.personagem, 'tempestade')) skillsEstado = {};
     var tem = Mapas.info(mapa);
     if (ehBoss(onda)) {
       // chefe + 2 minions do próprio mapa: a onda não espera um alvo só
@@ -452,7 +463,7 @@ var Batalha = (function () {
     while (p.xp >= p.xpProx) {
       p.xp -= p.xpProx;
       p.nivel++;
-      p.pontos += 5;
+      p.pontos += 3;           // era 5: pontos escassos = gestão importa
       p.xpProx = Personagem.custoProximo(p.nivel);
       tFlash = 1.6;
       nivelFlash = p.nivel;
@@ -546,6 +557,23 @@ var Batalha = (function () {
     }
   }
 
+  // Penalidade de morte (padrão Diablo 2): −10% do ouro (piso de 1
+  // quando há ouro) e volta de 5 ondas (piso: onda 1 do mapa atual —
+  // nunca sai do mapa). A onda em curso só é desfeita no renascimento
+  // (rollbackPend → inimigos limpos + spawnaOnda), porque este ponto
+  // roda DENTRO do laço decrescente de inimigos. mult > 1 vem dos
+  // eventos (Açougueiro = 2). Mesmas regras offline: é o mesmo loop.
+  var rollbackPend = false;
+  function penalizaMorte(mult) {
+    var p = Game.personagem;
+    if (p && p.ouro > 0) {
+      p.ouro -= Math.max(1, Math.floor(p.ouro * 0.1 * mult));
+      if (p.ouro < 0) p.ouro = 0;
+    }
+    onda = Math.max(1, onda - 5 * mult);
+    rollbackPend = true;
+  }
+
   function danoHeroi(dmg) {
     if (heroi.morto) return;
     stat('danoRecebido', Math.round(dmg));
@@ -564,6 +592,7 @@ var Batalha = (function () {
         Efeitos.cura(heroi.x, heroi.y - 6, '#ffd866');
         return;
       }
+      penalizaMorte(1);        // 2ª vida (Fênix) retornou antes: não paga
       heroi.hp = 0;
       heroi.morto = true;
       stat('mortes');
@@ -990,6 +1019,11 @@ var Batalha = (function () {
 
     if (h.atkCd > 0) h.atkCd -= dt;
     if (h.inv > 0) h.inv -= dt;
+    // sustento do herói: 4%/s quando não apanha há 0,5s (inv zerado) —
+    // segura a fronteira p/ a morte voltar a ser evento (Leva 1)
+    if (h.inv <= 0 && h.hp < h.hpMax) {
+      h.hp = Math.min(h.hpMax, h.hp + h.hpMax * 0.04 * dt);
+    }
     if (h.escapa) {
       h.escapa.t -= dt;
       if (h.escapa.t <= 0) h.escapa = null;
@@ -1193,6 +1227,13 @@ var Batalha = (function () {
         heroi.y = volta.y;
         heroi.inv = 1.2;
         numero(heroi.x, heroi.y - 26, 'DE VOLTA!', '#8ce08c', true);
+        if (rollbackPend) {
+          // a onda perdida é desfeita aqui (fora do laço de inimigos) e
+          // a onda reduzida renasce sem contar em stats.ondas
+          rollbackPend = false;
+          inimigos.length = 0;
+          spawnaOnda();
+        }
       }
     } else {
       atualizaHeroi(dt);
