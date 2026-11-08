@@ -1,0 +1,37 @@
+# Deploy no GitHub Pages: o jogo é 100% estático (sem build, sem npm) —
+# a cada push na main a Actions sobe a raiz inteira (index.html, style.css,
+# js/) e publica em https://munod.github.io/rpg_heroi/
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # gatilho manual na aba Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# nunca dois deploys concorrendo: o mais novo substitui o anterior
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      # raiz do projeto: index.html + style.css + js/ (os PNGs de teste
+      # seguem junto e são inofensivos; .git é excluído por padrão)
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Publica
+        id: deployment
+        uses: actions/deploy-pages@v4
