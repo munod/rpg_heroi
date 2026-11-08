@@ -57,7 +57,16 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   jogo tropeça na fronteira de propósito (é a tese da leva).
 - **XP intacto** — a desaceleração real já vem dos 3 pontos (orçamento de
   atributos −40%); alvo de nv redefinido empiricamente (40-48 @15min).
-  Pendência original do plano: abrir o `AGENTS` quando mexer em alvos.
+- **Eventos com pacing medido (Leva 2)** — números iniciais foram
+  ajustados com dados do `ritmo.js`: Açougueiro desde a onda 30 (com 10
+  ele chegava ~min5 = herói fraco = morte ×2 + −10 ondas = onda16@15min,
+  fora do alvo), hp×3/dano×1,35 (×5/×1,6 era parede inquebrável: stall
+  de 45s), tempo 30s e gatuno 1,5% (a perseguição universal custava
+  ondas). Resultado: mapa 1 em 44,6/48,6min ✓ faixa.
+- **Herói persegue o Gatuno por prioridade plana (+1000 no peso)** —
+  defender o ouro é universal (até INT mínima) e torna o resgate
+  determinístico; sem isso a contrajogada era imprevisível (lição de
+  projeto: evento com recompensa exige AI que o trate como alvo).
 - **Loadout com teto 3 e automático = 3 mais avançadas** — decisão só
   cria dilema com escassez (pesquisa: points ≪ nodes); o automático
   preserva saves antigos e os gatilhos (seção 16 intacta). Medido:
@@ -95,6 +104,15 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 - **`p.nivel`/`p.classe` alterados numa fixture vazam p/ seções
   seguintes** — restaurar o valor logo após o teste (precedente: 17 →
   `p.nivel = 25`).
+- **Evento aleatório em jogo roda EM MASSA durante o teste** (centenas de
+  ondas = Açougueiro/Gatuno disparando em seções antigas: stats
+  poluídos, roubos/penalidades ×2 quebrando asserts exatos) — o harness
+  **desliga os dois via stub** (`Eventos.nasceAco/nasceGat`) e só as
+  seções dedicadas religam. Regra: qualquer RNG novo de gameplay precisa
+  de um mosquetão de teste.
+- **Carência/cooldown: cada CHAMADA decrementa** — testes unitários de
+  cooldown precisam de livro-caixa explícito (contar chamadas), senão a
+  contagem vira flake enigmático.
 
 
 ## Bloqueios

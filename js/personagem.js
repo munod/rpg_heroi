@@ -280,7 +280,8 @@ var Personagem = (function () {
   // Chaves das estatísticas — espelho de Batalha.stat (mesma razão do
   // espelho acima: grade/previa carregam só sprite+personagem)
   var STATS = ['abates', 'mortes', 'danoCausado', 'danoRecebido',
-               'ondas', 'bosses', 'itens', 'tempo'];
+               'ondas', 'bosses', 'itens', 'tempo',
+               'gatunos', 'acougueiros'];   // +eventos (Leva 2)
 
   // Preenche as 8 chaves: valor válido do save, ou 0 (save antigo que não
   // tinha stats). Teto defensivo igual ao do xp p/ storage corrompido, e

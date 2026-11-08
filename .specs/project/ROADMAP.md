@@ -42,8 +42,8 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 1. ✅ `ritmo-punitivo` — pontos 5→3, morte −5 ondas/−10% ouro, combo
    reequilibrado (HP/dano/regen), ritmo gasta ouro, alvos novos medidos
-2. ⬜ `eventos-aleatorios` — Açougueiro (penalidade dobrada) + Gatuno
-   fugitivo (roubo contrariável)
+2. ✅ `eventos-aleatorios` — Açougueiro (penalidade dobrada, ouro×10,
+   lendário) + Gatuno fugitivo (roubo contrariável, prioridade na IA)
 3. ⬜ `tooltip-infra` — sistema de tooltips (hover + long-press), rodapé
    segmentado com breakdown de modificadores + DPS básico
 4. ⬜ `stats-completos` — aba Stats +7 (ouro ganho/gasto, vendas,

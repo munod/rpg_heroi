@@ -28,6 +28,23 @@ vive em `.specs/features/`.
   runs): 1º nível ~35-45s · 15min nv 40-48/onda 40-55 · mapa 1 em
   40-55min (média ~45) · mortes ~30-40 aos 50min. Testes: seção 27 (17
   confs) + fixtures com `restaurarOnda` de pressão.
+- **Eventos aleatórios (Leva 2 de 4)**: novo `js/eventos.js` —
+  **Açougueiro** ("AÇOUGUEIRO — CARNE FRESCA!"): 1,5% por onda desde a
+  **30** com pity +0,5%/onda (teto 25%), 1 chance (timeout de 30s ou
+  morte do herói = despawn), **morte com ele em campo paga penalidade
+  ×2** (−20%/−10 ondas), vitória = **ouro ×10 + XP ×4 + lendário
+  garantido** + `stats.acougueiros`; **Gatuno**: rouba **15%** do ouro e
+  foge p/ a borda (1,5%/onda, carência de 3, só com cofre cheio) —
+  matá-lo devolve **roubo ×1,2** + `stats.gatunos`, e o herói o
+  **persegue por prioridade na IA** (defende o ouro, até burro);
+  timeouts por unidade (`Eventos.atualiza*`), recompensas/punições em
+  `mataInimigo` com ouro relativo aos kills; aba Stats +2 linhas
+  (Açougueiros/Gatunos) — spec `.specs/features/eventos-aleatorios/`
+  (R-EVE-1..4). Pacing ajustado com dados do `ritmo.js` (chegada na
+  onda30, hp×3/dano×1,35, 30s, gatuno 1,5%): mapa 1 em **44,6/48,6min**
+  (2 runs) mantendo a faixa 40-55. Testes: seções 28/29 (47 confs) com
+  eventos **desligados do harness nas seções 1-27** (senão disparavam em
+  massa e poluíam stats/ouro/penalidades).
 
 ## [0.2.0] — 2026-11-08
 

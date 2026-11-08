@@ -77,6 +77,9 @@ var IA = (function () {
       dist = Math.sqrt(dx * dx + dy * dy);
       var prio = ((en.dmg || 3) * 6) / (en.hp + 1);
       var p = -dist + prio * (40 * agu) + ruido(agu) * 40;
+      // prioridade universal do ladrão: o herói defende o ouro roubado
+      // (mesmo burro — sem isso o resgate do Gatuno é imprevisível)
+      if (en.gatuno) p += 1000;
       if (p > melhorP) { melhorP = p; melhor = en; }
     }
     ia.alvo = melhor;

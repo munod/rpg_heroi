@@ -38,7 +38,12 @@ var Batalha = (function () {
                cor: '#c84a3a' },
     // chefe do fim de mapa — cor/escala/forma específicas por mapa
     boss:    { hp: 20, dmg: 5, vel: 30, xpExtra: 0, boss: true, escala: 2.6,
-               raio: 11, forma: 'slime', cor: '#d8a020' }
+               raio: 11, forma: 'slime', cor: '#d8a020' },
+    // eventos (Leva 2): ac = predador raro; gatuno = ladrão que foge
+    acougueiro: { hp: 22, dmg: 6, vel: 40, xpExtra: 10, escala: 2.4,
+                  raio: 11, forma: 'slime', cor: '#ff5a3a' },
+    gatuno: { hp: 8, dmg: 1, vel: 24, xpExtra: 0, forma: 'slime',
+              cor: '#e8c86a' }
   };
 
   var FIM_MAPA = 100;        // ondas por mapa; a100 é o chefe
@@ -248,6 +253,7 @@ var Batalha = (function () {
     parts = [];
     semearPoeira();
     skillsEstado = {};
+    Eventos.limpa();
     skillsVigentes = [];
     ultimaSkill = null;
     onda = 0;
@@ -389,6 +395,27 @@ var Batalha = (function () {
       }
       aviso('ONDA ' + onda, '#e8c86a');
     }
+    nasceEventos();
+  }
+
+  // Eventos aleatórios da onda: Açougueiro primeiro (em campo trava o
+  // resto); gatuno rouba 15% e nasce longe das bordas p/ dar tempo de
+  // reação. O ouro é debitado aqui (batalha é a dona de p.ouro).
+  function nasceEventos() {
+    if (Eventos.nasceAco(onda)) {
+      var ac = spawn({ tipo: 'acougueiro' });
+      aviso('AÇOUGUEIRO — CARNE FRESCA!', '#ff5a3a');
+      if (ac) numero(ac.x, ac.y - 40, 'CARNE FRESCA!', '#ff5a3a', true);
+      return;
+    }
+    var p = Game.personagem;
+    var roubo = Eventos.nasceGat(p ? (p.ouro || 0) : 0);
+    if (roubo > 0 && p) {
+      p.ouro = Math.max(0, p.ouro - roubo);
+      var g = spawn({ tipo: 'gatuno', roubo: roubo });
+      aviso('GATUNO ROUBOU ' + roubo + ' OURO!', '#e8c86a');
+      if (g) numero(g.x, g.y - 34, '-' + roubo + ' ouro', '#e8c86a', false);
+    }
   }
 
   // def: { tipo, cor?, escala?, forma? } — vindo de Mapas.info(mapa)
@@ -426,14 +453,19 @@ var Batalha = (function () {
     var escDmg = 1 + tot * ESC_DMG;
     // chefe: hp x4 e dano x1.5 sobre a escala da própria onda — desafiador,
     // mas derrotável (ele não regenera e o herói revive com vida cheia)
-    var hp = Math.round(t.hp * escHp * (t.boss ? 4 : 1));
-    inimigos.push({
+    // Açougueiro: predador de topo — hp ×3 e dano ×1,35 sobre a onda
+    // (medido: ×5/×1,6 era parede inquebrável → stall + morte ×2 quase
+    // certa; ×3/×1,35 mantém o susto e devolve a chance de vingança)
+    var ehAc = def.tipo === 'acougueiro';
+    var hp = Math.round(t.hp * escHp * (t.boss ? 4 : ehAc ? 3 : 1));
+    var ent = {
       x: x, y: y, tipo: t,
       cor: def.cor || t.cor,
       escala: def.escala || t.escala || 1,
       forma: def.forma || t.forma || 'slime',
       hp: hp, hpMax: hp,
-      dmg: Math.max(2, Math.round(t.dmg * escDmg * (t.boss ? 1.5 : 1))),
+      dmg: Math.max(2,
+        Math.round(t.dmg * escDmg * (t.boss ? 1.5 : ehAc ? 1.35 : 1))),
       // o chefe é pesado: não ganha a corrida de velocidade da onda
       vel: t.boss ? t.vel : t.vel + Math.min(12, tot),
       raio: raio,
@@ -446,8 +478,18 @@ var Batalha = (function () {
       // inicial escalonado — a onda inteira não desvia junto
       astucia: IA.astucia(def.tipo, mapa),
       slot: inimigos.length % 6,
-      esquivaCd: 1.5 + Math.random() * 2
-    });
+      esquivaCd: 1.5 + Math.random() * 2,
+      acougueiro: ehAc,
+      gatuno: def.tipo === 'gatuno',
+      roubo: def.roubo || 0
+    };
+    if (ent.gatuno) {
+      // longe das bordas p/ dar tempo de reação (contrajogada)
+      ent.x = Math.max(70, Math.min(MW - 70, ent.x));
+      ent.y = Math.max(70, Math.min(MH - 70, ent.y));
+    }
+    inimigos.push(ent);
+    return ent;
   }
 
   // -------------------------------------------------------- progressão
@@ -565,6 +607,12 @@ var Batalha = (function () {
   // eventos (Açougueiro = 2). Mesmas regras offline: é o mesmo loop.
   var rollbackPend = false;
   function penalizaMorte(mult) {
+    // com o Açougueiro em campo a morte dobra (−20% ouro, −10 ondas)
+    if (mult === 1) {
+      for (var i = 0; i < inimigos.length; i++) {
+        if (inimigos[i].acougueiro) { mult = 2; break; }
+      }
+    }
     var p = Game.personagem;
     if (p && p.ouro > 0) {
       p.ouro -= Math.max(1, Math.floor(p.ouro * 0.1 * mult));
@@ -572,6 +620,15 @@ var Batalha = (function () {
     }
     onda = Math.max(1, onda - 5 * mult);
     rollbackPend = true;
+  }
+
+  // o predador parte (timeout ou morte do herói) — fora do laço
+  function despachaAco() {
+    Eventos.acoPartiu();
+    for (var i = 0; i < inimigos.length; i++) {
+      if (inimigos[i].acougueiro) { inimigos.splice(i, 1); break; }
+    }
+    aviso('O Açougueiro partiu... por enquanto.', '#ff5a3a');
   }
 
   function danoHeroi(dmg) {
@@ -626,6 +683,8 @@ var Batalha = (function () {
     faísca(en.x, en.y - 6, en.cor, 10);
     inimigos.splice(i, 1);
     stat('abates');
+    if (en.acougueiro) { stat('acougueiros'); Eventos.acoMorreu(); }
+    if (en.gatuno) stat('gatunos');
     // XP na mesma escala contínua das ondas: a recompensa não despenca
     // no primeiro kill de cada mapa novo (o nível travava no troco de
     // mapa). (+ondaTotal+1 reproduz exatamente o 4+onda×2 de sempre no
@@ -636,17 +695,30 @@ var Batalha = (function () {
       // recompensa de chefe: XP de várias ondas de uma vez
       ganho = Math.round(ganho * 5);
       numero(en.x, en.y - 40, 'BOSS DERROTADO!', '#ffd866', true);
+    } else if (en.acougueiro) {
+      // vingança completa: XP ×4 (ouro ×10 está na conta de baixo)
+      ganho = Math.round(ganho * Eventos.MULT_XP_ACO);
+      numero(en.x, en.y - 40, 'AÇOUGUEIRO ABATIDO!', '#ff5a3a', true);
     }
     // ouro do abate: escala com o mapa e a onda (chefe paga ×8) — a
     // moeda sustenta venda/sucata/aprimoramento/re-roll da aba Itens
     var ouro = Math.round((1 + Math.random() * 2) * Mapas.forca(mapa) *
-      (1 + (ondaTotal() + 1) * 0.04) * (en.tipo.boss ? 8 : 1));
+      (1 + (ondaTotal() + 1) * 0.04) *
+      (en.tipo.boss ? 8 : (en.acougueiro ? Eventos.MULT_OURO_ACO : 1)));
     ouro = Math.round(ouro * Itens.multOuro(Game.personagem));  // mercador
     Game.personagem.ouro = (Game.personagem.ouro || 0) + ouro;
     numero(en.x, en.y - 24, '+' + ganho + ' XP · +' + ouro + ' ouro',
       '#ffd866', false);
     ganhaXP(ganho);
-    soltaItens(en);
+    // gatuno derrubado: o resgate (roubo ×1,2) é a recompensa — sem drop
+    if (en.gatuno) {
+      var resg = Eventos.gatAbatido();
+      Game.personagem.ouro = (Game.personagem.ouro || 0) + resg;
+      numero(en.x, en.y - 40, '+' + resg + ' OURO DE VOLTA!', '#8ce08c',
+        true);
+    } else {
+      soltaItens(en);
+    }
     tOnda = ESPERA_ONDA;
   }
 
@@ -656,6 +728,9 @@ var Batalha = (function () {
     var p = Game.personagem;
     if (!p || !p.equip || !p.bolsa) return;
     var drops = Itens.sorteiaDrop(mapa, !!en.tipo.boss, p.classe);
+    // vitória sobre o predador: lendário garantido (o drop normal rola por
+    // cima, se a chance quiser)
+    if (en.acougueiro) drops.unshift(Itens.geraItem(4, mapa, p.classe));
     for (var i = 0; i < drops.length; i++) {
       stat('itens');
       var it = drops[i];
@@ -1141,6 +1216,24 @@ var Batalha = (function () {
         }
       }
 
+      // Gatuno (evento): não briga — corre p/ a borda mais próxima com
+      // o ouro; tocar a borda = perda (o tempo do Eventos desemperra)
+      if (en.gatuno) {
+        var dk = 0;
+        var dists = [en.x, MW - en.x, en.y, MH - en.y];
+        for (var q = 1; q < 4; q++) if (dists[q] < dists[dk]) dk = q;
+        var pv = en.vel * dt;
+        mover(en, dk === 0 ? -pv : (dk === 1 ? pv : 0),
+                   dk === 2 ? -pv : (dk === 3 ? pv : 0), en.raio || 6);
+        if (dists[dk] <= pv + 1) {
+          var perdido = en.roubo || 0;
+          Eventos.gatFugiu();
+          inimigos.splice(i, 1);
+          aviso('GATUNO ESCAPOU COM ' + perdido + ' OURO!', '#ff6b6b');
+        }
+        continue;
+      }
+
       // empurrão da skill: sendo arremessado, não reage à IA
       if (en.empurra) {
         en.empurra.t -= dt;
@@ -1227,6 +1320,9 @@ var Batalha = (function () {
         heroi.y = volta.y;
         heroi.inv = 1.2;
         numero(heroi.x, heroi.y - 26, 'DE VOLTA!', '#8ce08c', true);
+        // o Açougueiro não fica p/ vingança: morte do herói = ele parte
+        // (a penalidade já foi APLICADA EM DOBRO na morte)
+        if (Eventos.acoEmCampo()) despachaAco();
         if (rollbackPend) {
           // a onda perdida é desfeita aqui (fora do laço de inimigos) e
           // a onda reduzida renasce sem contar em stats.ondas
@@ -1240,6 +1336,17 @@ var Batalha = (function () {
     }
 
     atualizaInimigos(dt);
+
+    // timers dos eventos (ponto seguro: fora do laço de inimigos)
+    if (Eventos.atualizaAco(dt)) despachaAco();
+    if (Eventos.atualizaGat(dt)) {
+      // gatuno emperrado além do tempo: desiste da fuga
+      for (var gi = 0; gi < inimigos.length; gi++) {
+        if (inimigos[gi].gatuno) { inimigos.splice(gi, 1); break; }
+      }
+      Eventos.gatFugiu();
+      aviso('GATUNO DESISTIU DA FUGA!', '#ff6b6b');
+    }
 
     // ondas
     if (inimigos.length === 0 && !heroi.morto) {
@@ -1482,6 +1589,14 @@ var Batalha = (function () {
     }
   }
 
+  // algum inimigo com a flag de evento em campo?
+  function temE(flag) {
+    for (var i = 0; i < inimigos.length; i++) {
+      if (inimigos[i][flag]) return true;
+    }
+    return false;
+  }
+
   function info() {
     var p = Game.personagem;
     var boss = false;
@@ -1496,6 +1611,8 @@ var Batalha = (function () {
     }
     return {
       mapa: mapa,
+      acougueiro: temE('acougueiro'),
+      gatuno: temE('gatuno'),
       dano: (heroi && heroi.stats) ? Math.round(heroi.stats.dano) : 0,
       onda: onda,
       janela: { w: VW, h: VH },

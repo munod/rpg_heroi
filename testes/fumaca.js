@@ -27,6 +27,18 @@ function conf(cond, msg) {
 sandbox.window.innerWidth = 1280;
 sandbox.window.innerHeight = 720;
 
+// eventos aleatórios DESLIGADOS nas seções 1..27: com centenas de ondas
+// rodando, Açougueiro/Gatuno disparariam em massa e poluiriam stats,
+// ouro e penalidades de todos os testes. A 28 religa o Açougueiro (e
+// desliga de novo no fim), a 29 religa o Gatuno — só lá são testados.
+const Eventos = sandbox.Eventos;
+Eventos._nasceAco = Eventos.nasceAco;
+Eventos._nasceGat = Eventos.nasceGat;
+const SEM_ACO = function () { return false; };
+const SEM_GAT = function () { return 0; };
+Eventos.nasceAco = SEM_ACO;
+Eventos.nasceGat = SEM_GAT;
+
 const Game = sandbox.Game;
 const Personagem = sandbox.Personagem;
 const Salvar = sandbox.Salvar;
@@ -894,7 +906,10 @@ console.log('16) skills automáticas (procs por classe)');
     frame(1);
     envenenou = (jogoCanvas._textos || []).some(t => t === 'Veneno');
   }
-  conf(envenenou, 'ladino aplica veneno nos acertos');
+  const dv = Batalha.info();
+  conf(envenenou, 'ladino aplica veneno nos acertos' +
+    (envenenou ? '' : ' [onda=' + dv.onda + ' inim=' + dv.inimigos +
+      ' morto=' + dv.morto + ' nv=' + p.nivel + ' dano=' + dv.dano + ']'));
   conf(Efeitos.qtd() > 0,
     'a aplicação do veneno respinga efeitos visuais');
 
@@ -2069,6 +2084,235 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
          Math.max(1, Math.floor(pagou.oAntes * 0.1)),
       'ouro caiu só na morte real (' + pagou.oAntes + ' → ' + p.ouro + ')');
   }
+}
+
+console.log('28) evento: o Açougueiro (raro, uma chance, recompensa gorda)');
+{
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+  const rnd = Math.random;
+  Eventos.nasceAco = Eventos._nasceAco;   // religa p/ testar as rolagens
+
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  let esp0 = 0;
+  while (Batalha.info().morto && esp0 < 900) { frame(1); esp0++; }
+
+  // --- rolagens unitárias (sem arena)
+  Eventos.limpa();
+  conf(Eventos.nasceAco(29) === false, 'antes da onda 30 nunca aparece');
+  Math.random = function () { return 0; };
+  conf(Eventos.nasceAco(30) === true, 'rolagem zerada: nasce na onda 30');
+  conf(Eventos.acoEmCampo() === true, 'fica em campo até derrubar/partir');
+  conf(Eventos.nasceAco(31) === false, 'só um de cada vez');
+  Eventos.acoPartiu();
+  Math.random = function () { return 0.99; };   // falha sempre (teto 25%)
+  for (let i = 0; i < 50; i++) Eventos.nasceAco(32);
+  Math.random = function () { return 0.20; };
+  const saiu = Eventos.nasceAco(33);
+  Math.random = rnd;
+  conf(saiu, 'pity: 50 ondas sem aparecer garante (teto 25%)');
+  Eventos.acoPartiu();
+  Math.random = function () { return 0; };
+  Eventos.nasceAco(34);
+  Math.random = rnd;
+  conf(!Eventos.atualizaAco(Eventos.TEMPO_ACO - 0.1) &&
+       Eventos.atualizaAco(0.2),
+    'parte depois de 45s em campo');
+  Eventos.acoPartiu();
+
+  // --- spawn ao vivo + vitória (herói de for 999, RNG zerado p/ exato)
+  p.atributos.for = 999;
+  p.atributos.con = 999;
+  p.atributos.int = 8;
+  p.pontos = 0;
+  p.classe = 'guerreiro';
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  Batalha.restaurarOnda(30);
+  Eventos.limpa();
+  jogoCanvas._textos = [];
+  Math.random = function () { return 0; };
+  for (let i = 0; i < 5 && !Batalha.info().acougueiro; i++) frame(1);
+  Math.random = rnd;
+  conf(Batalha.info().acougueiro, 'nasce na arena com aviso');
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('CARNE FRESCA') >= 0),
+    'aviso "CARNE FRESCA!" na tela');
+
+  const ac0 = p.stats.acougueiros;
+  const ouroA = p.ouro || 0;
+  Math.random = function () { return 0; };   // ouro determinístico
+  let matou = false;
+  for (let i = 0; i < 12000 && !matou; i++) {
+    frame(1);
+    matou = p.stats.acougueiros > ac0;
+  }
+  Math.random = rnd;
+  conf(matou, 'herói forte derruba o Açougueiro');
+  conf(p.stats.acougueiros === ac0 + 1, 'stats.acougueiros conta +1');
+  // RNG zerado e ×10 POR DENTRO do arredondamento: onda 30 (ondaTotal 29)
+  // → base round(1×1×2,2)=2 → Açougueiro round(2,2×10)=22 +
+  // 5 minions ×2 = delta exato 32
+  conf((p.ouro || 0) - ouroA === 32,
+    'ouro ×10 na vitória (delta ' + ((p.ouro || 0) - ouroA) + ' = 32)');
+  const leg = [p.equip.arma, p.equip.armadura].concat(p.bolsa)
+    .some(i => i && i.rar === 4);
+  conf(leg, 'lendário garantido no saque');
+
+  jogoCanvas._textos = [];
+  clique(412 + 4 * 70 + 33, 54);            // aba Stats
+  frame(1);
+  conf((jogoCanvas._textos || [])
+       .some(t => t.indexOf('Açougueiros abatidos') >= 0),
+    'aba Stats lista os Açougueiros');
+  clique(445, 50);                           // volta pra Atributos
+  frame(1);
+
+  // --- morte com o predador em campo: penalidade EM DOBRO + despawn
+  p.classe = 'guerreiro';
+  p.nivel = 4;
+  p.atributos.con = 1;
+  p.atributos.for = 1;
+  p.atributos.int = 8;
+  p.pontos = 0;
+  p.equip = { arma: null, armadura: null };
+  Batalha.restaurarOnda(30);
+  Eventos.limpa();
+  Math.random = function () { return 0; };
+  for (let i = 0; i < 5 && !Batalha.info().acougueiro; i++) frame(1);
+  Math.random = rnd;
+  conf(Batalha.info().acougueiro, 'predador na arena p/ o teste da morte');
+  p.ouro = 100;
+  let oAu = p.ouro, oOn = Batalha.info().onda, morreuA = false;
+  for (let i = 0; i < 9000 && !morreuA; i++) {
+    oAu = p.ouro;
+    oOn = Batalha.info().onda;
+    frame(1);
+    morreuA = Batalha.info().morto;
+  }
+  conf(morreuA, 'herói de vidro morre com o predador em campo');
+  conf(p.ouro === oAu - Math.max(1, Math.floor(oAu * 0.2)),
+    'penalidade DOBRADA: −20% do ouro (' + oAu + ' → ' + p.ouro + ')');
+  conf(Batalha.info().onda === Math.max(1, oOn - 10),
+    'penalidade DOBRADA: −10 ondas (' + oOn + ' → ' +
+    Batalha.info().onda + ')');
+  let rvA = 0;
+  while (Batalha.info().morto && rvA < 900) { frame(1); rvA++; }
+  conf(!Batalha.info().morto, 'renasce em 3s');
+  conf(Batalha.info().acougueiro === false,
+    'morte do herói despacha o Açougueiro (uma chance só)');
+  Eventos.nasceAco = SEM_ACO;          // silêncio de novo (29 só gatuno)
+}
+
+console.log('29) evento: o Gatuno (rouba, foge, resgate)');
+{
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+  const rnd = Math.random;
+  Eventos.nasceGat = Eventos._nasceGat;  // religa o Gatuno
+
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  let esp1 = 0;
+  while (Batalha.info().morto && esp1 < 900) { frame(1); esp1++; }
+
+  // --- unidade: roubo, carência (CADA chamada decrementa), resgate,
+  // timeout. Livro-caixa: nascer põe carência=3; são necessárias 3
+  // chamadas bloqueadas até a próxima aparição.
+  Eventos.limpa();
+  conf(Eventos.nasceGat(0) === 0, 'sem ouro não há roubo');
+  Math.random = function () { return 0; };
+  conf(Eventos.nasceGat(100) === 15, 'rouba 15% (100 → 15)');
+  conf(Eventos.nasceGat(100) === 0, 'carência em ação (3 → 2)');
+  conf(Eventos.gatAbatido() === 18, 'resgate = roubo ×1,2 (15 → 18)');
+  conf(Eventos.nasceGat(100) === 0, 'carência (2 → 1)');
+  conf(Eventos.nasceGat(100) === 0, 'carência (1 → 0)');
+  conf(Eventos.nasceGat(100) === 15, 'acabada a carência, rouba de novo');
+  Eventos.gatFugiu();
+  conf(Eventos.nasceGat(50) === 0, 'nova aparição reinicia (3 → 2)');
+  conf(Eventos.nasceGat(50) === 0, 'carência (2 → 1)');
+  conf(Eventos.nasceGat(50) === 0, 'carência (1 → 0)');
+  conf(Eventos.nasceGat(50) === 8, 'roubo recalculado (50 → 8)');
+  Eventos.gatFugiu();
+  conf(Eventos.nasceGat(50) === 0, 'carência (3 → 2)');
+  conf(Eventos.nasceGat(50) === 0, 'carência (2 → 1)');
+  conf(Eventos.nasceGat(50) === 0, 'carência (1 → 0)');
+  conf(Eventos.nasceGat(50) === 8, 'em campo p/ o teste do timeout');
+  Math.random = rnd;
+  conf(!Eventos.atualizaGat(Eventos.TEMPO_GAT - 0.1) &&
+       Eventos.atualizaGat(0.2),
+    'desiste da fuga após 30s emperrado');
+  Eventos.gatFugiu();
+
+  // --- resgate ao vivo: RNG zerado → geometria e ouro exatos.
+  // spawn a 110px (clamp ≥70 das bordas) e for 999: o golpe alcança
+  // antes da borda (2,0s de perseguição vs ≥2,8s de fuga)
+  p.classe = 'guerreiro';
+  p.nivel = 10;
+  p.atributos.for = 999;
+  p.atributos.con = 999;
+  p.atributos.des = 8;
+  p.atributos.int = 8;
+  p.pontos = 0;
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  Batalha.restaurarOnda(1);
+  Eventos.limpa();
+  p.ouro = 100;
+  const o0 = p.ouro;
+  jogoCanvas._textos = [];
+  Math.random = function () { return 0; };
+  for (let i = 0; i < 5 && !Batalha.info().gatuno; i++) frame(1);
+  conf(Batalha.info().gatuno, 'nasce e rouba na arena');
+  conf(p.ouro === o0 - 15, 'roubo debitado na hora (100 → ' + p.ouro + ')');
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('GATUNO ROUBOU') >= 0),
+    'aviso do roubo na tela');
+  let pegou = false;
+  for (let i = 0; i < 6000 && !pegou; i++) {
+    frame(1);
+    pegou = p.stats.gatunos > 0;
+  }
+  Math.random = rnd;
+  conf(pegou, 'alcança e derruba o Gatuno (prioridade na IA)');
+  conf(p.stats.gatunos === 1, 'stats.gatunos conta +1');
+  // RNG zerado: −15 do roubo + 18 de resgate +1 do kill do próprio
+  // ladrão +0..3 dos slimes da onda 1 (dependem da geometria do spawn)
+  conf(p.ouro >= o0 + 4 && p.ouro <= o0 + 7,
+    'resgate pago (100 → ' + p.ouro + ', faixa 104..107)');
+
+  // --- fuga: o ladrão some (borda ou desistência) e o roubo NÃO volta.
+  // Herói de vidro: ele morre antes de barrar — e se morrer, a perda é
+  // explicada EXATAMENTE pela penalidade normal (−10%/morte, sem ×2 —
+  // sem Açougueiro em campo)
+  p.atributos.for = 1;
+  p.atributos.con = 1;
+  p.atributos.des = 1;
+  p.nivel = 1;
+  Batalha.restaurarOnda(30);
+  Eventos.limpa();
+  p.ouro = 100;
+  jogoCanvas._textos = [];
+  Math.random = function () { return 0; };
+  for (let i = 0; i < 5 && !Batalha.info().gatuno; i++) frame(1);
+  conf(Batalha.info().gatuno, 'roubador em campo (tento a fuga)');
+  const roubado = p.ouro;
+  const mortes1 = p.stats.mortes;
+  let sumiu = false;
+  for (let i = 0; i < 9000 && !sumiu; i++) {
+    frame(1);
+    sumiu = !Batalha.info().gatuno;
+  }
+  Math.random = rnd;
+  conf(sumiu, 'some da arena (fuga na borda ou desistência)');
+  conf(p.stats.gatunos === 1, 'sem resgate: stats não muda');
+  const mortes2 = p.stats.mortes - mortes1;
+  let esperado = roubado;
+  for (let k = 0; k < mortes2; k++) {
+    esperado -= Math.max(1, Math.floor(esperado * 0.1));
+  }
+  conf(p.ouro === esperado,
+    'o roubo não volta (roubado ' + roubado + ', mortes +' + mortes2 +
+    ' → ' + p.ouro + ')');
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('GATUNO') >= 0),
+    'aviso do desfecho na tela');
 }
 
 console.log('');

@@ -154,12 +154,27 @@
   `Batalha` e `Gestao` dependem de skills.js; `personagem.js` não
   (grade/previa carregam só ele).
 - Estatísticas do jogador em `p.stats` (`Personagem.STATS`: abates,
-  mortes, dano causado/recebido, ondas, bosses, itens, tempo) incrementadas
+  mortes, dano causado/recebido, ondas, bosses, itens, tempo, gatunos,
+  acougueiros) incrementadas
   por `Batalha.stat()` nos pontos certos (aplicação de dano, morte, onda
   limpa, drop) e exibidas na 5ª aba de `Gestao` (Stats, `milhar`/`tempoHumano`
   em pt-BR). O `tempo` só corre em `atualizar(dt, true)` — o `true` vem do
   `update` de `jogo.js`; a simulação offline não conta. `normalizaStats`
   completa saves antigos (floor — o tempo ao vivo é fracionário).
+- Eventos aleatórios em `js/eventos.js` (declarado no `index.html`
+  ANTES de `batalha.js` — script novo exige editar o index, o
+  `testes/carga.js` lê a lista de lá): rolagens/estado/timers puros; a
+  arena fica em `batalha.js` (hooks: `spawnaOnda` → `nasceEventos`, branch
+  de fuga do gatuno em `atualizaInimigos`, recompensas em `mataInimigo`,
+  despawns no `atualizar`/revivência, `penalizaMorte` com ×2 quando o
+  Açougueiro está em campo, `info().acougueiro/gatuno`). **Açougueiro**:
+  onda ≥ 30, 1,5%+pity 0,5% (teto 25%), hp×3/dano×1,35, 30s em campo,
+  morte = despawn, vitória = ouro×10 + XP×4 + lendário (`★` no drop).
+  **Gatuno**: 1,5% (só `ouro > 0`, carência 3), rouba 15% → resgate
+  ×1,2; a IA o persegue com **prioridade plana (+1000)**. Como é RNG de
+  gameplay, o harness **desliga** (`Eventos.nasceAco/nasceGat` stubados
+  no topo da fumaça) e só as seções 28/29 religam — qualquer RNG novo
+  precisa desse mosquetão.
 - IA tática em `js/ia.js` (carregado antes de `batalha.js`; usa
   `Batalha.colideObst` em runtime): `agudeza(int)` (INT 4→0, 20→1) →
   `decideHeroi` (alvo por peso = −distância + prioridade×40×agu + ruído

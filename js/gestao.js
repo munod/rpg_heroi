@@ -438,6 +438,8 @@ var Gestao = (function () {
     var linhas = [
       ['Abates', milhar(s.abates)],
       ['Chefes derrotados', milhar(s.bosses)],
+      ['Açougueiros abatidos', milhar(s.acougueiros)],
+      ['Gatunos pegos', milhar(s.gatunos)],
       ['Ondas limpas', milhar(s.ondas)],
       ['Dano causado', milhar(s.danoCausado)],
       ['Dano recebido', milhar(s.danoRecebido)],
@@ -446,7 +448,7 @@ var Gestao = (function () {
       ['Tempo de jogo', tempoHumano(s.tempo)]
     ];
     linhas.forEach(function (l, i) {
-      var y = 128 + i * 26;
+      var y = 120 + i * 22;   // 10 linhas cabem no painel de 300px
       UI.text(l[0], 416, y, { color: '#c9c2dd' });
       UI.text(l[1], 752, y, { align: 'right', color: '#e8c86a' });
     });
