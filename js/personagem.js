@@ -87,7 +87,9 @@ var Personagem = (function () {
         hair: CORES_CABELO[0],
         estilo: 'curto',
         cloth: CORES_ROUPA[0]
-      }
+      },
+      // estatísticas de vida inteira (incrementos em Batalha.stat)
+      stats: normalizaStats(null)
     };
   }
 
@@ -198,6 +200,24 @@ var Personagem = (function () {
   // Chaves de bônus de item — espelho de Itens (personagem.js não pode
   // depender de itens.js: testes como grade carregam só sprite+personagem).
   var BONUS_ITENS = ['dano', 'hp', 'vel', 'crit'];
+
+  // Chaves das estatísticas — espelho de Batalha.stat (mesma razão do
+  // espelho acima: grade/previa carregam só sprite+personagem)
+  var STATS = ['abates', 'mortes', 'danoCausado', 'danoRecebido',
+               'ondas', 'bosses', 'itens', 'tempo'];
+
+  // Preenche as 8 chaves: valor válido do save, ou 0 (save antigo que não
+  // tinha stats). Teto defensivo igual ao do xp p/ storage corrompido, e
+  // floor nos valores (o tempo ao vivo é fracionário — soma de dt).
+  function normalizaStats(s) {
+    var out = {};
+    for (var i = 0; i < STATS.length; i++) {
+      var v = s ? s[STATS[i]] : null;
+      out[STATS[i]] = (typeof v === 'number' && isFinite(v) && v >= 0)
+        ? Math.min(Math.floor(v), 1e9) : 0;
+    }
+    return out;
+  }
   var BOLSA_LIMITE = 10;   // espelho de Itens.BOLSA_MAX
 
   // Item vindo de save/export antigo ou corrompido: valida e completa.
@@ -266,7 +286,8 @@ var Personagem = (function () {
         hair: corOu(p.look && p.look.hair, base.look.hair),
         estilo: (p.look && p.look.estilo) || base.look.estilo,
         cloth: corOu(p.look && p.look.cloth, base.look.cloth)
-      }
+      },
+      stats: normalizaStats(p.stats)
     };
     ATRIBUTOS.forEach(function (at) {
       var v = p.atributos ? p.atributos[at.id] : null;
@@ -294,6 +315,7 @@ var Personagem = (function () {
 
   return {
     ATRIBUTOS: ATRIBUTOS,
+    STATS: STATS,
     CLASSES: CLASSES,
     CORES_PELE: CORES_PELE,
     CORES_CABELO: CORES_CABELO,

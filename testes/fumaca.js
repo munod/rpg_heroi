@@ -275,20 +275,20 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     ', pts ' + pts1 + '->' + p1.pontos + ')');
 
   // --- abas de gestão
-  clique(540, 50);            // aba Aparência
+  clique(515, 50);            // aba Aparência (centro da 2ª aba)
   frame(2);
   const pele0 = p1.look.skin;
   clique(706, 96);           // botão > da linha Pele
   frame(2);
   conf(p1.look.skin !== pele0, 'troca de cor de pele funciona');
 
-  clique(628, 50);           // aba Classe
+  clique(585, 50);           // aba Classe (centro da 3ª aba)
   frame(2);
   clique(580, 138);           // botão Mago
   frame(2);
   conf(p1.classe === 'mago', 'troca de classe funciona');
 
-  clique(452, 50);           // volta pra aba Atributos
+  clique(445, 50);           // volta pra aba Atributos (1ª aba)
   frame(2);
 
   // --- pausar / continuar
@@ -678,7 +678,7 @@ console.log('15) drops, equipamento e aba de itens');
                   bonus: { hp: 50 } };
   Itens.guardar(p, manto);
   jogoCanvas._textos = [];
-  clique(716, 50);                 // aba Itens (4ª coluna)
+  clique(655, 50);                 // aba Itens (4ª coluna)
   frame(2);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('Bolsa') >= 0),
     'aba Itens abre com a bolsa');
@@ -686,7 +686,7 @@ console.log('15) drops, equipamento e aba de itens');
   frame(2);
   conf(p.equip.armadura === manto && p.bolsa.indexOf(manto) < 0,
     'clicar na linha da bolsa equipa o item');
-  clique(452, 50);                 // volta pra Atributos (estado neutro)
+  clique(445, 50);                 // volta pra Atributos (estado neutro)
   frame(2);
 
   if (!estavaPausada) Batalha.alternarPausa();
@@ -1031,7 +1031,7 @@ console.log('19) viewport larga: layout ancorado e preenchido (celular)');
 
   // aba desenhada sob translate: UI.deslocar compensa no hit-test
   jogoCanvas._textos = [];
-  clique(410 + 3 * 88 + 42 + dx, 54);   // aba Itens (local 674..758)
+  clique(412 + 3 * 70 + 33 + dx, 54);   // aba Itens (local 622..688)
   frame(2);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('Bolsa') >= 0),
     'aba Itens clicável com o painel ancorado à direita');
@@ -1095,6 +1095,80 @@ console.log('20) cenário procedural: Perlin Noise com semente do mapa');
   Batalha.restaurarMapa(1);
   conf(JSON.stringify(Batalha.info().obst) === antes,
     'voltar ao mapa 1 reproduz o mesmo layout (semente = nº do mapa)');
+}
+
+console.log('21) estatísticas do jogador (Personagem.stats)');
+{
+  const p = Game.personagem;
+  const Batalha = sandbox.Batalha;
+  const chaves = ['abates', 'mortes', 'danoCausado', 'danoRecebido',
+                  'ondas', 'bosses', 'itens', 'tempo'];
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+
+  conf(!!p.stats && chaves.every(k => typeof p.stats[k] === 'number'),
+    'personagem carrega as 8 estatísticas numéricas');
+
+  // --- round-trip do save preserva stats (normalizar completa o resto)
+  Salvar.salvar(p);
+  const volta = Salvar.listar().find(x => x.id === p.id);
+  // --- round-trip do save preserva stats (normalizar completa o resto);
+  // tempo é fracionário ao vivo (soma de dt) e o normalizar faz o floor
+  const igualStats = !!volta && chaves.every(k =>
+    volta.stats[k] ===
+    (k === 'tempo' ? Math.floor(p.stats[k]) : p.stats[k]));
+  conf(igualStats, 'stats sobrevivem ao save/leitura (normalizar)');
+  const antigo = Personagem.normalizar({ nome: 'Old', classe: 'mago' });
+  conf(chaves.every(k => antigo.stats[k] === 0),
+    'save antigo sem stats ganha os campos zerados');
+
+  // --- contagem ao vivo: luta forte soma abates/ondas/dano/tempo
+  p.atributos.for = 50;
+  p.atributos.int = 50;
+  p.atributos.con = 50;
+  p.pontos = 0;
+  const a0 = JSON.parse(JSON.stringify(p.stats));
+  const t0 = p.stats.tempo;
+  let contou = false;
+  for (let i = 0; i < 12000 && !contou; i++) {
+    frame(1);
+    contou = p.stats.abates > a0.abates && p.stats.ondas > a0.ondas &&
+             p.stats.danoCausado > a0.danoCausado;
+  }
+  conf(contou, 'luta soma abates, ondas limpas e dano causado');
+  conf(p.stats.tempo > t0, 'tempo de jogo acumula durante a luta');
+
+  // --- dano recebido: os inimigos chegam perto e acertam
+  let recebido = p.stats.danoRecebido > a0.danoRecebido;
+  for (let i = 0; i < 9000 && !recebido; i++) {
+    frame(1);
+    recebido = p.stats.danoRecebido > a0.danoRecebido;
+  }
+  conf(recebido, 'dano recebido conta quando o inimigo acerta');
+
+  // --- pausado o tempo não corre (atualizar(dt, true) só na jogatina)
+  Batalha.alternarPausa();
+  const tp = p.stats.tempo;
+  for (let i = 0; i < 100; i++) frame(1);
+  conf(p.stats.tempo === tp, 'pausado não acumula tempo de jogo');
+  Batalha.alternarPausa();
+
+  // --- morte incrementa mortes
+  const m0 = p.stats.mortes;
+  p.atributos.con = 1;
+  p.atributos.for = 1;
+  let morreu = false;
+  for (let i = 0; i < 12000 && !morreu; i++) {
+    frame(1);
+    morreu = p.stats.mortes > m0;
+  }
+  conf(morreu, 'morte incrementa a estatística de mortes');
+
+  // --- aba Stats na UI (clique na 5ª aba da grade nova)
+  jogoCanvas._textos = [];
+  clique(412 + 4 * 70 + 33, 54);          // centro da aba Stats (725, 54)
+  frame(1);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('Abates') >= 0),
+    'aba Stats mostra as estatísticas');
 }
 
 console.log('');

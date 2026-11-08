@@ -351,7 +351,11 @@ var Batalha = (function () {
   }
 
   function proximaOnda() {
-    if (onda >= FIM_MAPA) { passaMapa(); return; }   // limpo a onda 100
+    if (onda >= FIM_MAPA) {
+      stat('ondas');                       // onda 100 (chefe) limpa
+      passaMapa(); return;
+    }
+    if (onda > 0) stat('ondas');           // a 1ª onda do jogo não conta
     onda++;
     var tem = Mapas.info(mapa);
     if (ehBoss(onda)) {
@@ -472,8 +476,18 @@ var Batalha = (function () {
     }
   }
 
+  // Estatísticas de vida inteira (Personagem.stats). Escreve sempre no
+  // personagem em foco — mesma regra do XP: a batalha só roda na jogatina,
+  // onde foco e dono da batalha coincidem.
+  function stat(chave, n) {
+    var p = Game.personagem;
+    if (!p || !p.stats) return;
+    p.stats[chave] = (p.stats[chave] || 0) + (n === undefined ? 1 : n);
+  }
+
   function danoHeroi(dmg) {
     if (heroi.morto) return;
+    stat('danoRecebido', Math.round(dmg));
     heroi.hp -= dmg;
     heroi.inv = 0.5;
     shake = 0.15;
@@ -481,6 +495,7 @@ var Batalha = (function () {
     if (heroi.hp <= 0) {
       heroi.hp = 0;
       heroi.morto = true;
+      stat('mortes');
       heroi.revT = 3;
       morte.x = heroi.x;      // inimigos se agrupam onde ele caiu
       morte.y = heroi.y;
@@ -510,12 +525,14 @@ var Batalha = (function () {
   function mataInimigo(i, en) {
     faísca(en.x, en.y - 6, en.cor, 10);
     inimigos.splice(i, 1);
+    stat('abates');
     // XP na mesma escala contínua das ondas: a recompensa não despenca
     // no primeiro kill de cada mapa novo (o nível travava no troco de
     // mapa). (+ondaTotal+1 reproduz exatamente o 4+onda×2 de sempre no
     // mapa 1.)
     var ganho = Math.round(4 + (ondaTotal() + 1) * 2 + en.tipo.xpExtra);
     if (en.tipo.boss) {
+      stat('bosses');
       // recompensa de chefe: XP de várias ondas de uma vez
       ganho = Math.round(ganho * 5);
       numero(en.x, en.y - 40, 'BOSS DERROTADO!', '#ffd866', true);
@@ -533,6 +550,7 @@ var Batalha = (function () {
     if (!p || !p.equip || !p.bolsa) return;
     var drops = Itens.sorteiaDrop(mapa, !!en.tipo.boss);
     for (var i = 0; i < drops.length; i++) {
+      stat('itens');
       var it = drops[i];
       var equipou = Itens.equiparSeMelhor(p, it);
       if (!equipou) Itens.guardar(p, it);
@@ -577,6 +595,7 @@ var Batalha = (function () {
       if (crit) dmg *= 2;
 
       en.hp -= dmg;
+      stat('danoCausado', dmg);
       en.hitFlash = 0.12;
       if (d > 0.01) {
         en.x += (dx / d) * 4;
@@ -612,6 +631,7 @@ var Batalha = (function () {
         var idx = inimigos.indexOf(alvo);
         if (idx < 0) return;              // alvo morreu durante o voo
         alvo.hp -= dmg;
+        stat('danoCausado', dmg);
         alvo.hitFlash = 0.12;
         var ddx = alvo.x - heroi.x, ddy = alvo.y - heroi.y;
         var d = Math.sqrt(ddx * ddx + ddy * ddy);
@@ -651,6 +671,7 @@ var Batalha = (function () {
         var dmg = Math.max(1, Math.round(heroi.stats.dano * mult) +
           Math.floor(Math.random() * 3));
         alvo.hp -= dmg;
+        stat('danoCausado', dmg);
         alvo.hitFlash = 0.15;
         shake = Math.max(shake, 0.08);
         numero(alvo.x, alvo.y - 18, String(dmg), '#ffffff', false);
@@ -697,6 +718,7 @@ var Batalha = (function () {
       var dmg = Math.max(1, Math.round(st.dano * mg.mult) +
         Math.floor(Math.random() * 3));
       en.hp -= dmg;
+      stat('danoCausado', dmg);
       en.hitFlash = 0.12;
       numero(en.x, en.y - 18, String(dmg), mg.cor, false);
       faísca(en.x, en.y - 6, mg.cor, 6);
@@ -921,6 +943,7 @@ var Batalha = (function () {
           var v = Math.floor(en.veneno.acc);
           en.veneno.acc -= v;
           en.hp -= v;
+          stat('danoCausado', v);
           en.hitFlash = 0.1;
           Efeitos.brasas(en.x, en.y - 6, en.veneno.cor, 3, 50, 35);
           numero(en.x, en.y - 14, String(v), en.veneno.cor, false);
@@ -980,10 +1003,13 @@ var Batalha = (function () {
     }
   }
 
-  function atualizar(dt) {
+  // contaTempo: só o update da jogatina passa true — a simulação de
+  // ausência (progresso offline) em jogo.js não é tempo jogado
+  function atualizar(dt, contaTempo) {
     if (!heroi) return;
     atualizaCamera(dt);        // é apresentação: segue mesmo pausada
     if (pausada) return;
+    if (contaTempo) stat('tempo', dt);
 
     if (shake > 0) shake -= dt;
     if (tFlash > 0) tFlash -= dt;

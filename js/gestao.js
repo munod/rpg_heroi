@@ -111,16 +111,17 @@ var Gestao = (function () {
   }
 
   function desenhaAbas() {
-    // 4 abas encurtadas: os rótulos completos não cabem em 352px
+    // 5 abas encurtadas: o painel tem 352px — 66px de largura com passo 70
     var lista = [
       ['atributos', 'Atrib'],
       ['aparencia', 'Apar'],
       ['classe', 'Classe'],
-      ['itens', 'Itens']
+      ['itens', 'Itens'],
+      ['stats', 'Stats']
     ];
     lista.forEach(function (a, i) {
-      var x = 412 + i * 88;
-      if (UI.button(x, 40, 84, 28, a[1], {
+      var x = 412 + i * 70;
+      if (UI.button(x, 40, 66, 28, a[1], {
         ativo: aba === a[0],
         color: aba === a[0] ? '#e8c86a' : '#9a90b8',
         font: 'bold 16px monospace'
@@ -297,6 +298,42 @@ var Gestao = (function () {
       416, 316, { color: prox ? prox.cor : '#8ce08c' });
   }
 
+  // milhar em pt-BR sem depender do locale do ambiente: 1234567 -> 1.234.567
+  function milhar(n) {
+    var s = String(Math.max(0, Math.floor(n || 0)));
+    return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  // segundos -> '45s' | '12min' | '2h13min'
+  function tempoHumano(seg) {
+    var s = Math.max(0, Math.floor(seg || 0));
+    if (s < 60) return s + 's';
+    var min = Math.floor(s / 60);
+    if (min < 60) return min + 'min';
+    return Math.floor(min / 60) + 'h' + (min % 60) + 'min';
+  }
+
+  // Aba Stats: estatísticas de vida inteira do herói (Personagem.stats)
+  function desenhaStats(ctx, p) {
+    var s = p.stats || {};
+    UI.text('Estatísticas', 416, 96, { color: '#e8c86a' });
+    var linhas = [
+      ['Abates', milhar(s.abates)],
+      ['Chefes derrotados', milhar(s.bosses)],
+      ['Ondas limpas', milhar(s.ondas)],
+      ['Dano causado', milhar(s.danoCausado)],
+      ['Dano recebido', milhar(s.danoRecebido)],
+      ['Mortes', milhar(s.mortes)],
+      ['Itens dropados', milhar(s.itens)],
+      ['Tempo de jogo', tempoHumano(s.tempo)]
+    ];
+    linhas.forEach(function (l, i) {
+      var y = 128 + i * 26;
+      UI.text(l[0], 416, y, { color: '#c9c2dd' });
+      UI.text(l[1], 752, y, { align: 'right', color: '#e8c86a' });
+    });
+  }
+
   // Desenha o painel direito completo (painel + abas + conteúdo).
   // o.criacao ajusta as dicas de texto para a tela de seleção.
   function desenhar(ctx, p, o) {
@@ -312,6 +349,7 @@ var Gestao = (function () {
     if (aba === 'atributos') desenhaAtributos(ctx, p);
     else if (aba === 'aparencia') desenhaAparencia(ctx, p, o);
     else if (aba === 'itens') desenhaItens(ctx, p);
+    else if (aba === 'stats') desenhaStats(ctx, p);
     else desenhaClasse(ctx, p);
     UI.deslocar(0);
     ctx.restore();

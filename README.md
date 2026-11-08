@@ -79,6 +79,10 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   projéteis (alcance próprio por arma).
 - **Aparência** — pele, cabelo, estilo (curto, longo, cavalo, moicana, bandana)
   e cor de roupa; aparece no herói que está lutando.
+- **Estatísticas** — aba **Stats** no painel: abates, chefes derrotados,
+  ondas limpas, dano causado e recebido, mortes, itens dropados e **tempo
+  de jogo** (só a jogatina conta; o crédito offline não). Tudo é gravado
+  no save — saves antigos ganham os campos zerados.
 - **Equipamento** — inimigos **dropam** armas e armaduras (3 raridades) a
   cada abate; o item melhor que o equipado é **usado na hora** e o resto vai
   para a **bolsa** (até 10). A aba **Itens** mostra os 2 slots e a bolsa —
@@ -153,7 +157,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 152 asserções: sprites, status, UI, idle, toque
+node testes/fumaca.js     # 161 asserções: sprites, status, UI, idle, toque
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -162,7 +166,7 @@ node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
-São **165 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **174 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.

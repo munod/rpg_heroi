@@ -116,8 +116,9 @@ var Jogo = (function () {
   function update(dt) {
     blinkT += dt;
 
-    // A batalha roda sempre (idle).
-    Batalha.atualizar(dt);
+    // A batalha roda sempre (idle); com contaTempo, o tempo de jogo
+    // da aba Stats só corre na jogatina real (não no crédito offline)
+    Batalha.atualizar(dt, true);
 
     // o progresso nunca depende do Enter: toast + autosave
     Gravacao.update(dt, Game.personagem, salvarTudo);

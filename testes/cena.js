@@ -293,12 +293,12 @@ salvar('tela-jogo-luta.png');
 console.log('luta: ' + JSON.stringify(sandbox.Batalha.info()));
 
 // gestao: aba aparência (âncora direita em tela larga)
-clique(540 + dxL, 50);
+clique(515 + dxL, 50);   // aba Aparência
 frame(4);
 salvar('tela-aparencia.png');
 
 // gestão: aba classe (âncora direita em tela larga)
-clique(628 + dxL, 50);
+clique(585 + dxL, 50);   // aba Classe
 frame(4);
 salvar('tela-classe.png');
 
@@ -349,6 +349,11 @@ for (let i = 0; i < 1800 && !ferido; i++) {
   }
 }
 capturaSkill('clerigo', 'tela-skill-cura.png');    // motes + anel de cura
+
+// aba Stats: estatísticas do jogador (5ª aba da grade)
+clique(412 + 4 * 70 + 33 + dxL, 54);
+frame(4);
+salvar('tela-stats.png');
 
 console.log('cena atual: ' + sandbox.Game.cena);
 console.log('batalha: ' + JSON.stringify(sandbox.Batalha.info()));

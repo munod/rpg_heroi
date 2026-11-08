@@ -101,8 +101,9 @@
   `Personagem.status`/`lookDe` leem os bônus. **`personagem.js` não pode
   depender de `itens.js`** (grade/previa carregam só sprite+personagem) —
   as chaves de bônus são espelhadas nos dois arquivos.
-- Gestão tem 4 abas (Atrib/Apar/Classe/Itens): centros dos cliques em
-  x = 226/270/314/358, y = 25 — testes que clikam abas dependem dessa grade.
+- Gestão tem 5 abas (Atrib/Apar/Classe/Itens/Stats): botões de 66px com
+  passo 70 a partir de x=412, y=40 — centros 445/515/585/655/725 em y=54;
+  testes que clicam abas dependem dessa grade.
 - Skills automáticas em `js/skills.js` (procs por classe; 5 skills em
   5/15/25/35/45): gatilhos em `Batalha` — `golpeia()` conta as 'area' e
   aplica 'veneno' (classes com `distancia: true` em `personagem.js` mandam
@@ -115,6 +116,13 @@
   `iniciar()`, criado na preguiça p/ troca de classe em combate).
   `Batalha` e `Gestao` dependem de skills.js; `personagem.js` não
   (grade/previa carregam só ele).
+- Estatísticas do jogador em `p.stats` (`Personagem.STATS`: abates,
+  mortes, dano causado/recebido, ondas, bosses, itens, tempo) incrementadas
+  por `Batalha.stat()` nos pontos certos (aplicação de dano, morte, onda
+  limpa, drop) e exibidas na 5ª aba de `Gestao` (Stats, `milhar`/`tempoHumano`
+  em pt-BR). O `tempo` só corre em `atualizar(dt, true)` — o `true` vem do
+  `update` de `jogo.js`; a simulação offline não conta. `normalizaStats`
+  completa saves antigos (floor — o tempo ao vivo é fracionário).
 - Efeitos visuais em `js/efeitos.js` (chamado por `Batalha` em
   `atualizar`/`desenhar`/`limparEfeitos`): **só primitivas que
   `testes/cena.js` rasteriza** — `fillRect`, `strokeRect` (com
@@ -160,4 +168,5 @@
 - Chaves do `localStorage` são versionadas: `rpg_personagens_v1`,
   `rpg_ultimo_id`, `rpg_estado_v1`. Ao alterar o formato do save, suba o
   sufixo `_v1` e/ou normalize na leitura (`Personagem.normalizar`) — não
-  quebre saves antigos em silêncio.
+  quebre saves antigos em silêncio (hoje: `p.stats` via
+  `Personagem.normalizaStats`).
