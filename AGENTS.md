@@ -116,7 +116,12 @@
   passo 70 a partir de x=412, y=40 — centros 445/515/585/655/725 em y=54;
   testes que clicam abas dependem dessa grade.
 - Skills automáticas em `js/skills.js` (procs por classe; 5 skills em
-  5/15/25/35/45): gatilhos em `Batalha` — `golpeia()` conta as 'area' e
+  5/15/25/35/45) com **loadout** (`Skills.LIMITE = 3` ativas;
+  `Skills.carregadas(p)` = desbloqueadas ∩ `p.loadout`, automático =
+  3 mais avançadas; `Batalha` lê só ela). **Keystones** (1 por classe,
+  tradeoff) vivem em `personagem.js` junto do `status` (fonte única:
+  `KEYSTONES`, compra nv 30 × 200, respec 10 — sem espelho). Gatilhos em
+  `Batalha` — `golpeia()` conta as 'area' e
   aplica 'veneno' (classes com `distancia: true` em `personagem.js` mandam
   projétil em `golpeDistancia`, dano na chegada), e
   `atualizaHeroi` roda timers de 'nuke'/'cura' via `skillsPeriodicas` +

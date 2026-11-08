@@ -314,29 +314,106 @@ var Gestao = (function () {
       });
   }
 
+  // Alterna uma skill no loadout: começa do automático na primeira troca;
+  // mínimo 1 e máximo Skills.LIMITE (recusas com toast).
+  function alternarSkill(p, id) {
+    var sel = Array.isArray(p.loadout) ? p.loadout.slice()
+      : Skills.carregadas(p).map(function (s) { return s.id; });
+    var i = sel.indexOf(id);
+    if (i >= 0) {
+      if (sel.length <= 1) {
+        Gravacao.msg('Mínimo de 1 skill ativa');
+        return;
+      }
+      sel.splice(i, 1);
+    } else {
+      if (sel.length >= Skills.LIMITE) {
+        Gravacao.msg('Máximo de ' + Skills.LIMITE + ' skills ativas');
+        return;
+      }
+      sel.push(id);
+    }
+    p.loadout = sel;
+    Gravacao.msg('Skills ativas: ' + sel.length + '/' + Skills.LIMITE);
+  }
+
+  // Aba Classe: grade 2×2 das classes + loadout de skills (máx 3) +
+  // keystone (efeito e custo no rótulo). Sem descrição/próxima skill:
+  // bônus aparecem na aba Atributos e o nível de cada skill na própria
+  // linha. Linhas de 24px (alvo de toque do celular).
   function desenhaClasse(ctx, p) {
     var ordem = ['guerreiro', 'mago', 'ladino', 'clerigo'];
     ordem.forEach(function (id, i) {
       var cl = Personagem.CLASSES[id];
       var sel = p.classe === id;
-      if (UI.button(416, 96 + i * 36, 336, 32, (sel ? '> ' : '  ') + cl.nome, {
+      var x = 416 + (i % 2) * 174;      // 2 colunas de 166 + 8 de vão
+      var y = 88 + Math.floor(i / 2) * 36;
+      if (UI.button(x, y, 166, 28, (sel ? '> ' : '  ') + cl.nome, {
         color: sel ? '#e8c86a' : '#f2eef8'
       })) {
-        p.classe = id;
+        if (!sel) {
+          p.classe = id;
+          p.loadout = null;             // volta pro automático da classe
+        }
       }
     });
 
-    var cl = Personagem.CLASSES[p.classe];
-    // 35 caracteres = 336px cabem nos 343px do painel (16px)
-    var linhas = quebra(cl.desc, 35);
-    linhas.forEach(function (linha, i) {
-      UI.text(linha, 416, 252 + i * 24, { color: '#9a90b8' });
+    // loadout: as 5 skills da classe — ativas em dourado, bloqueadas
+    // travadas no nível
+    var ativasIds = Skills.carregadas(p).map(function (s) { return s.id; });
+    UI.text('Skills ativas (máx ' + Skills.LIMITE + ')', 416, 168,
+      { color: '#9a90b8', font: '13px monospace' });
+    UI.text(ativasIds.length + '/' + Skills.LIMITE, 752, 168,
+      { align: 'right', color: '#e8c86a', font: '13px monospace' });
+    Skills.daClasse(p.classe).forEach(function (sk, i) {
+      var y = 178 + i * 25;
+      var aberta = sk.nivel <= p.nivel;
+      var on = aberta && ativasIds.indexOf(sk.id) >= 0;
+      if (UI.button(416, y, 340, 24,
+        sk.nome + ' (nv ' + sk.nivel + ')', {
+          disabled: !aberta,
+          ativo: on,
+          align: 'left',
+          color: on ? '#e8c86a' : (aberta ? '#f2eef8' : '#6f678a'),
+          font: '13px monospace'
+        })) {
+        alternarSkill(p, sk.id);
+      }
     });
-    // próxima skill da classe (a arma já aparece no rodapé e na aba Itens)
-    var prox = Skills.proxima(p.classe, p.nivel);
-    UI.text(prox ? 'Próxima: ' + prox.nome + ' (nv ' + prox.nivel + ')'
-                 : 'Todas as skills desbloqueadas',
-      416, 316, { color: prox ? prox.cor : '#8ce08c' });
+
+    // keystone da classe: efeito e custo no rótulo (11px p/ caber)
+    var k = Personagem.keystoneDe(p.classe);
+    var rot = '', dis = true;
+    if (!k || p.nivel < Personagem.KEY_NIVEL) {
+      rot = 'K: keystone da classe libera no nível ' + Personagem.KEY_NIVEL;
+    } else if (!p.keystoneLib) {
+      rot = 'K: ' + k.nome + ' ' + k.efeito + ' · ' +
+        Personagem.KEY_CUSTO + ' ouro';
+      dis = (p.ouro || 0) < Personagem.KEY_CUSTO;
+    } else {
+      rot = 'K: ' + k.nome + ' ' + k.efeito + ' · ' +
+        (p.keystoneOn
+          ? 'ATIVO (desl ' + Personagem.KEY_RESPEC + ')'
+          : 'ligar (' + Personagem.KEY_RESPEC + ')');
+      dis = (p.ouro || 0) < Personagem.KEY_RESPEC;
+    }
+    if (UI.button(416, 306, 340, 24, rot, {
+      disabled: dis,
+      ativo: p.keystoneOn,
+      color: p.keystoneOn ? '#8ce08c' : '#c9c2dd',
+      font: '11px monospace'
+    })) {
+      var ligado = p.keystoneOn;
+      var ok = p.keystoneLib
+        ? Personagem.alternarKeystone(p)
+        : Personagem.comprarKeystone(p);
+      if (ok) {
+        Gravacao.msg(p.keystoneLib && !ligado
+          ? 'Keystone comprado e ativo!' : 'Keystone desligado');
+      } else {
+        Gravacao.msg('Sem ouro para isso');
+      }
+    }
   }
 
   // milhar em pt-BR sem depender do locale do ambiente: 1234567 -> 1.234.567

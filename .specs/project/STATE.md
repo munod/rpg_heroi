@@ -45,6 +45,22 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 - **Re-roll assimétrico** — sair de maldição (rol positivo garantido) é
   seguro; mexer em afixo positivo é aposta (pode virar neg): custo
   escala com tentativas p/ conter spam.
+- **Loadout com teto 3 e automático = 3 mais avançadas** — decisão só
+  cria dilema com escassez (pesquisa: points ≪ nodes); o automático
+  preserva saves antigos e os gatilhos (seção 16 intacta). Medido:
+  ritmo na faixa mesmo com o teto — fallback LIMITE 4 não foi preciso.
+- **Keystone mora em `personagem.js`, não em `skills.js`** — é
+  matemática de status derivado e `Personagem.status` é fonte única
+  (UI de status, batalha e testes leem ela); assim o efeito não precisa
+  de espelho. `skills.js` fica só com o que dispara em combate.
+- **Respec: loadout livre, keystone 10 de ouro** — cobrar por trocar de
+  ideia sem ponto investido seria freio (padrão D4: respec barato); o
+  custo simbólico honra a decisão aprovada e o sink real é o
+  desbloqueio (200).
+- **Aba Classe em grade 2×2** — 5 abas são contrato de teste (grade de
+  cliques); o espaço de uma linha por classe virou 2 colunas p/ caber
+  loadout + keystone dentro do painel de 300px (clique do Mago
+  atualizado: 673,102).
 
 
 ## Bloqueios

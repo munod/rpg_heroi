@@ -84,6 +84,9 @@ var Personagem = (function () {
       equip: { arma: null, armadura: null },
       bolsa: [],
       ouro: 0,              // moeda: abates, venda e sucata de itens
+      loadout: null,        // skills escolhidas (null = automático)
+      keystoneLib: false,   // keystone desbloqueado (compra única)
+      keystoneOn: false,    // keystone ativo (aplica o tradeoff)
       look: {
         skin: CORES_PELE[1],
         hair: CORES_CABELO[0],
@@ -126,23 +129,85 @@ var Personagem = (function () {
     return out;
   }
 
+  // ---- keystone da classe (gestão estratégica) ------------------------
+  // 1 por classe com tradeoff forte (pesquisa: keystone com custo >
+  // árvore gigante). Libera no KEY_NIVEL por KEY_CUSTO de ouro e já
+  // ativa na compra; alternar custa KEY_RESPEC (respec barato). Moram
+  // aqui — e não em skills.js — porque são matemática pura de status
+  // derivado: Personagem.status é a fonte única (sem espelho).
+  var KEY_NIVEL = 30;
+  var KEY_CUSTO = 200;
+  var KEY_RESPEC = 10;
+  var KEYSTONES = [
+    { id: 'furia', classe: 'guerreiro', nome: 'Fúria Incontida',
+      efeito: '+35%D/-20%HP', dano: 1.35, hpMax: 0.8 },
+    { id: 'peso', classe: 'mago', nome: 'Peso do Poder',
+      efeito: '+50%D/-25V', dano: 1.5, vel: -25 },
+    { id: 'falcao', classe: 'ladino', nome: 'Olhos de Falcão',
+      efeito: '+18C/-10%D', dano: 0.9, crit: 18 },
+    { id: 'voto', classe: 'clerigo', nome: 'Voto de Pobreza',
+      efeito: '+30HP/-20%D', dano: 0.8, hpMax: 1.3 }
+  ];
+
+  function keystoneDe(classe) {
+    for (var i = 0; i < KEYSTONES.length; i++) {
+      if (KEYSTONES[i].classe === classe) return KEYSTONES[i];
+    }
+    return null;
+  }
+
+  // desbloqueio (uma vez, já ativo) — false se sem nível/ouro
+  function comprarKeystone(p) {
+    if (!keystoneDe(p.classe) || p.keystoneLib || p.nivel < KEY_NIVEL) {
+      return false;
+    }
+    if ((p.ouro || 0) < KEY_CUSTO) return false;
+    p.ouro -= KEY_CUSTO;
+    p.keystoneLib = true;
+    p.keystoneOn = true;
+    return true;
+  }
+
+  // respec barato: ligar/desligar custa KEY_RESPEC de ouro
+  function alternarKeystone(p) {
+    if (!p.keystoneLib || (p.ouro || 0) < KEY_RESPEC) return false;
+    p.ouro -= KEY_RESPEC;
+    p.keystoneOn = !p.keystoneOn;
+    return true;
+  }
+
   function status(p) {
     var c = CLASSES[p.classe] || CLASSES.guerreiro;
     var a = efetivos(p);
     var b = bonusEquipamento(p);
     var nv = (typeof p.nivel === 'number' && p.nivel >= 1)
       ? Math.floor(p.nivel) : 1;
-    var vel = Math.max(10, 46 + a.des * 3 + b.vel);   // clamp: afixo negativo
+    var vel = 46 + a.des * 3 + b.vel;
+    var hpMax = c.hpBase + a.con * 4 + (nv - 1) * 4 + b.hp;
+    var dano = c.danoBase + Math.floor(a[c.danoMod] / 2) + b.dano;
+    var crit = 4 + Math.floor(a.des * 1.3) + b.crit;
+    // keystone ativo: tradeoff aplicado antes dos clamps finais
+    var k = (p.keystoneLib && p.keystoneOn) ? keystoneDe(p.classe) : null;
+    if (k) {
+      if (k.dano) dano = Math.round(dano * k.dano);
+      if (k.hpMax) hpMax = Math.round(hpMax * k.hpMax);
+      if (k.vel) vel += k.vel;
+      if (k.crit) crit += k.crit;
+    }
+    // clamps finais: afixo negativo ou keystone nunca zera status
+    vel = Math.max(10, vel);
+    hpMax = Math.max(10, hpMax);
+    dano = Math.max(1, dano);
+    crit = Math.max(0, Math.min(45, crit));
     return {
       // +4 de vida por nível (0 no nível 1, preservando o custo inicial)
-      // clamps: afixo negativo forte não zera status (hp ≥ 10, dano ≥ 1)
-      hpMax: Math.max(10, c.hpBase + a.con * 4 + (nv - 1) * 4 + b.hp),
-      dano: Math.max(1, c.danoBase + Math.floor(a[c.danoMod] / 2) + b.dano),
+      hpMax: hpMax,
+      dano: dano,
       vel: vel,
       // Velocidade também acelera o ataque: recarga do golpe em segundos
       // (vel 70 = 0,50s base; piso de 0,15s para não virar metralhadora)
       recarga: Math.max(0.15, 35 / vel),
-      crit: Math.max(0, Math.min(45, 4 + Math.floor(a.des * 1.3) + b.crit)),
+      crit: crit,
       alcance: c.alcance,
       arma: c.armaNome,
       xpMult: 1 + (a.car - 8) * 0.03,
@@ -297,6 +362,18 @@ var Personagem = (function () {
     return out;
   }
 
+  // loadout: até Skills.LIMITE ids (espelho do 3 — skills.js não é
+  // carregado pelos testes de sprite); lixo/ids alheios viram null
+  // (automático) e o fallback por classe está em Skills.carregadas.
+  function normalizaLoadout(l) {
+    if (!Array.isArray(l)) return null;
+    var out = [];
+    for (var i = 0; i < l.length && out.length < 3; i++) {
+      if (typeof l[i] === 'string' && l[i]) out.push(l[i].slice(0, 24));
+    }
+    return out.length ? out : null;
+  }
+
   function num(v, min, padrao) {
     return (typeof v === 'number' && isFinite(v) && v >= min) ? Math.floor(v) : padrao;
   }
@@ -322,6 +399,9 @@ var Personagem = (function () {
       },
       bolsa: normalizaBolsa(p.bolsa),
       ouro: num(p.ouro, 0, 0),
+      loadout: normalizaLoadout(p.loadout),
+      keystoneLib: p.keystoneLib === true,
+      keystoneOn: p.keystoneOn === true,
       look: {
         skin: corOu(p.look && p.look.skin, base.look.skin),
         hair: corOu(p.look && p.look.hair, base.look.hair),
@@ -362,6 +442,13 @@ var Personagem = (function () {
     CORES_CABELO: CORES_CABELO,
     CORES_ROUPA: CORES_ROUPA,
     ESTILOS: ESTILOS,
+    KEYSTONES: KEYSTONES,
+    KEY_NIVEL: KEY_NIVEL,
+    KEY_CUSTO: KEY_CUSTO,
+    KEY_RESPEC: KEY_RESPEC,
+    keystoneDe: keystoneDe,
+    comprarKeystone: comprarKeystone,
+    alternarKeystone: alternarKeystone,
     novo: novo,
     custoProximo: custoProximo,
     status: status,

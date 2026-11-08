@@ -937,7 +937,7 @@ var Batalha = (function () {
       if (h.hp > h.hpMax) h.hp = h.hpMax;
     }
     // skills ativas (classe/nível podem mudar em combate)
-    skillsVigentes = Skills.ativas(Game.personagem.classe, Game.personagem.nivel);
+    skillsVigentes = Skills.carregadas(Game.personagem);
 
     if (h.atkCd > 0) h.atkCd -= dt;
     if (h.inv > 0) h.inv -= dt;

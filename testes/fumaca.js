@@ -284,7 +284,7 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
 
   clique(585, 50);           // aba Classe (centro da 3ª aba)
   frame(2);
-  clique(580, 138);           // botão Mago
+  clique(673, 102);          // Mago na grade 2×2 (590..756, 88..116)
   frame(2);
   conf(p1.classe === 'mago', 'troca de classe funciona');
 
@@ -1571,6 +1571,146 @@ console.log('24) economia: ouro, venda/sucata, aprimoramento e re-roll');
   frame(2);
   conf(p.equip.arma.up === 1 && p.ouro === 490,
     'clique no A+ aprimora e cobra (515 - 25)');
+}
+
+console.log('25) gestão de skills: loadout e keystone');
+{
+  const Skills = sandbox.Skills;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // --- carregadas: automático = 3 mais avançadas desbloqueadas
+  p.classe = 'mago';
+  p.nivel = 45;
+  p.loadout = null;
+  const auto = Skills.carregadas(p);
+  conf(auto.length === 3 && auto[0].nivel === 25 && auto[2].nivel === 45,
+    'automático: as 3 skills mais avançadas (nv 25/35/45)');
+
+  // --- seleção custom entre as desbloqueadas
+  p.loadout = ['bola-fogo', 'meteoro'];
+  const sel = Skills.carregadas(p);
+  conf(sel.length === 2 && sel[0].id === 'bola-fogo' &&
+       sel[1].id === 'meteoro',
+    'loadout escolhido substitui o automático');
+
+  // --- seleção de outra classe cai no automático (troca direta)
+  p.classe = 'guerreiro';
+  const fb = Skills.carregadas(p);
+  conf(fb.length === 3 && fb.every(s => s.classe === 'guerreiro'),
+    'loadout alheio à classe nova volta pro automático');
+  p.loadout = null;
+
+  // --- migração dos campos de build
+  const mig = Personagem.importarJSON(
+    '{"nome":"K","nivel":45,"loadout":["a","b","c","d"],' +
+    '"keystoneLib":"x","keystoneOn":1}');
+  conf(Array.isArray(mig.loadout) && mig.loadout.length === 3 &&
+       mig.keystoneLib === false && mig.keystoneOn === false,
+    'migração: loadout truncado no teto e keystone booleanizado');
+
+  // --- efeito exato de cada keystone (liga e compara com desligado)
+  for (const ks of Personagem.KEYSTONES) {
+    p.classe = ks.classe;
+    p.nivel = 45;
+    p.keystoneLib = true;
+    p.keystoneOn = false;
+    const off = Personagem.status(p);
+    p.keystoneOn = true;
+    const on = Personagem.status(p);
+    let ok = true;
+    if (ks.dano) ok = ok && on.dano === Math.round(off.dano * ks.dano);
+    if (ks.hpMax) ok = ok && on.hpMax === Math.round(off.hpMax * ks.hpMax);
+    if (ks.vel) ok = ok && on.vel === off.vel + ks.vel;
+    if (ks.crit) ok = ok && on.crit === off.crit + ks.crit;
+    conf(ok, 'keystone ' + ks.id + ' aplica o efeito exato no status');
+    p.keystoneOn = false;
+  }
+  p.keystoneLib = false;
+
+  // --- compra (nível + ouro) e respec (10 de ouro)
+  p.classe = 'guerreiro';
+  p.ouro = 500;
+  p.nivel = 29;
+  conf(!Personagem.comprarKeystone(p) && p.ouro === 500,
+    'keystone exige o nível 30');
+  p.nivel = 30;
+  const danoSem = Personagem.status(p).dano;
+  conf(Personagem.comprarKeystone(p) && p.keystoneLib && p.keystoneOn &&
+       p.ouro === 300,
+    'compra libera e já ativa (200 de ouro)');
+  conf(Personagem.status(p).dano === Math.round(danoSem * 1.35),
+    'keystone ativo muda o status na hora');
+  conf(Personagem.alternarKeystone(p) && !p.keystoneOn && p.ouro === 290 &&
+       Personagem.status(p).dano === danoSem,
+    'respec desliga por 10 e o status volta');
+
+  // --- o combate executa só o carregado (filtro na prática)
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  p.classe = 'mago';
+  p.nivel = 45;
+  p.atributos.for = 50;
+  p.atributos.int = 50;
+  p.pontos = 0;
+  p.loadout = ['meteoro'];
+  jogoCanvas._textos = [];
+  Batalha.limparEfeitos();
+  let lancou = false;
+  for (let i = 0; i < 2400 && !lancou; i++) {
+    frame(1);
+    lancou = (jogoCanvas._textos || []).some(t => t === 'Meteoro');
+  }
+  conf(lancou, 'skill do loadout dispara na arena (Meteoro)');
+  conf(!(jogoCanvas._textos || []).some(t => t === 'Bola de Fogo'),
+    'skill fora do loadout não dispara');
+  if (!Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- UI da aba Classe: grade nova, toggle com limites e keystone
+  p.keystoneLib = false;
+  p.keystoneOn = false;
+  p.ouro = 1000;
+  p.nivel = 45;
+  p.classe = 'guerreiro';
+  p.loadout = null;
+  clique(585, 50);                 // aba Classe
+  frame(2);
+  clique(673, 102);                // Mago na grade 2×2
+  frame(2);
+  conf(p.classe === 'mago' && p.loadout === null,
+    'trocar classe na grade zera o loadout (automático)');
+  p.loadout = ['bola-fogo'];
+  clique(584, 265);                // linha Meteoro (i=3: y=253..277)
+  frame(2);
+  conf(p.loadout.length === 2 && p.loadout.indexOf('meteoro') >= 0,
+    'clicar na skill liga no loadout');
+  clique(584, 290);                // linha Rajada (i=4: y=278..302)
+  frame(2);
+  clique(584, 215);                // linha Nova (i=1: y=203..227) com 3/3
+  frame(2);
+  conf(p.loadout.length === 3,
+    'loadout respeita o máximo de 3');
+  conf((jogoCanvas._textos = jogoCanvas._textos || [])
+       .some(t => t.indexOf('Máximo de 3') >= 0),
+    'ultrapassar o máximo recusa com aviso');
+  clique(584, 190);                // linha Bola (i=0): sai -> 2/3
+  frame(2);
+  clique(584, 265);                // linha Meteoro (i=3): sai -> 1/3
+  frame(2);
+  clique(584, 290);                // linha Rajada (i=4): última ativa
+  frame(2);
+  conf(p.loadout.length === 1,
+    'loadout mantém o mínimo de 1 skill');
+  conf((jogoCanvas._textos || [])
+       .some(t => t.indexOf('Mínimo de 1') >= 0),
+    'desligar a última skill recusa com aviso');
+  clique(584, 318);                // botão do keystone (y=306..330)
+  frame(2);
+  conf(p.keystoneLib && p.keystoneOn && p.ouro === 800,
+    'botão do keystone compra e ativa (200)');
+  clique(584, 318);
+  frame(2);
+  conf(!p.keystoneOn && p.ouro === 790,
+    'botão do keystone desliga no respec (10)');
 }
 
 console.log('');

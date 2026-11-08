@@ -36,6 +36,19 @@ vive em `.specs/features/`.
   migração sem bump de chave (`p.ouro`, `up/rerolls/escala/base`) —
   spec `.specs/features/economia-ouro/` (R-ECO-1..6). Ritmo reconfirmado
   (37,9s · nv34/onda55 · mapa 1 em 29min).
+- **Skills estratégicas (Leva C da gestão estratégica)**: **loadout** —
+  máx. 3 skills ativas por vez (`Skills.carregadas`; automático = as 3
+  mais avançadas, mínimo 1, troca de classe zera); **keystone por
+  classe** com tradeoff forte (Fúria Incontida +35%D/−20%HP · Peso do
+  Poder +50%D/−25V · Olhos de Falcão +18C/−10%D · Voto de Pobreza
+  +30HP/−20%D) liberado no nv 30 por 200 ouro, aplicado dentro de
+  `Personagem.status` (fonte única); **respec barato** — loadout troca
+  livre, keystone alterna por 10 ouro; aba Classe reorganizada (grade
+  2×2, linhas de skill com toggle e botão do keystone com efeito/custo);
+  `Batalha` lê o loadout; migração com `loadout/keystoneLib/keystoneOn`
+  — spec `.specs/features/skills-estrategicas/` (R-SKL-1..4). Ritmo com
+  o teto de 3 skills na faixa (39,9s · nv34/onda55 · mapa 1 em 30,4min);
+  seção 16 (gatilhos) passou sem tocar nela.
 
 ## [0.1.0] — 2026-11-08
 

@@ -1,6 +1,6 @@
 # Spec: Gestão estratégica — itens, economia, skills (umbrella)
 
-Status: **em execução** — Levas A (`itens-afixos`) e B (`economia-ouro`) concluídas; C/D planejadas
+Status: **em execução** — Levas A (`itens-afixos`), B (`economia-ouro`) e C (`skills-estrategicas`) concluídas; D planejada
 · Data: 2026-11-08 · Versão alvo: 0.2.0 (em 4 levas)
 Decisões do usuário: afixos + mods negativos + UI de deltas (sem slots novos
 na 1ª leva) · skills = loadout + keystone · economia com ouro em leva própria ·
@@ -50,7 +50,7 @@ com valor mínimo (loop econômico).
   "melhorar o atual ou caçar o próximo".
 - **R-GES-2.4**: persistência do ouro/investimento em item com migração.
 
-### Leva C — `skills-estrategicas` (R-GES-3)
+### Leva C — `skills-estrategicas` (R-GES-3) ✅ (ver spec própria)
 - **R-GES-3.1**: **loadout** — escolher quais skills estão ativas entre as
   desbloqueadas (limite por classe, ex. 3 de 5); o combate segue automático
   só executando o carregado.

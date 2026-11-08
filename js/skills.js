@@ -77,6 +77,31 @@ var Skills = (function () {
     return out;
   }
 
+  // ---- loadout (gestão estratégica) -----------------------------------
+  // Teto de skills ativas por vez. O loadout é seleção pura do jogador
+  // (p.loadout = ids); sem seleção válida — automático — valem as
+  // LIMITE mais avançadas desbloqueadas. Mínimo 1 é garantido pela UI.
+  var LIMITE = 3;
+
+  function automaticas(desb) {
+    return desb.slice(Math.max(0, desb.length - LIMITE));
+  }
+
+  // skills que o combate vai executar para o personagem
+  function carregadas(p) {
+    var desb = ativas(p ? p.classe : null, p ? p.nivel : 1);
+    var sel = p && p.loadout;
+    if (Array.isArray(sel) && sel.length) {
+      var out = [];
+      for (var i = 0; i < desb.length; i++) {
+        if (sel.indexOf(desb[i].id) >= 0) out.push(desb[i]);
+      }
+      // seleção da classe antiga (troca direta): volta pro automático
+      if (out.length) return out.slice(0, LIMITE);
+    }
+    return automaticas(desb);
+  }
+
   // skill desbloqueada EXATAMENTE neste nível (para o aviso) — ou null
   function desbloqueada(classe, nivel) {
     var todas = daClasse(classe);
@@ -99,8 +124,10 @@ var Skills = (function () {
 
   return {
     LISTA: LISTA,
+    LIMITE: LIMITE,
     daClasse: daClasse,
     ativas: ativas,
+    carregadas: carregadas,
     desbloqueada: desbloqueada,
     proxima: proxima
   };
