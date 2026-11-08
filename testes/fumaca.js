@@ -184,7 +184,7 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   const p0 = Game.personagem;
   p0.pontos = 5;              // herói novo nasce sem pontos: dá saldo ao teste
   const for0 = p0.atributos.for, pts0 = p0.pontos;
-  clique(361, 46); // centro do botão + (aba Atributos)
+  clique(722, 92); // centro do botão + (aba Atributos)
   frame(2);
   conf(p0.atributos.for === for0 + 1 && p0.pontos === pts0 - 1,
     'botão + funciona na criação (for ' + for0 + '->' + p0.atributos.for +
@@ -193,7 +193,7 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   // sem teto de 18: dá pra ir além
   p0.atributos.for = 50;
   const ptsCap = p0.pontos;
-  clique(361, 46);
+  clique(722, 92);
   frame(2);
   conf(p0.atributos.for === 51 && p0.pontos === ptsCap - 1,
     'sem teto: Força50 -> 51 (pontos ' + ptsCap + ' -> ' + p0.pontos + ')');
@@ -201,7 +201,7 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   // --- segurar o + repete (arranque de 0,25s e depois ~10/s)
   p0.pontos = 50;
   const ptsSeg = p0.pontos;
-  pressionar(361, 46);          // pressiona sem soltar
+  pressionar(722, 92);          // pressiona sem soltar
   frame(45);                    // ~0,75s segurado
   soltar();
   const gastos = ptsSeg - p0.pontos;
@@ -209,18 +209,18 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     'segurar repete o + (gastou ' + gastos + ' em ~0,75s)');
 
   // --- toggle ×5: gasta 5 por clique e volta para ×1
-  clique(354, 117);             // toggle (342,112,25,11)
+  clique(708, 234);             // toggle (684,224,55,26)
   frame(2);
   p0.pontos = 10;
   const forT = p0.atributos.for;
-  clique(361, 46);
+  clique(722, 92);
   frame(2);
   conf(p0.atributos.for === forT + 5 && p0.pontos === 5,
     '×5 gasta 5 por clique (for ' + forT + '->' + p0.atributos.for +
     ', pts 10->' + p0.pontos + ')');
-  clique(354, 117);             // volta para ×1
+  clique(708, 234);             // volta para ×1
   frame(2);
-  clique(361, 46);
+  clique(722, 92);
   frame(2);
   conf(p0.atributos.for === forT + 6 && p0.pontos === 4,
     'toggle volta para ×1 (for +1, pts 5->4)');
@@ -270,27 +270,27 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     ', pts ' + pts1 + '->' + p1.pontos + ')');
 
   // --- abas de gestão
-  clique(270, 25);            // aba Aparência
+  clique(540, 50);            // aba Aparência
   frame(2);
   const pele0 = p1.look.skin;
-  clique(353, 48);           // botão > da linha Pele
+  clique(706, 96);           // botão > da linha Pele
   frame(2);
   conf(p1.look.skin !== pele0, 'troca de cor de pele funciona');
 
-  clique(314, 25);           // aba Classe
+  clique(628, 50);           // aba Classe
   frame(2);
-  clique(290, 69);           // botão Mago
+  clique(580, 138);           // botão Mago
   frame(2);
   conf(p1.classe === 'mago', 'troca de classe funciona');
 
-  clique(226, 25);           // volta pra aba Atributos
+  clique(452, 50);           // volta pra aba Atributos
   frame(2);
 
   // --- pausar / continuar
-  clique(322, 194);
+  clique(644, 388);
   frame(2);
   conf(Batalha.info().pausada === true, 'botão Pausar pausa a batalha');
-  clique(322, 194);
+  clique(644, 388);
   frame(2);
   conf(Batalha.info().pausada === false, 'botão Continuar retoma a batalha');
 }
@@ -326,7 +326,7 @@ console.log('6) morte, revivescimento e troca de tela');
   conf(reviveu, 'herói revive sozinho depois de 3s');
 
   // --- a jogatina não tem como trocar de herói por baixo: você sai dela
-  clique(118, 194);           // botão Trocar herói
+  clique(236, 388);           // botão Trocar herói
   frame(2);
   conf(Game.cena === 'selecao',
     'Trocar herói leva para a tela de seleção (fora da arena)');
@@ -337,7 +337,7 @@ console.log('6) morte, revivescimento e troca de tela');
 
   const forSel = Game.personagem.atributos.for;
   Game.personagem.pontos = 5;  // saldo pro clique (herói nasce sem pontos)
-  clique(361, 46);            // + funciona na tela de seleção
+  clique(722, 92);            // + funciona na tela de seleção
   frame(2);
   conf(Game.personagem.atributos.for === forSel + 1 &&
        Game.personagem.pontos === 4,
@@ -345,7 +345,7 @@ console.log('6) morte, revivescimento e troca de tela');
     Game.personagem.atributos.for + ', pontos 5 -> ' +
     Game.personagem.pontos + ')');
 
-  clique(60, 194);            // botão JOGAR
+  clique(120, 388);            // botão JOGAR
   frame(2);
   conf(Game.cena === 'jogo' && Batalha.info().onda >= 1,
     'JOGAR entra na arena de novo (onda ' + Batalha.info().onda + ')');
@@ -389,12 +389,12 @@ console.log('7) autosave, nome do arquivo e carisma');
 
 console.log('8) seleção: novo herói, exclusão em duas etapas e paginação');
 {
-  clique(118, 194);                       // Trocar herói -> seleção
+  clique(236, 388);                       // Trocar herói -> seleção
   frame(2);
   conf(Game.cena === 'selecao', 'a lista vive na tela de seleção');
 
   const qtd0 = Salvar.listar().length;
-  clique(35, 144);                        // botão Novo (8,136,54,16)
+  clique(70, 288);                        // botão Novo (16,272,108,32)
   frame(2);
   conf(Salvar.listar().length === qtd0 + 1,
     'Novo criou um registro a mais (' + qtd0 + ' -> ' +
@@ -402,14 +402,14 @@ console.log('8) seleção: novo herói, exclusão em duas etapas e paginação')
   conf(Game.personagem.nome === 'Herói', 'o novo herói está em foco na seleção');
 
   // --- exclusão em duas etapas: foca o primeiro herói da lista
-  clique(100, 56);                        // item 1 da lista (8,48,184,16)
+  clique(200, 112);                        // item 1 da lista (16,96,368,32)
   frame(2);
   const alvo = Game.personagem;
-  clique(96, 144);                        // Apagar (1º clique)
+  clique(192, 288);                        // Apagar (1º clique)
   frame(2);
   conf(Salvar.listar().some(s => s.id === alvo.id),
     'primeiro clique só pede confirmação (não apagou)');
-  clique(96, 144);                        // Sim? (2º clique)
+  clique(192, 288);                        // Sim? (2º clique)
   frame(2);
   conf(!Salvar.listar().some(s => s.id === alvo.id),
     'segundo clique apagou "' + alvo.nome + '"');
@@ -422,7 +422,7 @@ console.log('8) seleção: novo herói, exclusão em duas etapas e paginação')
   }
   frame(2);
   jogoCanvas._textos = [];
-  clique(190, 40);                        // seta > da navegação (184,34,12,12)
+  clique(380, 80);                        // seta > da navegação (368,68,24,24)
   frame(2);
   const txts = jogoCanvas._textos || [];
   conf(txts.some(t => t.indexOf('2/2') >= 0),
@@ -548,10 +548,10 @@ console.log('13) save de estado não contamina outro personagem');
   conf(ondaA > 0, 'batalha em andamento antes do teste (onda ' + ondaA + ')');
 
   // sai para a seleção e foca outro herói
-  clique(118, 194);              // Trocar herói
+  clique(236, 388);              // Trocar herói
   frame(2);
   conf(Game.cena === 'selecao', 'saiu para a seleção');
-  clique(35, 144);               // Novo -> cria e foca o herói B
+  clique(70, 288);               // Novo -> cria e foca o herói B
   frame(2);
   const pB = Game.personagem;
   conf(pB.id !== pA.id, 'focou um personagem diferente (B)');
@@ -586,7 +586,7 @@ console.log('14) ausência creditada na jogatina + limites do estado');
   const Batalha = sandbox.Batalha;
 
   // JOGAR com o foco em B: entra na arena e restaura o estado dele
-  clique(60, 194);
+  clique(120, 388);
   frame(2);
   conf(Game.cena === 'jogo', 'entrou na jogatina com B');
 
@@ -673,15 +673,15 @@ console.log('15) drops, equipamento e aba de itens');
                   bonus: { hp: 50 } };
   Itens.guardar(p, manto);
   jogoCanvas._textos = [];
-  clique(358, 25);                 // aba Itens (4ª coluna)
+  clique(716, 50);                 // aba Itens (4ª coluna)
   frame(2);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('Bolsa') >= 0),
     'aba Itens abre com a bolsa');
-  clique(292, 108);                // linha da bolsa (2ª: y=102..115)
+  clique(584, 216);                // linha da bolsa (2ª: y=206..232)
   frame(2);
   conf(p.equip.armadura === manto && p.bolsa.indexOf(manto) < 0,
     'clicar na linha da bolsa equipa o item');
-  clique(226, 25);                 // volta pra Atributos (estado neutro)
+  clique(452, 50);                 // volta pra Atributos (estado neutro)
   frame(2);
 
   if (!estavaPausada) Batalha.alternarPausa();
@@ -860,6 +860,79 @@ console.log('17) câmera, mundo maior e renascimento aleatório');
   conf(Math.abs(f.cam.x - fax) <= 2 && Math.abs(f.cam.y - fay) <= 2,
     'câmera acompanha o renascimento');
   Batalha.alternarPausa();
+}
+
+console.log('18) toque, resolução e escala responsiva');
+{
+  const Input = sandbox.Input;
+  const p = Game.personagem;
+
+  // --- resolução nova + escala fracionária que preenche a janela
+  conf(jogoCanvas.width === 768 && jogoCanvas.height === 432,
+    'backing store 768×432');
+  conf(jogoCanvas.style.width === '1280px' &&
+       jogoCanvas.style.height === '720px',
+    'CSS preenche a janela do harness (escala fracionária 1.67×, ' +
+    jogoCanvas.style.width + '×' + jogoCanvas.style.height + ')');
+
+  // --- touch: touchstart/touchmove no canvas, touchend na window
+  let prevenido = 0;
+  const T = (id, x, y) => ({ identifier: id, clientX: x * 2, clientY: y * 2 });
+  function dispara(tipo, lista) {
+    const ev = { touches: lista, preventDefault() { prevenido++; } };
+    const fonte = (tipo === 'touchend' || tipo === 'touchcancel')
+      ? ouvintesJanela : jogoCanvas._listeners;
+    (fonte[tipo] || []).forEach(fn => fn(ev));
+  }
+
+  // tem que haver ouvintes de toque registrados
+  conf((jogoCanvas._listeners.touchstart || []).length > 0 &&
+       (jogoCanvas._listeners.touchmove || []).length > 0 &&
+       (ouvintesJanela.touchend || []).length > 0,
+    'ouvintes de touchstart/touchmove/touchend registrados');
+
+  // toque no "+" (centro 728,96) aplica o ponto na hora
+  p.pontos = 5;
+  const for0 = p.atributos.for;
+  dispara('touchstart', [T(1, 728, 96)]);
+  conf(Input.mouse.down && Input.mouse.clicked,
+    'touchstart vira mouse down+clicked');
+  conf(prevenido > 0,
+    'preventDefault chamado (mata rolagem, zoom e mouse sintético)');
+  conf(Input.mouse.x === 728 && Input.mouse.y === 96,
+    'toque mapeia para a coordenada de jogo (728,96)');
+  frame(1);
+  conf(p.atributos.for === for0 + 1 && p.pontos === 4,
+    'clique por toque aplicou o + (for ' + for0 + '->' +
+    p.atributos.for + ', pts 5->' + p.pontos + ')');
+  conf(!Input.mouse.clicked && Input.mouse.down,
+    'clicked consumido no frame; down mantido com o dedo pressionado');
+
+  // arrasto: touchmove segue o dedo que começou
+  dispara('touchmove', [T(1, 150, 150)]);
+  conf(Input.mouse.x === 150 && Input.mouse.y === 150,
+    'touchmove atualiza o ponteiro (150,150)');
+
+  // segundo dedo não sequestra o ponteiro
+  dispara('touchstart', [T(1, 150, 150), T(2, 500, 300)]);
+  conf(Input.mouse.x === 150 && Input.mouse.y === 150,
+    'segundo dedo é ignorado (vale o identifier do primeiro)');
+  dispara('touchmove', [T(1, 170, 170), T(2, 500, 300)]);
+  conf(Input.mouse.x === 170 && Input.mouse.y === 170,
+    'touchmove continua seguindo o primeiro dedo');
+
+  // soltura: em touchend, e.touches = toques QUE RESTAM ativos.
+  // dedo 2 sai (resta o 1) -> ponteiro continua; dedo 1 sai -> solta
+  dispara('touchend', [T(1, 170, 170)]);
+  conf(Input.mouse.down, 'dedo 2 sair não solta o ponteiro (resta o 1)');
+  dispara('touchend', [T(2, 500, 300)]);
+  conf(!Input.mouse.down, 'dedo 1 (o que controlava) sair solta o ponteiro');
+
+  // touchcancel limpa igual
+  dispara('touchstart', [T(1, 40, 40)]);
+  conf(Input.mouse.down, 'touchstart liga de novo');
+  dispara('touchcancel', []);
+  conf(!Input.mouse.down, 'touchcancel solta o ponteiro');
 }
 
 console.log('');

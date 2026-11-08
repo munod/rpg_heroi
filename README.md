@@ -89,7 +89,7 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
 index.html          carrega os scripts na ordem
 style.css           canvas centralizado, pixel art nítida
 js/
-  input.js          teclado e mouse (estado por frame)
+  input.js          teclado, mouse e toque (estado por frame)
   sprite.js         geração procedural de pixel art (herói, inimigos, cenário)
   anim.js           cache de frames animados
   personagem.js     classes, atributos, status derivados, validação, níveis
@@ -107,11 +107,19 @@ js/
 testes/             ferramentas de verificação (ver abaixo)
 ```
 
-Resolução interna de **384×216** escalada por inteiro. A arena é uma
-**janela de 192×134 deslizando sobre um mundo de 384×268** — uma câmera
-suave segue o herói (com trava nas bordas do mundo) — e os sprites são
+Resolução interna de **768×432** com escala responsiva: o CSS preenche
+a tela com escala **fracionária** (paisagem no celular aproveita tudo)
+e o backing store usa pixels inteiros (DPR) para texto e pixel art
+nascerem nítidos. A arena é uma **janela de 192×134 (unidades de mundo,
+ampliadas ×2 na tela) deslizando sobre um mundo de 384×268** — uma
+câmera suave segue o herói (com trava nas bordas) — e os sprites são
 grades de pixels desenhadas por código e escaladas com `imageSmoothing`
 desligado.
+
+**Celular**: toque funciona como o mouse (`touchstart` = clique, com
+`preventDefault` contra rolagem/zoom), alvos de toque de 24px nos
+atributos, `touch-action: none` e viewport travado; em retrato aparece
+a dica **"Gire o celular para jogar"** (o layout é paisagem).
 
 ## Testes
 
@@ -119,7 +127,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 116 asserções: sprites, status, UI, idle completo
+node testes/fumaca.js     # 131 asserções: sprites, status, UI, idle, toque
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por magia: tela-magia*.png)
@@ -128,7 +136,7 @@ node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
-São **129 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **144 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.
@@ -145,6 +153,7 @@ legado, **drops com auto-equip/bolsa** e a **aba Itens** equipando no clique,
 as **magias com os 4 tipos de proc** (área, nuke, veneno e cura) com aviso
 de desbloqueio e **efeitos visuais** (missil teleguiado, arco de corte,
 anel de impacto, respingos de veneno e motes de cura), a **câmera sobre o
-mundo 384×268** com o **renascimento em local aleatório**, e a lista de
-personagens na seleção com paginação, novo herói e exclusão em duas
-etapas.
+mundo 384×268** com o **renascimento em local aleatório**, o **toque no
+celular** (clique, arrasto e soltura por dedo, com bloqueio de rolagem)
+e a **escala responsiva 768×432**, e a lista de personagens na seleção
+com paginação, novo herói e exclusão em duas etapas.

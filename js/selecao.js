@@ -116,20 +116,20 @@ var Selecao = (function () {
     var p = Game.personagem;
 
     ctx.fillStyle = '#141020';
-    ctx.fillRect(0, 0, 384, 216);
+    ctx.fillRect(0, 0, 768, 432);
 
     // ---------------- cabeçalho: título + nome digitável
     ctx.fillStyle = '#191326';
-    ctx.fillRect(0, 0, 384, 15);
-    UI.text('RPG HERÓI', 6, 8, { color: '#e8c86a', font: 'bold 8px monospace' });
-    UI.text('crie ou escolha um herói', 76, 8, { color: '#9a90b8' });
+    ctx.fillRect(0, 0, 768, 30);
+    UI.text('RPG HERÓI', 6, 16, { color: '#e8c86a', font: 'bold 16px monospace' });
+    UI.text('crie ou escolha um herói', 152, 16, { color: '#9a90b8' });
     var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';
-    UI.text('Nome: ' + (p ? p.nome : '') + cursor, 378, 8, {
+    UI.text('Nome: ' + (p ? p.nome : '') + cursor, 756, 16, {
       align: 'right', color: '#f2eef8'
     });
 
     // ---------------- lista de heróis (esquerda)
-    UI.panel(4, 18, 196, 150, 'HERÓIS');
+    UI.panel(8, 36, 392, 300, 'HERÓIS');
     desenhaLista(ctx);
 
     // ---------------- gestão do herói em foco (direita)
@@ -146,10 +146,10 @@ var Selecao = (function () {
     var foco = Game.personagem;
 
     if (!lista.length) {
-      UI.text('Nenhum herói salvo.', 102, 70, {
+      UI.text('Nenhum herói salvo.', 204, 140, {
         align: 'center', color: '#9a90b8'
       });
-      UI.text('Clique em "Novo" para criar.', 102, 84, {
+      UI.text('Clique em "Novo" para criar.', 204, 168, {
         align: 'center', color: '#6f678a'
       });
     }
@@ -158,23 +158,23 @@ var Selecao = (function () {
     var paginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
     if (pagina > paginas - 1) pagina = paginas - 1;
     if (paginas > 1) {
-      if (UI.button(148, 34, 12, 12, '<', { disabled: pagina === 0 })) {
+      if (UI.button(296, 68, 24, 24, '<', { disabled: pagina === 0 })) {
         pagina--;
       }
-      UI.text((pagina + 1) + '/' + paginas, 171, 40,
+      UI.text((pagina + 1) + '/' + paginas, 342, 80,
         { align: 'center', color: '#c9c2dd' });
-      if (UI.button(184, 34, 12, 12, '>', { disabled: pagina >= paginas - 1 })) {
+      if (UI.button(368, 68, 24, 24, '>', { disabled: pagina >= paginas - 1 })) {
         pagina++;
       }
     }
 
     lista.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA)
       .forEach(function (item, i) {
-        var y = 56 + i * 16;
+        var y = 112 + i * 32;
         var sel = !!(foco && foco.id === item.id);
         var cl = Personagem.CLASSES[item.classe];
         var rotulo = item.nome + '  Nv' + item.nivel + ' · ' + (cl ? cl.nome : '?');
-        if (UI.button(8, y - 8, 184, 16, rotulo, {
+        if (UI.button(16, y - 16, 368, 32, rotulo, {
           ativo: sel, align: 'left',
           color: sel ? '#e8c86a' : undefined
         })) {
@@ -183,12 +183,12 @@ var Selecao = (function () {
       });
 
     UI.text(lista.length + (lista.length === 1 ? ' salvo' : ' salvos'),
-      12, 158, { color: '#6f678a' });
+      24, 316, { color: '#6f678a' });
 
-    if (UI.button(8, 136, 54, 16, 'Novo')) novoPersonagem();
+    if (UI.button(16, 272, 108, 32, 'Novo')) novoPersonagem();
 
     var marcado = !!(apagando && foco && apagando.id === foco.id);
-    if (UI.button(66, 136, 60, 16, marcado ? 'Sim?' : 'Apagar', {
+    if (UI.button(132, 272, 120, 32, marcado ? 'Sim?' : 'Apagar', {
       disabled: !foco,
       color: marcado ? '#ff6b6b' : undefined
     })) {
@@ -200,7 +200,7 @@ var Selecao = (function () {
       }
     }
 
-    if (UI.button(130, 136, 54, 16, 'Exp.', { disabled: !foco })) {
+    if (UI.button(260, 272, 108, 32, 'Exp.', { disabled: !foco })) {
       Salvar.exportar(foco);
       Gravacao.msg('Arquivo .json exportado!');
     }
@@ -210,15 +210,15 @@ var Selecao = (function () {
     if (!p) return;
     UI.linhaStatus(Personagem.status(p));
 
-    if (UI.button(4, 186, 110, 16, 'JOGAR', {
-      color: '#8ce08c', font: 'bold 8px monospace'
+    if (UI.button(8, 372, 220, 32, 'JOGAR', {
+      color: '#8ce08c', font: 'bold 16px monospace'
     })) jogar();
-    if (UI.button(120, 186, 66, 16, 'Importar')) importar();
-    if (UI.button(192, 186, 66, 16, 'Exportar')) {
+    if (UI.button(240, 372, 132, 32, 'Importar')) importar();
+    if (UI.button(384, 372, 132, 32, 'Exportar')) {
       Salvar.exportar(p);
       Gravacao.msg('Arquivo .json exportado!');
     }
-    if (UI.button(264, 186, 116, 16, 'Salvar')) {
+    if (UI.button(528, 372, 232, 32, 'Salvar')) {
       Gravacao.salvarPersonagem(p, true);
     }
   }

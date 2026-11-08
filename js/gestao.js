@@ -9,7 +9,7 @@ var Gestao = (function () {
   var repI = 0;            // tempo desde a última repetição
   var REP_ATRASO = 0.25;   // segurar antes de começar a repetir
   var REP_PASSO = 0.1;     // cadência da repetição (~10/s)
-  var RECT_TOGGLE = { x: 342, y: 112, w: 25, h: 11 };
+  var RECT_TOGGLE = { x: 684, y: 224, w: 55, h: 26 };
 
   function ciclo(arr, atual) {
     var i = arr.indexOf(atual);
@@ -44,15 +44,16 @@ var Gestao = (function () {
 
   // Linhas dos atributos com retângulos dos botões +/− — fonte única de
   // geometria: o update aplica as ações e o render só desenha por cima.
+  // Alvos de toque: 11 -> 24px no dobro da resolução (dedo no celular).
   function linhasAtributos() {
     return Personagem.ATRIBUTOS.map(function (at, i) {
-      var y = 46 + i * 14;
+      var y = 96 + i * 28;
       return {
         at: at.id,
         nome: at.nome,
         y: y,
-        menos: { x: 342, y: y - 5, w: 11, h: 11 },
-        mais:  { x: 356, y: y - 5, w: 11, h: 11 }
+        menos: { x: 684, y: y - 12, w: 24, h: 24 },
+        mais:  { x: 716, y: y - 12, w: 24, h: 24 }
       };
     });
   }
@@ -106,7 +107,7 @@ var Gestao = (function () {
   }
 
   function desenhaAbas() {
-    // 4 abas encurtadas: os rótulos completos não cabem em 176px
+    // 4 abas encurtadas: os rótulos completos não cabem em 352px
     var lista = [
       ['atributos', 'Atrib'],
       ['aparencia', 'Apar'],
@@ -114,11 +115,11 @@ var Gestao = (function () {
       ['itens', 'Itens']
     ];
     lista.forEach(function (a, i) {
-      var x = 205 + i * 44;
-      if (UI.button(x, 19, 42, 13, a[1], {
+      var x = 412 + i * 88;
+      if (UI.button(x, 40, 84, 28, a[1], {
         ativo: aba === a[0],
         color: aba === a[0] ? '#e8c86a' : '#9a90b8',
-        font: 'bold 8px monospace'
+        font: 'bold 16px monospace'
       })) {
         aba = a[0];
       }
@@ -128,12 +129,12 @@ var Gestao = (function () {
   function desenhaAtributos(ctx, p) {
     linhasAtributos().forEach(function (linha) {
       var v = p.atributos[linha.at];
-      UI.text(linha.nome, 208, linha.y, {});
-      UI.text(String(v), 332, linha.y, { align: 'right', color: '#e8c86a' });
+      UI.text(linha.nome, 416, linha.y, {});
+      UI.text(String(v), 664, linha.y, { align: 'right', color: '#e8c86a' });
       // visual apenas: clicar/segurar aplica em Gestao.update
-      UI.button(linha.menos.x, linha.menos.y, 11, 11, '-',
+      UI.button(linha.menos.x, linha.menos.y, 24, 24, '-',
         { disabled: v <= 1 });
-      UI.button(linha.mais.x, linha.mais.y, 11, 11, '+',
+      UI.button(linha.mais.x, linha.mais.y, 24, 24, '+',
         { disabled: p.pontos <= 0 });
     });
 
@@ -151,13 +152,13 @@ var Gestao = (function () {
       var b = cl.bonus[at.id];
       return (b > 0 ? '+' : '') + b + ' ' + at.nome;
     }).join(', ');
-    UI.text('Classe: ' + cl.nome, 208, 118, { color: cl.cor });
-    // o bônus passa de 30 caracteres: quebra em vez de estourar o painel
-    var linhas = quebra(bonus || 'sem bônus', 30);
+    UI.text('Classe: ' + cl.nome, 416, 240, { color: cl.cor });
+    // em 16px cabem 35 caracteres nos 343px do painel; 36 estoura
+    var linhas = quebra(bonus || 'sem bônus', 35);
     linhas.forEach(function (linha, i) {
-      UI.text(linha, 208, 130 + i * 12, { color: '#9a90b8' });
+      UI.text(linha, 416, 268 + i * 24, { color: '#9a90b8' });
     });
-    UI.text('Cada nível: +5 pontos', 208, 130 + linhas.length * 12 + 6,
+    UI.text('Cada nível: +5 pontos', 416, 268 + linhas.length * 24 + 12,
       { color: '#6f678a' });
   }
 
@@ -206,25 +207,25 @@ var Gestao = (function () {
     ];
 
     linhas.forEach(function (lin, i) {
-      var y = 48 + i * 16;
-      UI.text(lin.rot, 208, y, {});
-      if (UI.button(258, y - 6, 11, 12, '<')) lin.muda(-1);
+      var y = 104 + i * 32;
+      UI.text(lin.rot, 416, y, {});
+      if (UI.button(508, y - 14, 24, 28, '<')) lin.muda(-1);
       if (lin.swatch) {
-        UI.swatch(272, y - 6, 70, 12, lin.get());
+        UI.swatch(544, y - 14, 140, 28, lin.get());
       } else {
-        UI.swatch(272, y - 6, 70, 12, '#241f33');
-        UI.text(lin.nome(), 307, y, { align: 'center', color: '#c9c2dd' });
+        UI.swatch(544, y - 14, 140, 28, '#241f33');
+        UI.text(lin.nome(), 614, y, { align: 'center', color: '#c9c2dd' });
       }
-      if (UI.button(348, y - 6, 11, 12, '>')) lin.muda(1);
+      if (UI.button(692, y - 14, 24, 28, '>')) lin.muda(1);
     });
 
-    UI.text('Muda na arena em tempo real', 208, 124, { color: '#9a90b8' });
+    UI.text('Muda na arena em tempo real', 416, 248, { color: '#9a90b8' });
     if (o && o.criacao) {
       // na tela de seleção o nome se digita no cabeçalho
-      UI.text('Nome: digite qualquer tecla no topo', 208, 140, { color: '#6f678a' });
-      UI.text('Enter entra na arena', 208, 152, { color: '#6f678a' });
+      UI.text('Nome: digite qualquer tecla no topo', 416, 280, { color: '#6f678a' });
+      UI.text('Enter entra na arena', 416, 308, { color: '#6f678a' });
     } else {
-      UI.text('Enter salva a qualquer momento', 208, 140, { color: '#6f678a' });
+      UI.text('Enter salva a qualquer momento', 416, 280, { color: '#6f678a' });
     }
   }
 
@@ -232,33 +233,33 @@ var Gestao = (function () {
   // equipado anterior volta para a bolsa).
   function desenhaItens(ctx, p) {
     var arma = p.equip.arma, arm = p.equip.armadura;
-    UI.text('Arma: ' + (arma ? arma.nome : '—'), 208, 48,
+    UI.text('Arma: ' + (arma ? arma.nome : '—'), 416, 96,
       { color: arma ? Itens.corRar(arma.rar) : '#6f678a' });
-    UI.text('Armadura: ' + (arm ? arm.nome : '—'), 208, 62,
+    UI.text('Armadura: ' + (arm ? arm.nome : '—'), 416, 124,
       { color: arm ? Itens.corRar(arm.rar) : '#6f678a' });
 
     UI.text('Bolsa ' + p.bolsa.length + '/' + Itens.BOLSA_MAX,
-      208, 76, { color: '#9a90b8' });
+      416, 152, { color: '#9a90b8' });
     var paginas = Math.max(1, Math.ceil(p.bolsa.length / 5));
     if (paginaBolsa > paginas - 1) paginaBolsa = paginas - 1;
-    if (UI.button(346, 70, 12, 12, '<', { disabled: paginaBolsa === 0 })) {
+    if (UI.button(684, 144, 28, 28, '<', { disabled: paginaBolsa === 0 })) {
       paginaBolsa--;
     }
-    if (UI.button(362, 70, 12, 12, '>',
+    if (UI.button(720, 144, 28, 28, '>',
       { disabled: paginaBolsa >= paginas - 1 })) {
       paginaBolsa++;
     }
 
     if (!p.bolsa.length) {
-      UI.text('Derrotar monstros dropa equipamento', 208, 96,
+      UI.text('Derrotar monstros dropa equipamento', 416, 192,
         { color: '#6f678a' });
       return;
     }
 
     p.bolsa.slice(paginaBolsa * 5, paginaBolsa * 5 + 5)
       .forEach(function (item, i) {
-        var y = 88 + i * 14;
-        if (UI.button(206, y, 172, 13,
+        var y = 176 + i * 30;
+        if (UI.button(416, y, 340, 26,
           item.nome + '  ' + Itens.resumo(item), {
             align: 'left', color: Itens.corRar(item.rar)
           })) {
@@ -272,7 +273,7 @@ var Gestao = (function () {
     ordem.forEach(function (id, i) {
       var cl = Personagem.CLASSES[id];
       var sel = p.classe === id;
-      if (UI.button(206, 46 + i * 16, 168, 14, (sel ? '> ' : '  ') + cl.nome, {
+      if (UI.button(416, 96 + i * 36, 336, 32, (sel ? '> ' : '  ') + cl.nome, {
         color: sel ? '#e8c86a' : '#f2eef8'
       })) {
         p.classe = id;
@@ -280,22 +281,22 @@ var Gestao = (function () {
     });
 
     var cl = Personagem.CLASSES[p.classe];
-    // 34 cabe nos 170px do painel; 36 passava da borda
-    var linhas = quebra(cl.desc, 34);
+    // 35 caracteres = 336px cabem nos 343px do painel (16px)
+    var linhas = quebra(cl.desc, 35);
     linhas.forEach(function (linha, i) {
-      UI.text(linha, 208, 120 + i * 12, { color: '#9a90b8' });
+      UI.text(linha, 416, 252 + i * 24, { color: '#9a90b8' });
     });
     // magia da classe (a arma já aparece no rodapé e na aba Itens)
     var ativas = Magias.ativas(p.classe, p.nivel);
     var ult = ativas.length ? ativas[ativas.length - 1] : null;
     UI.text(ult ? 'Magia: ' + ult.nome : 'Magia aos níveis 5 e 15',
-      208, 156, { color: ult ? ult.cor : '#6f678a' });
+      416, 316, { color: ult ? ult.cor : '#6f678a' });
   }
 
   // Desenha o painel direito completo (painel + abas + conteúdo).
   // o.criacao ajusta as dicas de texto para a tela de seleção.
   function desenhar(ctx, p, o) {
-    UI.panel(204, 18, 176, 150);
+    UI.panel(408, 36, 352, 300);
     desenhaAbas();
     if (aba === 'atributos') desenhaAtributos(ctx, p);
     else if (aba === 'aparencia') desenhaAparencia(ctx, p, o);

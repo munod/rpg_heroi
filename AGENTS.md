@@ -52,15 +52,22 @@
   `node testes/ritmo.js [min]` (fica fora do `todos.js`) antes de achar
   que está bom. Alvos medidos hoje: 1º nível ~42s · 15min = nv 30-35 /
   onda 40-60 · mapa 1 fechado em 25-35min.
+- Canvas **768×432** (espaço de jogo) × escala de exibição: `main.js
+  resize()` calcula escala fracionária que preenche a janela (CSS) e
+  `esc = floor(escala × devicePixelRatio)` para o backing store —
+  `ctx.setTransform(esc,...)` por frame. **Nunca** desenhar em
+  coordenadas de tela cheia: tudo é coordenada de jogo (768×432).
 - Mundo × janela: `VW/VH` (192×134, janela do painel — o layout NÃO muda)
-  × `MW/MH` (384×268, mundo). Câmera `cam` com lerp em `atualizaCamera`
-  (roda até pausada, é apresentação; teleporte >96px trava) e desenho
-  via `ctx.translate(vx - cam.x, vy - cam.y)`. Obstáculos de `mapas.js`
-  valem na base 192×134 e são escalados em `constroiObst`; inimigos
-  nascem em anel de 110-132px do herói (fora da janela — mudar isso
-  muda o ritmo); renascimento em `posicaoAleatoriaSegura()` e inimigos
-  miram no local da morte. `info()` expõe `janela`/`mundo`/`cam`/`heroi`
-  para os testes (seção 17).
+  × `MW/MH` (384×268, mundo). A janela é desenhada com `k = vw/VW`
+  (=2 na tela nova): `translate(vx,vy) → scale(k) → translate(-cam)`.
+  Física/câmera/ritmo vivem em unidades de mundo e NÃO mudam com k.
+  Câmera `cam` com lerp em `atualizaCamera` (roda até pausada, é
+  apresentação; teleporte >96px trava). Obstáculos de `mapas.js` valem
+  na base 192×134 e são escalados em `constroiObst`; inimigos nascem em
+  anel de 110-132px do herói (fora da janela — mudar isso muda o
+  ritmo); renascimento em `posicaoAleatoriaSegura()` e inimigos miram
+  no local da morte. `info()` expõe `janela`/`mundo`/`cam`/`heroi`
+  para os testes (seções 17-18).
 - Mapas: ciclo de `FIM_MAPA` (100) ondas — a onda 100 é o chefe; vencido,
   `passaMapa()` faz `mapa++` e volta a onda 1. Dados em `js/mapas.js`
   (`Mapas.info(n)` p/ tema e `Mapas.forca(n)` p/ dificuldade+XP); cenário
@@ -83,9 +90,10 @@
   de magias.js; `personagem.js` não (grade/previa carregam só ele).
 - Efeitos visuais em `js/efeitos.js` (chamado por `Batalha` em
   `atualizar`/`desenhar`/`limparEfeitos`): **só primitivas que
-  `testes/cena.js` rasteriza** — `fillRect`, `ellipse`+`fill` e
-  `globalAlpha`. `arc`/`stroke`/gradiente **quebram o screenshot** (e o
-  `stroke()` do rasterizador é no-op). O dano do missil vive no callback
+  `testes/cena.js` rasteriza** — `fillRect`, `strokeRect` (com
+  `strokeStyle`/`lineWidth`), `ellipse`+`fill`, `translate`/`scale`/
+  `setTransform` e `globalAlpha`. `arc`/`stroke()`/gradiente
+  **quebram o screenshot** (o `stroke()` do rasterizador é no-op). O dano do missil vive no callback
   que a `Batalha` passa, não no Efeitos. Em teste, para zerar efeitos
   pendentes use `Batalha.limparEfeitos()` (limpa também `nums`): só
   `Efeitos.limpar()` deixa texto flutuando por 1,4s e dá falso-positivo
@@ -104,8 +112,14 @@
   via `frame()`.
 - `grade.js` valida coordenadas de pixel exatas do herói: mover um pixel do
   sprite quebra essas asserções de propósito.
-- O clique nos testes usa coordenadas do jogo **×2** (harness assume canvas
-  exibido em escala 2); mudar o stub `getBoundingClientRect` quebra os cliques.
+- O clique nos testes usa coordenadas do jogo **×2** (harness devolve
+  `getBoundingClientRect` = dimensões de jogo ×2, independente do
+  backing); mudar esse stub quebra os cliques. O toque é testado na
+  seção 18 disparando os ouvintes `touchstart/touchmove` (canvas) e
+  `touchend/touchcancel` (window) com `touches: [{identifier, clientX,
+  clientY}]` — em `touchend`, `e.touches` são os toques que **restam**.
+- `main.js resize()` precisa rodar **antes** de `getContext()` no init:
+  o rasterizador de `cena.js` aloca o buffer na primeira chamada.
 
 ## Persistência
 

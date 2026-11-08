@@ -85,10 +85,13 @@ function novoCtxCaptura(cv) {
 
 // opcoes.novoCtx  : fábrica do contexto 2d (padrão: contador)
 // opcoes.scripts  : caminhos relativos a RAIZ (padrão: ordem do index.html)
-// opcoes.larg/alt : tamanho do canvas do jogo (padrão: 384x216)
+// opcoes.larg/alt : dimensões do JOGO em coordenadas lógicas (768x432)
 function carregar(opcoes) {
   opcoes = opcoes || {};
   const fabricaCtx = opcoes.novoCtx || novoCtxContador;
+  // espaço de jogo (o index.html define width="768" height="432")
+  const GL = opcoes.larg || 768;
+  const GA = opcoes.alt || 432;
 
   function novoCanvas() {
     const cv = {
@@ -108,17 +111,18 @@ function carregar(opcoes) {
         (cv._listeners[ev] = cv._listeners[ev] || []).push(fn);
       },
       getBoundingClientRect() {
-        // escala 2: o canvas de 384x216 ocupa 768x432 na tela
-        return { left: 0, top: 0, width: cv.width * 2, height: cv.height * 2 };
+        // exibição "2×": as dimensões de JOGO ocupam o dobro na tela, e os
+        // cliques dos testes são coordenadas de jogo ×2 — independente do
+        // tamanho do backing store (esc do devicePixelRatio)
+        return { left: 0, top: 0, width: GL * 2, height: GA * 2 };
       }
     };
     return cv;
   }
 
   const jogoCanvas = novoCanvas();
-  // o index.html define width="384" height="216"
-  jogoCanvas.width = opcoes.larg || 384;
-  jogoCanvas.height = opcoes.alt || 216;
+  jogoCanvas.width = GL;
+  jogoCanvas.height = GA;
 
   const ouvintesJanela = {};
   const windowStub = {
@@ -222,7 +226,7 @@ function carregar(opcoes) {
     (ouvintesJanela[tipo] || []).forEach(fn => fn(ev));
   }
 
-  // o retângulo no teste é o dobro do canvas (escala 2 do harness)
+  // o retângulo do harness é o dobro das dimensões de jogo (escala 2)
   function pressionar(xJogo, yJogo) {
     const ev = { clientX: xJogo * 2, clientY: yJogo * 2, preventDefault() {} };
     (jogoCanvas._listeners.mousedown || []).forEach(fn => fn(ev));

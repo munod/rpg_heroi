@@ -12,6 +12,7 @@ var Batalha = (function () {
   var inimigos = [];
   var nums = [];
   var parts = [];
+  var poeira = [];       // pó ambiente da arena (visual só)
   var onda = 0;
   var tOnda = 1.0;                // espera até a próxima onda
   var tFlash = 0;                 // flash de "NÍVEL X!"
@@ -65,7 +66,7 @@ var Batalha = (function () {
       }
     }
 
-    for (var i = 0; i < 24; i++) {
+    for (var i = 0; i < 36; i++) {
       c.fillStyle = tema.chao.mancha[i % 2];
       c.beginPath();
       c.ellipse(Math.random() * MW, Math.random() * MH,
@@ -74,9 +75,20 @@ var Batalha = (function () {
     }
 
     var flores = tema.chao.flores;
-    for (i = 0; flores.length && i < 18; i++) {
+    for (i = 0; flores.length && i < 30; i++) {
       c.fillStyle = flores[i % flores.length];
       c.fillRect((Math.random() * MW) | 0, (Math.random() * MH) | 0, 2, 2);
+    }
+
+    // pedrinhas e rachaduras: textura dura em fillRect puro
+    c.fillStyle = tema.chao.borda2;
+    for (i = 0; i < 26; i++) {
+      c.fillRect((Math.random() * MW) | 0, (Math.random() * MH) | 0,
+        Math.random() < 0.35 ? 2 : 1, 1);
+    }
+    c.fillStyle = tema.chao.imp;
+    for (i = 0; i < 20; i++) {
+      c.fillRect((Math.random() * MW) | 0, (Math.random() * MH) | 0, 2, 1);
     }
 
     c.strokeStyle = tema.chao.borda;
@@ -173,6 +185,7 @@ var Batalha = (function () {
     inimigos = [];
     nums = [];
     parts = [];
+    semearPoeira();
     magiasEstado = {};
     magiasVigentes = [];
     onda = 0;
@@ -183,6 +196,19 @@ var Batalha = (function () {
   }
 
   function reiniciar() { iniciar(); }
+
+  // Pó ambiente: motes lentos que sobem e dão a volta no mundo. Semente
+  // única em iniciar() — atualizar só move (simulação offline não aloca).
+  function semearPoeira() {
+    poeira = [];
+    for (var i = 0; i < 36; i++) {
+      poeira.push({
+        x: Math.random() * MW, y: Math.random() * MH,
+        vx: (Math.random() - 0.5) * 3, vy: -(1 + Math.random() * 2),
+        fase: Math.random() * 6, tam: Math.random() < 0.3 ? 2 : 1
+      });
+    }
+  }
 
   // Personagem dono da batalha em memória (null antes da primeira entrada
   // na jogatina). O save de estado é gravado por ele, não pelo personagem
@@ -218,6 +244,8 @@ var Batalha = (function () {
   // Aviso grande (onda/chefe/mapa) ancorado no centro da janela atual —
   // nums vive em coordenadas de mundo, e a câmera muda.
   function aviso(txt, cor) {
+    // em espaço de mundo: 34 un. = 25% da janela visível (≈68px na tela
+    // com k=2), a mesma altura de sempre
     numero(cam.x + VW / 2, cam.y + 34, txt, cor, true);
   }
 
@@ -762,6 +790,17 @@ var Batalha = (function () {
       nums[i].t -= dt;
       if (nums[i].t <= 0) nums.splice(i, 1);
     }
+
+    // poeira: deriva lenta com wrap (só posição, sem alocação)
+    for (i = 0; i < poeira.length; i++) {
+      var po = poeira[i];
+      po.x += po.vx * dt;
+      po.y += po.vy * dt;
+      po.fase += dt;
+      if (po.y < 0) { po.y += MH; po.x = Math.random() * MW; }
+      if (po.x < 0) po.x += MW;
+      else if (po.x >= MW) po.x -= MW;
+    }
   }
 
   // ----------------------------------------------------------- desenho
@@ -776,6 +815,13 @@ var Batalha = (function () {
   }
 
   function sombra(ctx, x, y, rx, cor) {
+    // halo largo fraco + miolo denso = sombra com profundidade
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = cor || 'rgba(0,0,0,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx * 1.45, rx * 0.58, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.fillStyle = cor || 'rgba(0,0,0,0.26)';
     ctx.beginPath();
     ctx.ellipse(x, y, rx, rx * 0.4, 0, 0, Math.PI * 2);
@@ -837,15 +883,20 @@ var Batalha = (function () {
     }
   }
 
-  // desenha a arena dentro do retângulo (vx, vy, vw, vh) da tela
+  // desenha a arena dentro do retângulo (vx, vy, vw, vh) da tela — o
+  // mundo continua em unidades de 192×134 de janela; k = vw/VW amplia
+  // tudo (física, câmera e ritmo intactos, só o desenho escala)
   function desenhar(ctx, vx, vy, vw, vh) {
+    var k = vw / VW;
     ctx.save();
     ctx.beginPath();
     ctx.rect(vx, vy, vw, vh);
     ctx.clip();
     ctx.fillStyle = '#0d0b14';
     ctx.fillRect(vx, vy, vw, vh);
-    ctx.translate(vx - cam.x, vy - cam.y);
+    ctx.translate(vx, vy);
+    ctx.scale(k, k);
+    ctx.translate(-cam.x, -cam.y);
 
     if (shake > 0) {
       ctx.translate((Math.random() * 3 - 1.5) | 0, (Math.random() * 3 - 1.5) | 0);
@@ -877,6 +928,7 @@ var Batalha = (function () {
     // efeitos das magias (missis, anéis, cortes, motes)
     Efeitos.desenhar(ctx);
 
+    // em espaço de mundo: 8 un. × k=2 = 16px na tela (igual à UI)
     ctx.font = 'bold 8px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -888,27 +940,54 @@ var Batalha = (function () {
       ctx.fillText(n.txt, Math.round(n.x), Math.round(n.y));
     }
 
+    // poeira ambiente (espaço de mundo, dentro do clip da janela)
+    for (i = 0; i < poeira.length; i++) {
+      var pdu = poeira[i];
+      ctx.globalAlpha = 0.10 + 0.12 *
+        (0.5 + 0.5 * Math.sin(pdu.fase * 2 + pdu.x * 0.05));
+      ctx.fillStyle = '#d8d8f0';
+      ctx.fillRect(Math.round(pdu.x), Math.round(pdu.y), pdu.tam, pdu.tam);
+    }
+    ctx.globalAlpha = 1;
+
     ctx.restore();
 
-    // ---- HUD do herói (espaço de tela, por cima da arena)
-    UI.bar(vx + 4, vy + 4, 54, 6, heroi.hp / heroi.hpMax, '#d84a4a');
-    UI.text(Math.ceil(heroi.hp) + '/' + heroi.hpMax, vx + 62, vy + 7, {
-      color: '#ffffff', font: 'bold 8px monospace'
-    });
+    // vinheta: bordas da janela escurecidas em degraus (fillRect+alpha,
+    // sem gradiente — primitiva que o rasterizador entende)
+    var degraus = [[11, 0.10], [8, 0.07], [5, 0.05], [2, 0.03]];
+    for (var vg = 0; vg < degraus.length; vg++) {
+      var bd = degraus[vg][0] * k;
+      ctx.globalAlpha = degraus[vg][1];
+      ctx.fillStyle = '#0d0b14';
+      ctx.fillRect(vx, vy, vw, bd);
+      ctx.fillRect(vx, vy + vh - bd, vw, bd);
+      ctx.fillRect(vx, vy, bd, vh);
+      ctx.fillRect(vx + vw - bd, vy, bd, vh);
+    }
+    ctx.globalAlpha = 1;
+
+    // ---- HUD do herói (espaço de tela, por cima da arena): offsets e
+    // fontes proporcionais a k — com a janela nova (k=2) vira 16px
+    UI.bar(vx + 4 * k, vy + 4 * k, 54 * k, 6 * k,
+      heroi.hp / heroi.hpMax, '#d84a4a');
+    UI.text(Math.ceil(heroi.hp) + '/' + heroi.hpMax,
+      vx + 62 * k, vy + 7 * k, {
+        color: '#ffffff', font: 'bold ' + (8 * k) + 'px monospace'
+      });
     UI.text('Onda ' + onda + ' (' + inimigos.length + ')',
-      vx + vw - 4, vy + 7, { align: 'right', color: '#e8c86a' });
+      vx + vw - 4 * k, vy + 7 * k, { align: 'right', color: '#e8c86a' });
 
     if (heroi.morto) {
       ctx.fillStyle = 'rgba(5,3,10,0.5)';
-      ctx.fillRect(vx, vy + vh / 2 - 12, vw, 24);
+      ctx.fillRect(vx, vy + vh / 2 - 12 * k, vw, 24 * k);
       UI.text('CAIU — revivendo em ' + Math.max(1, Math.ceil(heroi.revT)) + 's',
         vx + vw / 2, vy + vh / 2, { align: 'center', color: '#ff6b6b' });
     }
 
     if (tFlash > 0) {
       ctx.globalAlpha = Math.min(1, tFlash);
-      UI.text('NIVEL ' + nivelFlash + '!', vx + vw / 2, vy + vh / 2 - 4, {
-        align: 'center', color: '#ffd866', font: 'bold 8px monospace'
+      UI.text('NIVEL ' + nivelFlash + '!', vx + vw / 2, vy + vh / 2 - 4 * k, {
+        align: 'center', color: '#ffd866', font: 'bold ' + (8 * k) + 'px monospace'
       });
       ctx.globalAlpha = 1;
     }
@@ -917,7 +996,7 @@ var Batalha = (function () {
       ctx.fillStyle = 'rgba(5,3,10,0.55)';
       ctx.fillRect(vx, vy, vw, vh);
       UI.text('PAUSADO', vx + vw / 2, vy + vh / 2, {
-        align: 'center', color: '#e8c86a', font: 'bold 8px monospace'
+        align: 'center', color: '#e8c86a', font: 'bold ' + (8 * k) + 'px monospace'
       });
     }
   }

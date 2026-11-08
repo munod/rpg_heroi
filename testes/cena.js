@@ -1,6 +1,6 @@
 // Captura screenshots reais das telas do jogo usando um canvas falsificado
-// que rasteriza de verdade (fillRect, drawImage, elipse, texto, translate).
-// Uso: node testes/cena.js   ->  tela-selecao.png, tela-jogo.png, ...
+// que rasteriza de verdade (fillRect, strokeRect, drawImage, elipse, texto,
+// translate/scale/setTransform com clip). Uso: node testes/cena.js
 'use strict';
 
 const path = require('path');
@@ -46,8 +46,11 @@ function novoCtxRGBA(cv) {
   }
   const st = {
     tx: 0, ty: 0,
+    sx: 1, sy: 1,          // escala do transform (setTransform/scale)
     alpha: 1,
     fillStyle: '#000000',
+    strokeStyle: null,     // null => usa fillStyle (quem não define)
+    lw: 1,                 // lineWidth
     font: '8px monospace',
     textAlign: 'left',
     textBaseline: 'middle'
@@ -59,6 +62,10 @@ function novoCtxRGBA(cv) {
   const api = {
     get fillStyle() { return st.fillStyle; },
     set fillStyle(v) { st.fillStyle = v; },
+    get strokeStyle() { return st.strokeStyle; },
+    set strokeStyle(v) { st.strokeStyle = v; },
+    get lineWidth() { return st.lw; },
+    set lineWidth(v) { st.lw = v; },
     get font() { return st.font; },
     set font(v) { st.font = v; },
     get textAlign() { return st.textAlign; },
@@ -71,33 +78,54 @@ function novoCtxRGBA(cv) {
     fillRect(x, y, w, h) {
       const [r, g, b, a0] = parseCor(st.fillStyle);
       const a = a0 * st.alpha;
-      for (let j = 0; j < h; j++) {
-        for (let i = 0; i < w; i++) put(cv, st.tx + x + i, st.ty + y + j, r, g, b, a);
+      // itera em pixels de DISPOSITIVO: com escala (ex.: k=2 da arena)
+      // cada retângulo preenche a área toda, sem buracos
+      const X0 = Math.round(st.tx + x * st.sx);
+      const Y0 = Math.round(st.ty + y * st.sy);
+      const X1 = Math.round(st.tx + (x + w) * st.sx);
+      const Y1 = Math.round(st.ty + (y + h) * st.sy);
+      for (let Y = Y0; Y < Y1; Y++) {
+        for (let X = X0; X < X1; X++) put(cv, X, Y, r, g, b, a);
       }
     },
 
     strokeRect(x, y, w, h) {
-      const [r, g, b, a0] = parseCor(st.fillStyle);
+      // cor do traço: strokeStyle quando definido (o jogo sempre define
+      // antes), senão fillStyle — antes a borda era pintada com a cor de
+      // fundo e sumia nas screenshots
+      const cor = st.strokeStyle != null ? st.strokeStyle : st.fillStyle;
+      const [r, g, b, a0] = parseCor(cor);
       const a = a0 * st.alpha;
-      for (let i = 0; i < w; i++) {
-        put(cv, st.tx + x + i, st.ty + y, r, g, b, a);
-        put(cv, st.tx + x + i, st.ty + y + h - 1, r, g, b, a);
-      }
-      for (let j = 0; j < h; j++) {
-        put(cv, st.tx + x, st.ty + y + j, r, g, b, a);
-        put(cv, st.tx + x + w - 1, st.ty + y + j, r, g, b, a);
+      const X0 = Math.round(st.tx + x * st.sx);
+      const Y0 = Math.round(st.ty + y * st.sy);
+      const X1 = Math.round(st.tx + (x + w) * st.sx);
+      const Y1 = Math.round(st.ty + (y + h) * st.sy);
+      const t = Math.max(1, Math.round(st.lw * Math.max(st.sx, st.sy)));
+      // traço centrado no path (como o browser): lw=1 (UI) não muda,
+      // lw=8 (borda do mundo) passa a cobrir os 4px de cada lado
+      const off = t >> 1;
+      for (let i = 0; i < t; i++) {
+        for (let X = X0; X < X1; X++) {          // topo e base
+          put(cv, X, Y0 - off + i, r, g, b, a);
+          put(cv, X, Y1 - 1 - off + i, r, g, b, a);
+        }
+        for (let Y = Y0; Y < Y1; Y++) {          // laterais
+          put(cv, X0 - off + i, Y, r, g, b, a);
+          put(cv, X1 - 1 - off + i, Y, r, g, b, a);
+        }
       }
     },
 
-    // strokeStyle é ignorado: o jogo sempre define fillStyle antes; para
-    // stroke usamos strokeStyle quando existir
-    _stroke: null,
-
     fillText(str, x, y) {
       const texto = String(str);
-      const largo = st.font.includes('bold') ? 5.0 : 4.8;
+      // métricas em espaço de jogo a partir do px real da fonte: 8px era
+      // o caso fixo, 16px (UI nova) herda a proporção
+      const px = parseFloat((st.font.match(/(\d+(?:\.\d+)?)px/) || [0, 8])[1]);
+      const bold = st.font.includes('bold');
+      const largo = px * (bold ? 0.625 : 0.6);
+      const h = Math.round(px * 0.875);
+      const bloco = Math.max(1, Math.round(largo - px / 4));
       const w = texto.length * largo;
-      const h = 7;
       let x0 = x;
       if (st.textAlign === 'center') x0 = x - w / 2;
       else if (st.textAlign === 'right') x0 = x - w;
@@ -106,34 +134,43 @@ function novoCtxRGBA(cv) {
       else if (st.textBaseline === 'bottom') y0 = y - h;
       const [r, g, b, a0] = parseCor(st.fillStyle);
       const a = a0 * st.alpha;
-      // simula letras: um bloco por caractere com 1px de intervalo
+      // glifo simulado em pixels de dispositivo (sem pular linha na escala)
+      const X0 = st.tx + x0 * st.sx;
+      const Y0 = st.ty + y0 * st.sy;
+      const pitch = largo * st.sx;
+      const altD = Math.max(1, Math.round((h - 1) * st.sy));
+      const largD = Math.max(1, Math.round(bloco * st.sx));
       for (let i = 0; i < texto.length; i++) {
         if (texto[i] === ' ') continue;
-        const lx = x0 + i * largo;
-        for (let j = 0; j < h - 1; j++) {
-          for (let k = 0; k < Math.max(1, Math.round(largo - 2)); k++) {
-            put(cv, st.tx + lx + k, st.ty + y0 + j, r, g, b, a);
-          }
+        const lx = X0 + i * pitch;
+        for (let j = 0; j < altD; j++) {
+          for (let k = 0; k < largD; k++) put(cv, lx + k, Y0 + j, r, g, b, a);
         }
       }
     },
 
     measureText(str) {
-      return { width: String(str).length * 4.8 };
+      const px = parseFloat((st.font.match(/(\d+(?:\.\d+)?)px/) || [0, 8])[1]);
+      return { width: String(str).length * px * 0.6 * st.sx };
     },
 
     drawImage(src, dx, dy, dw, dh) {
       if (!src || !src._data) return;
       if (dw === undefined) { dw = src.width; dh = src.height; }
       const sw = src.width, sh = src.height;
-      for (let y = 0; y < dh; y++) {
-        for (let x = 0; x < dw; x++) {
-          const sx = Math.min(sw - 1, Math.floor(x * sw / dw));
-          const sy = Math.min(sh - 1, Math.floor(y * sh / dh));
-          const so = (sy * sw + sx) * 4;
+      // itera em pixels de dispositivo: escala vira bloco nítido (nearest)
+      const DW = Math.max(1, Math.round(dw * st.sx));
+      const DH = Math.max(1, Math.round(dh * st.sy));
+      const X0 = st.tx + dx * st.sx;
+      const Y0 = st.ty + dy * st.sy;
+      for (let Y = 0; Y < DH; Y++) {
+        for (let X = 0; X < DW; X++) {
+          const ix = Math.min(sw - 1, Math.floor(X * sw / DW));
+          const iy = Math.min(sh - 1, Math.floor(Y * sh / DH));
+          const so = (iy * sw + ix) * 4;
           const a = src._data[so + 3] / 255;
           if (a <= 0) continue;
-          put(cv, st.tx + dx + x, st.ty + dy + y,
+          put(cv, X0 + X, Y0 + Y,
             src._data[so], src._data[so + 1], src._data[so + 2], a);
         }
       }
@@ -141,7 +178,9 @@ function novoCtxRGBA(cv) {
 
     beginPath() { elipsePend = null; retPend = null; },
     rect(x, y, w, h) {
-      retPend = { x: st.tx + x, y: st.ty + y, w: w, h: h };
+      // em espaço de dispositivo (o clip é fixo no device, como no browser)
+      retPend = { x: st.tx + x * st.sx, y: st.ty + y * st.sy,
+                  w: w * st.sx, h: h * st.sy };
     },
     clip() {
       if (!retPend) return;
@@ -166,11 +205,17 @@ function novoCtxRGBA(cv) {
       const { cx, cy, rx, ry } = elipsePend;
       const [r, g, b, a0] = parseCor(st.fillStyle);
       const a = a0 * st.alpha;
-      for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
-        for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
-          const dx = (x + 0.5 - cx) / rx;
-          const dy = (y + 0.5 - cy) / ry;
-          if (dx * dx + dy * dy <= 1) put(cv, st.tx + x, st.ty + y, r, g, b, a);
+      // amostra em pixels de dispositivo e testa a elipse em espaço de
+      // jogo — com escala não pula linha nem abre buraco
+      const X0 = Math.floor(st.tx + (cx - rx) * st.sx);
+      const X1 = Math.ceil(st.tx + (cx + rx) * st.sx);
+      const Y0 = Math.floor(st.ty + (cy - ry) * st.sy);
+      const Y1 = Math.ceil(st.ty + (cy + ry) * st.sy);
+      for (let Y = Y0; Y <= Y1; Y++) {
+        for (let X = X0; X <= X1; X++) {
+          const dx = ((X - st.tx) / st.sx + 0.5 - cx) / rx;
+          const dy = ((Y - st.ty) / st.sy + 0.5 - cy) / ry;
+          if (dx * dx + dy * dy <= 1) put(cv, X, Y, r, g, b, a);
         }
       }
       elipsePend = null;
@@ -181,14 +226,22 @@ function novoCtxRGBA(cv) {
     },
 
     save() {
-      pilha.push({ tx: st.tx, ty: st.ty, alpha: st.alpha, clip: cv._clip });
+      pilha.push({ tx: st.tx, ty: st.ty, sx: st.sx, sy: st.sy,
+                   alpha: st.alpha, clip: cv._clip });
     },
     restore() {
       const p = pilha.pop();
-      if (p) { st.tx = p.tx; st.ty = p.ty; st.alpha = p.alpha; cv._clip = p.clip; }
+      if (p) {
+        st.tx = p.tx; st.ty = p.ty; st.sx = p.sx; st.sy = p.sy;
+        st.alpha = p.alpha; cv._clip = p.clip;
+      }
     },
-    translate(x, y) { st.tx += x; st.ty += y; },
-    setTransform() {},
+    translate(x, y) { st.tx += x * st.sx; st.ty += y * st.sy; },
+    scale(sx, sy) { st.sx *= sx; st.sy *= sy; },
+    setTransform(a, b, c, d, e, f) {
+      // o jogo não usa rotação (b/c): só escala + translação
+      st.sx = a; st.sy = d; st.tx = e; st.ty = f;
+    },
     clearRect() {}
   };
   return api;
@@ -222,7 +275,7 @@ frame(12);
 salvar('tela-selecao.png');
 
 // JOGAR entra na arena
-clique(60, 194);
+clique(120, 388);
 frame(4);
 salvar('tela-jogo.png');
 
@@ -237,12 +290,12 @@ salvar('tela-jogo-luta.png');
 console.log('luta: ' + JSON.stringify(sandbox.Batalha.info()));
 
 // gestao: aba aparência
-clique(270, 25);
+clique(540, 50);
 frame(4);
 salvar('tela-aparencia.png');
 
 // gestão: aba classe
-clique(314, 25);
+clique(628, 50);
 frame(4);
 salvar('tela-classe.png');
 

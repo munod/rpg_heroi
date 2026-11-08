@@ -139,25 +139,25 @@ var Jogo = (function () {
     var p = Game.personagem;
 
     ctx.fillStyle = '#141020';
-    ctx.fillRect(0, 0, 384, 216);
+    ctx.fillRect(0, 0, 768, 432);
 
     // ---------------- cabeçalho: nível, XP e pontos
     ctx.fillStyle = '#191326';
-    ctx.fillRect(0, 0, 384, 15);
-    UI.text('HERÓI IDLE', 6, 8, { color: '#e8c86a', font: 'bold 8px monospace' });
-    UI.text('Nv ' + p.nivel, 76, 8, { color: '#f2eef8' });
-    UI.bar(108, 5, 84, 7, p.xp / p.xpProx, '#e8c86a');
-    UI.text(p.xp + '/' + p.xpProx, 198, 8, { color: '#c9c2dd' });
-    UI.text('Pontos: ' + p.pontos, 378, 8, {
+    ctx.fillRect(0, 0, 768, 30);
+    UI.text('HERÓI IDLE', 6, 16, { color: '#e8c86a', font: 'bold 16px monospace' });
+    UI.text('Nv ' + p.nivel, 152, 16, { color: '#f2eef8' });
+    UI.bar(216, 10, 168, 14, p.xp / p.xpProx, '#e8c86a');
+    UI.text(p.xp + '/' + p.xpProx, 396, 16, { color: '#c9c2dd' });
+    UI.text('Pontos: ' + p.pontos, 756, 16, {
       align: 'right',
       color: p.pontos > 0 ? '#8ce08c' : '#9a90b8'
     });
 
     // ---------------- arena automática (esquerda)
     var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';
-    UI.panel(4, 18, 196, 150, p.nome + cursor + ' — MAPA ' +
+    UI.panel(8, 36, 392, 300, p.nome + cursor + ' — MAPA ' +
       Batalha.info().mapa);
-    Batalha.desenhar(ctx, 6, 32, 192, 134);
+    Batalha.desenhar(ctx, 12, 64, 384, 268);
 
     // ---------------- gestão (direita)
     Gestao.desenhar(ctx, p);
@@ -168,20 +168,20 @@ var Jogo = (function () {
   function desenhaRodape(ctx, p) {
     UI.linhaStatus(Personagem.status(p));
 
-    if (UI.button(4, 186, 64, 16, 'Salvar')) {
+    if (UI.button(8, 372, 128, 32, 'Salvar')) {
       Gravacao.salvarPersonagem(Game.personagem, true);
     }
-    if (UI.button(72, 186, 92, 16, 'Trocar herói')) {
+    if (UI.button(144, 372, 184, 32, 'Trocar herói')) {
       // a troca acontece fora da jogatina: salva e sai para a seleção
       salvarTudo();
       Game.setScene('selecao');
     }
-    if (UI.button(170, 186, 56, 16, 'Exportar')) {
+    if (UI.button(340, 372, 112, 32, 'Exportar')) {
       Salvar.exportar(p);
       Gravacao.msg('Arquivo .json exportado!');
     }
-    if (UI.button(232, 186, 56, 16, 'Importar')) importar();
-    if (UI.button(294, 186, 56, 16,
+    if (UI.button(464, 372, 112, 32, 'Importar')) importar();
+    if (UI.button(588, 372, 112, 32,
       Batalha.info().pausada ? 'Continuar' : 'Pausar')) {
       var pausou = Batalha.alternarPausa();
       Gravacao.msg(pausou ? 'Batalha pausada.' : 'Batalha retomada!');
