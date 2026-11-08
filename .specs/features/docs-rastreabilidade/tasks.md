@@ -10,8 +10,8 @@ Legenda: `[P]` paralelo · Status: ⬜ pendente / ✅ feito / ❌ falhou
 | T4 | [P] `CHANGELOG.md` raiz: Keep a Changelog, backfill 0.1.0 (21 commits) | — | ✅ |
 | T5 | `AGENTS.md` + `README.md`: referenciar `.specs/`, CHANGELOG, Conventional Commits, fluxo de release | T1-T4 | ✅ |
 | T6 | Verificação: `node testes/todos.js` + consistência (todos os caminhos citados existem, contagens do README) | T1-T5 | ✅ |
-| T7 | Commit `docs(specs): …` (Conventional Commits) | T6 | ⬜ |
-| T8 | Push (3 commits de IA + docs) · tag `v0.1.0` · `gh release create` com notas do CHANGELOG | T7 | ⬜ |
+| T7 | Commit `docs(specs): …` (Conventional Commits) | T6 | ✅ |
+| T8 | Push (3 commits de IA + docs) · tag `v0.1.0` · `gh release create` com notas do CHANGELOG | T7 | ✅ |
 
 ## Verificação por task
 
