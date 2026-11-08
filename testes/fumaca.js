@@ -692,9 +692,9 @@ console.log('15) drops, equipamento e aba de itens');
   if (!estavaPausada) Batalha.alternarPausa();
 }
 
-console.log('16) magias automáticas (procs por classe)');
+console.log('16) skills automáticas (procs por classe)');
 {
-  const Magias = sandbox.Magias;
+  const Skills = sandbox.Skills;
   const Efeitos = sandbox.Efeitos;
   const Batalha = sandbox.Batalha;
   const p = Game.personagem;
@@ -703,18 +703,27 @@ console.log('16) magias automáticas (procs por classe)');
   p.atributos.int = 50;
   p.pontos = 0;
 
-  // --- dados: desbloqueio por nível (5 e 15) e cobertura das classes
-  conf(Magias.ativas('mago', 4).length === 0 &&
-       Magias.ativas('mago', 5).length === 1 &&
-       Magias.ativas('mago', 15).length === 2,
-    'magias desbloqueiam nos níveis 5 e 15');
-  conf(!!Magias.desbloqueada('mago', 5) &&
-       Magias.desbloqueada('mago', 6) === null &&
-       Magias.desbloqueada('ladino', 5).tipo === 'veneno',
-    'desbloqueada devolve a magia exata do nível');
+  // --- dados: desbloqueio por nível (5/15/25/35/45) e cobertura
+  conf(Skills.ativas('mago', 4).length === 0 &&
+       Skills.ativas('mago', 5).length === 1 &&
+       Skills.ativas('mago', 15).length === 2 &&
+       Skills.ativas('mago', 25).length === 3 &&
+       Skills.ativas('mago', 45).length === 5,
+    'skills desbloqueiam nos níveis 5, 15, 25, 35 e 45');
+  conf(!!Skills.desbloqueada('mago', 5) &&
+       Skills.desbloqueada('mago', 6) === null &&
+       Skills.desbloqueada('ladino', 5).tipo === 'veneno',
+    'desbloqueada devolve a skill exata do nível');
   conf(['guerreiro', 'mago', 'ladino', 'clerigo']
-       .every(c => Magias.magiasDe(c).length === 2),
-    'toda classe tem 2 magias');
+       .every(c => Skills.daClasse(c).length === 5),
+    'toda classe tem 5 skills');
+  conf(['guerreiro', 'mago', 'ladino']
+       .every(c => Skills.daClasse(c).some(s => s.tipo === 'mobilidade')) &&
+       Skills.daClasse('clerigo').some(s => s.tipo === 'medo'),
+    'cada classe tem a skill de fuga (mobilidade) ou medo (clérigo)');
+  conf(Skills.proxima('mago', 4).nivel === 5 &&
+       Skills.proxima('mago', 45) === null,
+    'proxima aponta a próxima skill (ou null com todas)');
 
   // --- aviso ao subir de nível (mago: força o nível 4 e espera o kill)
   p.classe = 'mago';
@@ -728,7 +737,7 @@ console.log('16) magias automáticas (procs por classe)');
     desbloqueou = (jogoCanvas._textos || [])
       .some(t => t.indexOf('desbloqueada') >= 0);
   }
-  conf(desbloqueou, 'subir de nível anuncia a magia desbloqueada');
+  conf(desbloqueou, 'subir de nível anuncia a skill desbloqueada');
 
   // --- nuke periódico do mago dispara sozinho (Bola de Fogo)
   jogoCanvas._textos = [];
@@ -738,9 +747,9 @@ console.log('16) magias automáticas (procs por classe)');
     frame(1);
     lancou = (jogoCanvas._textos || []).some(t => t === 'Bola de Fogo');
   }
-  conf(lancou, 'mago dispara a magia automática (Bola de Fogo)');
+  conf(lancou, 'mago dispara a skill automática (Bola de Fogo)');
   conf(Efeitos.qtd() > 0,
-    'a magia nasce com efeito visual (missil/explosão)');
+    'a skill nasce com efeito visual (missil/explosão)');
 
   // --- área do guerreiro: varredura a cada 5 golpes
   p.classe = 'guerreiro';
@@ -790,6 +799,49 @@ console.log('16) magias automáticas (procs por classe)');
   conf(curou, 'clérigo cura periodicamente (Bênção)');
   conf(Efeitos.qtd() > 0,
     'a bênção solta os motes de cura (efeito visual)');
+
+  // --- ataque à distância: mago de nível 4 (SEM skills) — o projétil do
+  // golpe básico é o único jeito de nascer efeito aqui
+  p.classe = 'mago';
+  p.nivel = 4;
+  Batalha.limparEfeitos();
+  let projeteis = false;
+  for (let i = 0; i < 3000 && !projeteis; i++) {
+    frame(1);
+    projeteis = Efeitos.qtd() > 0;
+  }
+  conf(projeteis, 'mago (nv 4, sem skills) ataca à distância com projétil');
+
+  // --- mobilidade/medo (skills nv 25): gatilho quando o bando se fecha.
+  // O efeito exposto em info() é o que prova o disparo (nada de estado
+  // velho de testes anteriores).
+  const checa = {
+    empurrao: inf => inf.empurra > 0,
+    esquiva: inf => inf.fuga,
+    amedronta: inf => inf.medo > 0
+  };
+  const gatilho = [
+    ['guerreiro', 'empurrao', 'guerreiro empurra o bando'],
+    ['ladino', 'esquiva', 'ladino esquiva para longe'],
+    ['clerigo', 'amedronta', 'clérigo amedronta os inimigos']
+  ];
+  for (const [classe, id, msg] of gatilho) {
+    p.classe = classe;
+    p.nivel = 25;
+    p.atributos.for = 1;      // fraco: os inimigos vivem p/ chegar perto
+    let disparou = false;
+    for (let i = 0; i < 9000 && !disparou; i++) {
+      frame(1);
+      disparou = checa[id](Batalha.info());
+    }
+    conf(disparou, msg + ' quando os inimigos se fecham (nv 25)');
+  }
+
+  // volta ao estado em que a seção 17 espera encontrar o herói
+  p.classe = 'clerigo';
+  p.nivel = 6;
+  p.atributos.for = 1;
+  p.atributos.con = 1;
 }
 
 console.log('17) câmera, mundo maior e renascimento aleatório');

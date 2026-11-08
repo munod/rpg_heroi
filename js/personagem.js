@@ -19,23 +19,26 @@ var Personagem = (function () {
     },
     mago: {
       id: 'mago', nome: 'Mago', arma: 'cajado', armaNome: 'Cajado',
-      danoMod: 'int', danoBase: 4, hpBase: 8, alcance: 30,
+      danoMod: 'int', danoBase: 4, hpBase: 8, alcance: 72,
+      distancia: true, corProj: '#9a8bff',
       bonus: { for: -2, des: 0, con: -1, int: 4, car: 1 },
-      desc: 'Frágil, mas o cajado alcanca longe e causa dano mágico.',
+      desc: 'Frágil, mas conjura projéteis arcanos à distância.',
       cor: '#5a4ac0'
     },
     ladino: {
       id: 'ladino', nome: 'Ladino', arma: 'adaga', armaNome: 'Adaga',
-      danoMod: 'des', danoBase: 4, hpBase: 12, alcance: 18,
+      danoMod: 'des', danoBase: 4, hpBase: 12, alcance: 56,
+      distancia: true, corProj: '#7ed957',
       bonus: { for: 0, des: 4, con: 0, int: 1, car: -1 },
-      desc: 'Ágil e letal. Crítico altíssimo e golpes rápidos.',
+      desc: 'Ágil e letal. Joga adagas à distância e critica muito.',
       cor: '#3a7a4a'
     },
     clerigo: {
       id: 'clerigo', nome: 'Clérigo', arma: 'martelo', armaNome: 'Martelo',
-      danoMod: 'for', danoBase: 4, hpBase: 16, alcance: 24,
+      danoMod: 'for', danoBase: 4, hpBase: 16, alcance: 52,
+      distancia: true, corProj: '#ffe89a',
       bonus: { for: 1, des: 0, con: 3, int: 1, car: 2 },
-      desc: 'Equilibrado e resistente. Boa vida e dano sólido.',
+      desc: 'Equilibrado e resistente. Martelo sagrado à distância.',
       cor: '#b8913a'
     }
   };

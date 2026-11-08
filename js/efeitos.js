@@ -1,4 +1,4 @@
-// Efeitos visuais das magias — pixel art por cima da arena.
+// Efeitos visuais das skills — pixel art por cima da arena.
 // Restrição importante: SÓ primitivas que o rasterizador de testes/cena.js
 // implementa (fillRect, ellipse + fill, globalAlpha) — arc/stroke/gradiente
 // quebram o screenshot. Lógica de dano NÃO mora aqui: o missil recebe um

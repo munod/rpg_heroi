@@ -92,12 +92,18 @@
   as chaves de bônus são espelhadas nos dois arquivos.
 - Gestão tem 4 abas (Atrib/Apar/Classe/Itens): centros dos cliques em
   x = 226/270/314/358, y = 25 — testes que clikam abas dependem dessa grade.
-- Magias automáticas em `js/magias.js` (procs por classe; 2 magias em 5/15):
-  gatilhos em `Batalha` — `golpeia()` conta as 'area' e aplica 'veneno',
-  `atualizaHeroi` roda timers de 'nuke'/'cura' via `magiasPeriodicas`, e o
-  estado fica em `magiasEstado` (zerado em `iniciar()`, criado na
-  preguiça p/ troca de classe em combate). `Batalha` e `Gestao` dependem
-  de magias.js; `personagem.js` não (grade/previa carregam só ele).
+- Skills automáticas em `js/skills.js` (procs por classe; 5 skills em
+  5/15/25/35/45): gatilhos em `Batalha` — `golpeia()` conta as 'area' e
+  aplica 'veneno' (classes com `distancia: true` em `personagem.js` mandam
+  projétil em `golpeDistancia`, dano na chegada), e
+  `atualizaHeroi` roda timers de 'nuke'/'cura' via `skillsPeriodicas` +
+  o gatilho por proximidade de 'mobilidade'/'medo' via
+  `skillsPosicionamento` (esquiva/teleporte do herói, empurrão e medo nos
+  inimigos — estado em `heroi.fuga`/`en.empurra`/`en.medo`, exposto em
+  `info()`); o estado das skills fica em `skillsEstado` (zerado em
+  `iniciar()`, criado na preguiça p/ troca de classe em combate).
+  `Batalha` e `Gestao` dependem de skills.js; `personagem.js` não
+  (grade/previa carregam só ele).
 - Efeitos visuais em `js/efeitos.js` (chamado por `Batalha` em
   `atualizar`/`desenhar`/`limparEfeitos`): **só primitivas que
   `testes/cena.js` rasteriza** — `fillRect`, `strokeRect` (com

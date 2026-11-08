@@ -290,11 +290,11 @@ var Gestao = (function () {
     linhas.forEach(function (linha, i) {
       UI.text(linha, 416, 252 + i * 24, { color: '#9a90b8' });
     });
-    // magia da classe (a arma já aparece no rodapé e na aba Itens)
-    var ativas = Magias.ativas(p.classe, p.nivel);
-    var ult = ativas.length ? ativas[ativas.length - 1] : null;
-    UI.text(ult ? 'Magia: ' + ult.nome : 'Magia aos níveis 5 e 15',
-      416, 316, { color: ult ? ult.cor : '#6f678a' });
+    // próxima skill da classe (a arma já aparece no rodapé e na aba Itens)
+    var prox = Skills.proxima(p.classe, p.nivel);
+    UI.text(prox ? 'Próxima: ' + prox.nome + ' (nv ' + prox.nivel + ')'
+                 : 'Todas as skills desbloqueadas',
+      416, 316, { color: prox ? prox.cor : '#8ce08c' });
   }
 
   // Desenha o painel direito completo (painel + abas + conteúdo).

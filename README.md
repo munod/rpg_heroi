@@ -34,14 +34,18 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   (longe de obstáculos e inimigos) — e a luta continua; os inimigos se
   agrupam onde ele caiu e a câmera acompanha o renascimento.
 - Ele **regenera vida** constantemente.
-- **Magias automáticas** — cada classe tem **2 magias** que desbloqueiam
-  nos níveis **5 e 15** e disparam sozinhas, sem botão: varredura do
-  guerreiro (a cada N golpes), bola de fogo/nova arcana do mago, veneno
-  contínuo do ladino e bênção/castigo sagrado do clérigo. A aba **Classe**
-  mostra a magia ativa e o nível avisa **"\<magia\> desbloqueada!"**.
-  Cada proc tem **efeito visual próprio**: missil teleguiado com rastro e
-  explosão em anel, arco de corte luminoso, respingos + ícone de veneno no
-  inimigo e motes de cura subindo (capturados em `testes/tela-magia*.png`).
+- **Skills automáticas** — cada classe tem **5 skills** que desbloqueiam
+  nos níveis **5, 15, 25, 35 e 45** e disparam sozinhas, sem botão:
+  varredura do guerreiro (a cada N golpes), bola de fogo/nova arcana do
+  mago, veneno contínuo do ladino, bênção/castigo sagrado do clérigo — e
+  **skills de fuga**, disparadas quando os inimigos se fecham:
+  **Empurrão** (guerreiro afasta o bando), **Teleporte** (mago some para
+  longe), **Esquiva** (ladino corre) e **Amedronta** (os inimigos fogem
+  por segundos). A aba **Classe** mostra a próxima skill e o nível avisa
+  **"\<skill\> desbloqueada!"**. Cada skill tem **efeito visual próprio**:
+  projétil teleguiado com rastro e explosão em anel, arco de corte
+  luminoso, respingos + ícone de veneno no inimigo, motes de cura subindo
+  e marcador de medo (capturados em `testes/tela-skill*.png`).
 - `Pausar`/`Continuar` (botão embaixo) congela a batalha se quiser.
 - **Autosave** a cada 3s (e ao fechar a aba): o progresso nunca depende de
   `Enter`, e o navegador avisa se faltar espaço pra salvar.
@@ -61,7 +65,9 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   ficam no cabeçalho). Heróis novos nascem com **0 pontos** (atributos base
   em 8) — os primeiros +5 vêm já no primeiro nível.
 - **Classe** — Guerreiro, Mago, Ladino ou Clérigo, com bônus e arma próprios;
-  trocar no meio da luta altera o herói na hora.
+  trocar no meio da luta altera o herói na hora. O guerreiro briga no
+  **corpo a corpo**; mago, ladino e clérigo atacam **à distância** com
+  projéteis (alcance próprio por arma).
 - **Aparência** — pele, cabelo, estilo (curto, longo, cavalo, moicana, bandana)
   e cor de roupa; aparece no herói que está lutando.
 - **Equipamento** — inimigos **dropam** armas e armaduras (3 raridades) a
@@ -135,16 +141,16 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 138 asserções: sprites, status, UI, idle, toque
+node testes/fumaca.js     # 142 asserções: sprites, status, UI, idle, toque
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
-node testes/cena.js       # screenshots das telas (e um por magia: tela-magia*.png)
+node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
 node testes/mapa.js X.png # converte screenshot em mapa ASCII (layout)
 node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
-São **151 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **155 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.
@@ -158,9 +164,13 @@ offline, a **velocidade acelerando o ataque**, a **barra de HP dos inimigos**
 sem contorno que a tapava, o **chefe do fim de mapa** (nasce na onda 100, o
 avanço muda de mapa e não trava), o **avance de mapa** com migração de save
 legado, **drops com auto-equip/bolsa** e a **aba Itens** equipando no clique,
-as **magias com os 4 tipos de proc** (área, nuke, veneno e cura) com aviso
-de desbloqueio e **efeitos visuais** (missil teleguiado, arco de corte,
-anel de impacto, respingos de veneno e motes de cura), a **câmera sobre o
+as **skills com os 6 tipos de proc** (área, nuke, veneno, cura, mobilidade
+e medo) — **5 por classe**, com aviso de desbloqueio, o **ataque à
+distância** do mago/ladino/clérigo (projétil do golpe básico) e os
+**gatilhos de fuga** (Empurrão, Teleporte, Esquiva e Amedronta quando o
+bando se fecha) — tudo com **efeitos visuais** (projétil teleguiado, arco
+de corte, anel de impacto, respingos de veneno, motes de cura e marcador
+de medo), a **câmera sobre o
 mundo 384×268** com o **renascimento em local aleatório**, o **toque no
 celular** (clique, arrasto e soltura por dedo, com bloqueio de rolagem),
 a **escala responsiva** e o **layout de largura adaptativa** (768–1728,

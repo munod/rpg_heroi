@@ -317,9 +317,9 @@ for (let i = 0; i < 40; i++) frame(1);
 salvar('tela-mapa2.png');
 console.log('mapa 2: ' + JSON.stringify(sandbox.Batalha.info()));
 
-// magias em ação: um screenshot por tipo de efeito (herói nivel 6 =
-// exatamente 1 magia por classe → efeito determinístico)
-function capturaMagia(classe, arquivo) {
+// skills em ação: um screenshot por tipo de efeito (herói nivel 6 =
+// exatamente 1 skill por classe → efeito determinístico)
+function capturaSkill(classe, arquivo) {
   sandbox.Game.personagem.classe = classe;
   sandbox.Game.personagem.nivel = Math.max(6, sandbox.Game.personagem.nivel);
   sandbox.Efeitos.limpar();
@@ -330,13 +330,13 @@ function capturaMagia(classe, arquivo) {
   }
   for (let i = 0; i < 5; i++) frame(1);
   salvar(arquivo);
-  console.log('magia/' + classe + ': ' +
+  console.log('skill/' + classe + ': ' +
     (espera < 1800 ? 'efeito ok em ' + espera + ' frames' : 'NÃO DISPAROU') +
     ' -> ' + arquivo);
 }
-capturaMagia('mago', 'tela-magia.png');            // missil + explosão
-capturaMagia('guerreiro', 'tela-magia-corte.png');  // arco de corte
-capturaMagia('ladino', 'tela-magia-veneno.png');    // veneno: ícone + sombra
+capturaSkill('mago', 'tela-skill-projetil.png');   // projétil + explosão
+capturaSkill('guerreiro', 'tela-skill-corte.png');  // arco de corte
+capturaSkill('ladino', 'tela-skill-veneno.png');    // veneno: ícone + sombra
 // clérigo precisa estar ferido para a Bênção mostrar os motes
 sandbox.Game.personagem.classe = 'clerigo';
 sandbox.Game.personagem.atributos.con = 1;
@@ -348,7 +348,7 @@ for (let i = 0; i < 1800 && !ferido; i++) {
       sandbox.Personagem.status(sandbox.Game.personagem).hpMax - 10;
   }
 }
-capturaMagia('clerigo', 'tela-magia-cura.png');    // motes + anel de cura
+capturaSkill('clerigo', 'tela-skill-cura.png');    // motes + anel de cura
 
 console.log('cena atual: ' + sandbox.Game.cena);
 console.log('batalha: ' + JSON.stringify(sandbox.Batalha.info()));

@@ -22,8 +22,9 @@ var Batalha = (function () {
   var donoId = null;         // personagem dono da batalha em memória
   var mapa = 1;              // mapa atual (ciclo de FIM_MAPA ondas)
   var cenarioMapa = 0;       // mapa para o qual chao/obst já foram construídos
-  var magiasVigentes = [];   // magias ativas do herói (recomputadas por frame)
-  var magiasEstado = {};     // contadores/timers por magia (zerado em iniciar)
+  var skillsVigentes = [];    // skills ativas do herói (recomputadas por frame)
+  var skillsEstado = {};      // contadores/timers por skill (zerado em iniciar)
+  var ultimaSkill = null;     // última skill de posicionamento/medo disparada
 
   // stats/visual por espécie — cor/escala/forma vêm do mapa (Mapas.info)
   var TIPOS = {
@@ -176,7 +177,7 @@ var Batalha = (function () {
       x: MW / 2, y: MH / 2, facing: 1,
       anim: 'idle', frame: 0, frameT: 0,
       hp: s.hpMax, hpMax: s.hpMax, stats: s,
-      atkT: 0, atkCd: 0, hitDone: true, inv: 1,
+      atkT: 0, atkCd: 0, hitDone: true, inv: 1, fuga: null,
       morto: false, revT: 0
     };
     var c0 = alvoCamera();
@@ -186,8 +187,9 @@ var Batalha = (function () {
     nums = [];
     parts = [];
     semearPoeira();
-    magiasEstado = {};
-    magiasVigentes = [];
+    skillsEstado = {};
+    skillsVigentes = [];
+    ultimaSkill = null;
     onda = 0;
     tOnda = 1.0;
     tFlash = 0;
@@ -356,7 +358,8 @@ var Batalha = (function () {
       raio: raio,
       frame: 0, frameT: 0,
       atkCd: 0.5 + Math.random() * 0.8,
-      hitFlash: 0, lunge: 0
+      hitFlash: 0, lunge: 0,
+      medo: null, empurra: null
     });
   }
 
@@ -382,7 +385,7 @@ var Batalha = (function () {
         'NIVEL ' + p.nivel + '!', '#ffd866', true);
       Efeitos.explosao(heroi ? heroi.x : MW / 2,
         (heroi ? heroi.y : MH / 2) - 12, '#ffd866', 1.1);
-      var nova = Magias.desbloqueada(p.classe, p.nivel);
+      var nova = Skills.desbloqueada(p.classe, p.nivel);
       if (nova) {
         numero(heroi ? heroi.x : MW / 2, (heroi ? heroi.y : MH / 2) - 46,
           nova.nome + ' desbloqueada!', nova.cor, true);
@@ -475,8 +478,30 @@ var Batalha = (function () {
     }
   }
 
+  // Um golpe do herói: corpo a corpo varre no alcance; as classes à
+  // distância (mago/ladino/clérigo) mandam um projétil para o inimigo
+  // vivo mais perto e o dano cai na chegada — mesmos cálculos de crítico,
+  // veneno e empurrão do golpe normal.
   function golpeia() {
     var st = heroi.stats;
+    var cl = Personagem.CLASSES[Game.personagem.classe] ||
+      Personagem.CLASSES.guerreiro;
+    if (cl.distancia) golpeDistancia(st, cl);
+    else golpeCorpo(st);
+
+    // contadores das skills 'area': a cada N golpes, varredura em tudo
+    for (var m = 0; m < skillsVigentes.length; m++) {
+      var mg = skillsVigentes[m];
+      if (mg.tipo !== 'area') continue;
+      var est = estadoSkill(mg.id);
+      est.cont++;
+      if (est.cont % mg.aCada === 0) varredura(mg);
+    }
+  }
+
+  // Golpe corpo a corpo (padrão): dano instantâneo em quem estiver no
+  // alcance — o caminho do guerreiro.
+  function golpeCorpo(st) {
     for (var i = inimigos.length - 1; i >= 0; i--) {
       var en = inimigos[i];
       var dx = en.x - heroi.x, dy = en.y - heroi.y;
@@ -500,23 +525,51 @@ var Batalha = (function () {
       if (en.hp > 0) aplicaVeneno(en, st);
       if (en.hp <= 0) mataInimigo(i, en);
     }
-
-    // contadores das magias 'area': a cada N golpes, varredura em tudo
-    for (var m = 0; m < magiasVigentes.length; m++) {
-      var mg = magiasVigentes[m];
-      if (mg.tipo !== 'area') continue;
-      var est = estadoMagia(mg.id);
-      est.cont++;
-      if (est.cont % mg.aCada === 0) varredura(mg);
-    }
   }
 
-  // ----------------------------------------------------------- magias
-  // Estado por magia (contador de golpes / timer). Criação preguiçosa:
+  // Ataque à distância: um projétil por golpe. alvo/dmg/crit são
+  // capturados pelo callback POR VALOR — o alvo pode morrer durante o voo.
+  function golpeDistancia(st, cl) {
+    var alvo = null;
+    var melhor = Infinity;
+    var alc2 = (st.alcance + 6) * (st.alcance + 6);
+    for (var i = 0; i < inimigos.length; i++) {
+      var dx = inimigos[i].x - heroi.x, dy = inimigos[i].y - heroi.y;
+      var d2 = dx * dx + dy * dy;
+      if (d2 <= alc2 && d2 < melhor) { melhor = d2; alvo = inimigos[i]; }
+    }
+    if (!alvo) return;
+
+    var crit = Math.random() * 100 < st.crit;
+    var dmg = st.dano + Math.floor(Math.random() * 3);
+    if (crit) dmg *= 2;
+    Efeitos.missil({ x: heroi.x, y: heroi.y - 16 }, alvo, cl.corProj, 0.9,
+      function () {
+        var idx = inimigos.indexOf(alvo);
+        if (idx < 0) return;              // alvo morreu durante o voo
+        alvo.hp -= dmg;
+        alvo.hitFlash = 0.12;
+        var ddx = alvo.x - heroi.x, ddy = alvo.y - heroi.y;
+        var d = Math.sqrt(ddx * ddx + ddy * ddy);
+        if (d > 0.01) {
+          alvo.x += (ddx / d) * 4;
+          alvo.y += (ddy / d) * 4;
+          resolve(alvo, alvo.raio || 6);
+        }
+        numero(alvo.x, alvo.y - 18, String(dmg),
+          crit ? '#ffd866' : '#ffffff', crit);
+        faísca(alvo.x, alvo.y - 6, crit ? '#ffd866' : '#ffffff', crit ? 8 : 4);
+        if (alvo.hp > 0) aplicaVeneno(alvo, st);
+        if (alvo.hp <= 0) mataInimigo(idx, alvo);
+      });
+  }
+
+  // ----------------------------------------------------------- skills
+  // Estado por skill (contador de golpes / timer). Criação preguiçosa:
   // trocar de classe no meio da luta reconta do zero.
-  function estadoMagia(id) {
-    if (!magiasEstado[id]) magiasEstado[id] = { cont: 0, t: 0 };
-    return magiasEstado[id];
+  function estadoSkill(id) {
+    if (!skillsEstado[id]) skillsEstado[id] = { cont: 0, t: 0 };
+    return skillsEstado[id];
   }
 
   // Nuke vira missil teleguiado: clarão no conjuro, rastro no voo e o
@@ -543,11 +596,11 @@ var Batalha = (function () {
   }
 
   // Nuke/cura periódicos (rodando a cada frame com alvo em mãos).
-  function magiasPeriodicas(dt, alvo) {
-    for (var i = 0; i < magiasVigentes.length; i++) {
-      var mg = magiasVigentes[i];
+  function skillsPeriodicas(dt, alvo) {
+    for (var i = 0; i < skillsVigentes.length; i++) {
+      var mg = skillsVigentes[i];
       if (mg.tipo !== 'nuke' && mg.tipo !== 'cura') continue;
-      var st = estadoMagia(mg.id);
+      var st = estadoSkill(mg.id);
       st.t -= dt;
       if (st.t > 0) continue;
       st.t = mg.intervalo;
@@ -569,7 +622,7 @@ var Batalha = (function () {
     }
   }
 
-  // Varredura da magia 'area': acerta todos os inimigos.
+  // Varredura da skill 'area': acerta todos os inimigos.
   function varredura(mg) {
     var st = heroi.stats;
     numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
@@ -587,11 +640,11 @@ var Batalha = (function () {
     }
   }
 
-  // Veneno (magia do ladino): chance por acerto aplica dano contínuo.
+  // Veneno (skill do ladino): chance por acerto aplica dano contínuo.
   // Recolocar o veneno renova a duração (dps congelado no valor do hit).
   function aplicaVeneno(en, st) {
-    for (var i = 0; i < magiasVigentes.length; i++) {
-      var mg = magiasVigentes[i];
+    for (var i = 0; i < skillsVigentes.length; i++) {
+      var mg = skillsVigentes[i];
       if (mg.tipo !== 'veneno') continue;
       if (Math.random() >= mg.chance) continue;
       en.veneno = {
@@ -602,6 +655,94 @@ var Batalha = (function () {
       };
       Efeitos.brasas(en.x, en.y - 8, mg.cor, 5, 60, 45);
       numero(en.x, en.y - 30, mg.nome, mg.cor, false);
+    }
+  }
+
+  // Skills de posicionamento e medo: gatilho DEFENSIVO — o bando
+  // chegando perto do herói dispara, com cooldown próprio (st.t). Roda
+  // antes da IA dos inimigos, dentro do atualizaHeroi.
+  function skillsPosicionamento(dt) {
+    if (heroi.morto) return;
+    for (var i = 0; i < skillsVigentes.length; i++) {
+      var sk = skillsVigentes[i];
+      if (sk.tipo !== 'mobilidade' && sk.tipo !== 'medo') continue;
+      var st = estadoSkill(sk.id);
+      st.t -= dt;
+      if (st.t > 0) continue;
+      var perto = false;
+      for (var j = 0; j < inimigos.length; j++) {
+        var dx = inimigos[j].x - heroi.x, dy = inimigos[j].y - heroi.y;
+        if (dx * dx + dy * dy <= sk.gatilho * sk.gatilho) { perto = true; break; }
+      }
+      if (!perto) continue;
+      st.t = sk.intervalo;
+      ultimaSkill = sk.id;
+      if (sk.tipo === 'medo') aplicaMedo(sk);
+      else if (sk.modo === 'empurra') empurra(sk);
+      else foge(sk);
+    }
+  }
+
+  // Empurrão (guerreiro): arremessa o bando para longe em curta rajada —
+  // o inimigo empurrado não reage à IA durante o voo.
+  function empurra(sk) {
+    numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
+    Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 1.5);
+    shake = Math.max(shake, 0.12);
+    var r2 = sk.alcance * sk.alcance;
+    for (var i = 0; i < inimigos.length; i++) {
+      var en = inimigos[i];
+      var dx = en.x - heroi.x, dy = en.y - heroi.y;
+      if (dx * dx + dy * dy > r2) continue;
+      var d = Math.sqrt(dx * dx + dy * dy) || 1;
+      en.empurra = { t: sk.dur,
+        vx: (dx / d) * sk.impulso, vy: (dy / d) * sk.impulso };
+      Efeitos.brasas(en.x, en.y - 6, sk.cor, 4, 60, 50);
+    }
+  }
+
+  // Esquiva (ladino: corrida curta) e Teleporte (mago: salto instantâneo):
+  // levam o herói para longe do centro do bando, respeitando limites e
+  // obstáculos do mundo.
+  function foge(sk) {
+    var sx = 0, sy = 0, n = 0;
+    for (var i = 0; i < inimigos.length; i++) {
+      var en = inimigos[i];
+      var dx = en.x - heroi.x, dy = en.y - heroi.y;
+      if (dx * dx + dy * dy <= 64 * 64) { sx += dx; sy += dy; n++; }
+    }
+    if (!n) return;   // o gatilho viu alguém; o bando saiu do raio (raro)
+    var d = Math.sqrt(sx * sx + sy * sy) || 1;
+    var ux = -sx / d, uy = -sy / d;          // direção oposta ao bando
+    numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
+    if (sk.modo === 'blink') {
+      Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 0.9);
+      heroi.x = Math.max(8, Math.min(MW - 8, heroi.x + ux * sk.distancia));
+      heroi.y = Math.max(10, Math.min(MH - 8, heroi.y + uy * sk.distancia));
+      resolve(heroi, 6);
+      Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 1.1);
+      Efeitos.brasas(heroi.x, heroi.y - 6, sk.cor, 8, 90, 60);
+    } else {
+      // esquiva: rajada curta — corre por sk.distancia em 0,18s
+      heroi.fuga = { t: 0.18, vx: ux * sk.distancia / 0.18,
+                     vy: uy * sk.distancia / 0.18 };
+      Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 0.9);
+    }
+  }
+
+  // Amedronta (clérigo): os inimigos no raio fogem por sk.dur segundos —
+  // correm para longe e não atacam enquanto durar o medo.
+  function aplicaMedo(sk) {
+    numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
+    Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 1.0);
+    shake = Math.max(shake, 0.08);
+    var r2 = sk.alcance * sk.alcance;
+    for (var i = 0; i < inimigos.length; i++) {
+      var en = inimigos[i];
+      var dx = en.x - heroi.x, dy = en.y - heroi.y;
+      if (dx * dx + dy * dy > r2) continue;
+      en.medo = { t: sk.dur, cor: sk.cor };
+      Efeitos.brasas(en.x, en.y - 10, sk.cor, 5, 70, 45);
     }
   }
 
@@ -626,8 +767,8 @@ var Batalha = (function () {
       h.hpMax = s.hpMax;
       if (h.hp > h.hpMax) h.hp = h.hpMax;
     }
-    // magias ativas (classe/nível podem mudar em combate)
-    magiasVigentes = Magias.ativas(Game.personagem.classe, Game.personagem.nivel);
+    // skills ativas (classe/nível podem mudar em combate)
+    skillsVigentes = Skills.ativas(Game.personagem.classe, Game.personagem.nivel);
 
     if (h.atkCd > 0) h.atkCd -= dt;
     if (h.inv > 0) h.inv -= dt;
@@ -641,8 +782,22 @@ var Batalha = (function () {
       if (d2 < melhor) { melhor = d2; alvo = e; }
     }
 
-    // magias com timer (nuke/cura) — antes do ciclo de ataque
-    magiasPeriodicas(dt, alvo);
+    // skills com timer (nuke/cura) e gatilho por proximidade — antes do
+    // ciclo de ataque (o empurrão age na IA dos inimigos logo abaixo)
+    skillsPeriodicas(dt, alvo);
+    skillsPosicionamento(dt);
+
+    // esquiva em curso: corre na fuga e não ataca até pousar
+    if (h.fuga) {
+      h.fuga.t -= dt;
+      mover(h, h.fuga.vx * dt, h.fuga.vy * dt, 6);
+      if (h.fuga.t > 0) {
+        anima(h, 'walk', dt);
+        h.hp = Math.min(h.hpMax, h.hp + 2 * dt);
+        return;
+      }
+      h.fuga = null;
+    }
 
     var atacando = h.atkT > 0;
     if (atacando) {
@@ -694,7 +849,7 @@ var Batalha = (function () {
       if (en.atkCd > 0) en.atkCd -= dt;
       if (en.lunge > 0) en.lunge -= dt;
 
-      // dano contínuo do veneno (magia do ladino)
+      // dano contínuo do veneno (skill do ladino)
       if (en.veneno) {
         en.veneno.t -= dt;
         en.veneno.acc += en.veneno.dps * dt;
@@ -716,6 +871,14 @@ var Batalha = (function () {
         }
       }
 
+      // empurrão da skill: sendo arremessado, não reage à IA
+      if (en.empurra) {
+        en.empurra.t -= dt;
+        mover(en, en.empurra.vx * dt, en.empurra.vy * dt, en.raio || 6);
+        if (en.empurra.t <= 0) en.empurra = null;
+        continue;
+      }
+
       var alvoX, alvoY;
       if (heroi.morto) {
         // herói caído: se agrupam no local da morte (o centro do mundo
@@ -727,7 +890,19 @@ var Batalha = (function () {
       var vx = alvoX - en.x, vy = alvoY - en.y;
       var dist = Math.sqrt(vx * vx + vy * vy) || 1;
 
-      if (heroi.morto) {
+      // medo (Amedronta): corre para longe do herói e não ataca —
+      // o cronômetro anda mesmo com o herói caído, senão trava em 100%
+      var comMedo = false;
+      if (en.medo) {
+        en.medo.t -= dt;
+        comMedo = en.medo.t > 0 && !heroi.morto;
+        if (en.medo.t <= 0) en.medo = null;
+      }
+
+      if (comMedo) {
+        mover(en, -(vx / dist) * en.vel * 0.9 * dt,
+          -(vy / dist) * en.vel * 0.9 * dt, en.raio || 6);
+      } else if (heroi.morto) {
         if (dist > 20) mover(en, (vx / dist) * en.vel * 0.5 * dt,
           (vy / dist) * en.vel * 0.5 * dt, en.raio || 6);
       } else if (dist > 13) {
@@ -875,6 +1050,16 @@ var Batalha = (function () {
       }
       ctx.globalAlpha = 1;
     }
+    // marcador de medo: 2 pontinhos tremulando (skill Amedronta)
+    if (en.medo) {
+      ctx.fillStyle = en.medo.cor;
+      var myy = Math.round(en.y - 18 * esc - 7);
+      for (var mm = 0; mm < 2; mm++) {
+        ctx.globalAlpha = Math.sin(en.medo.t * 10 + mm * 2) > -0.4 ? 1 : 0.3;
+        ctx.fillRect(Math.round(en.x) - 2 + mm * 4, myy - mm * 2, 2, 2);
+      }
+      ctx.globalAlpha = 1;
+    }
     if (en.hp < en.hpMax) {
       // 3px: o contorno de 1px (quando existe) não pode cobrir a barra toda
       var bw = Math.round(16 * esc);
@@ -925,7 +1110,7 @@ var Batalha = (function () {
       ctx.fillRect(Math.round(pa.x), Math.round(pa.y), 2, 2);
     }
 
-    // efeitos das magias (missis, anéis, cortes, motes)
+    // efeitos das skills (missis, anéis, cortes, motes)
     Efeitos.desenhar(ctx);
 
     // em espaço de mundo: 8 un. × k=2 = 16px na tela (igual à UI)
@@ -1007,6 +1192,11 @@ var Batalha = (function () {
     for (var i = 0; i < inimigos.length; i++) {
       if (inimigos[i].tipo.boss) { boss = true; break; }
     }
+    var medo = 0, empurra = 0;
+    for (i = 0; i < inimigos.length; i++) {
+      if (inimigos[i].medo) medo++;
+      if (inimigos[i].empurra) empurra++;
+    }
     return {
       mapa: mapa,
       onda: onda,
@@ -1017,6 +1207,11 @@ var Batalha = (function () {
                y: Math.round(heroi ? heroi.y : 0) },
       inimigos: inimigos.length,
       boss: boss,
+      // skills de posicionamento/medo: última disparada + efeitos ativos
+      ultimaSkill: ultimaSkill,
+      medo: medo,
+      empurra: empurra,
+      fuga: !!(heroi && heroi.fuga),
       pausada: pausada,
       morto: heroi ? heroi.morto : false,
       hp: heroi ? Math.ceil(heroi.hp) : 0,
