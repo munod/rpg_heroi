@@ -5,7 +5,8 @@ var Personagem = (function () {
     { id: 'for', nome: 'Força',         desc: 'Aumenta o dano corpo a corpo' },
     { id: 'des', nome: 'Destreza',      desc: 'Aumenta velocidade e crítico' },
     { id: 'con', nome: 'Constituição',  desc: 'Aumenta os pontos de vida' },
-    { id: 'int', nome: 'Inteligência',  desc: 'Aumenta o dano mágico' },
+    { id: 'int', nome: 'Inteligência',
+      desc: 'Aumenta o dano mágico e a qualidade da IA em combate' },
     { id: 'car', nome: 'Carisma',       desc: 'Aumenta o XP ganho por abate' }
   ];
 

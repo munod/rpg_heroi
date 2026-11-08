@@ -743,15 +743,24 @@ var Batalha = (function () {
       });
   }
 
+  // Agudeza da INT vigente — a mesma régua de IA.agudeza do cérebro;
+  // as skills disparam com raio/cooldown proporcionais a ela (gênio usa
+  // mais cedo e com menos espera).
+  function aguHeroi() {
+    var s = heroi ? heroi.stats : null;
+    return IA.agudeza(s && s.atributos ? s.atributos.int : 8);
+  }
+
   // Nuke/cura periódicos (rodando a cada frame com alvo em mãos).
   function skillsPeriodicas(dt, alvo) {
+    var agu = aguHeroi();
     for (var i = 0; i < skillsVigentes.length; i++) {
       var mg = skillsVigentes[i];
       if (mg.tipo !== 'nuke' && mg.tipo !== 'cura') continue;
       var st = estadoSkill(mg.id);
       st.t -= dt;
       if (st.t > 0) continue;
-      st.t = mg.intervalo;
+      st.t = IA.skillEfeito(mg, agu).intervalo || mg.intervalo;
       if (mg.tipo === 'nuke') {
         if (!alvo) continue;
         conjuraNuke(mg, alvo);
@@ -812,19 +821,22 @@ var Batalha = (function () {
   // antes da IA dos inimigos, dentro do atualizaHeroi.
   function skillsPosicionamento(dt) {
     if (heroi.morto) return;
+    var agu = aguHeroi();
     for (var i = 0; i < skillsVigentes.length; i++) {
       var sk = skillsVigentes[i];
       if (sk.tipo !== 'mobilidade' && sk.tipo !== 'medo') continue;
       var st = estadoSkill(sk.id);
       st.t -= dt;
       if (st.t > 0) continue;
+      var ef = IA.skillEfeito(sk, agu);
+      var gat = ef.gatilho || sk.gatilho;
       var perto = false;
       for (var j = 0; j < inimigos.length; j++) {
         var dx = inimigos[j].x - heroi.x, dy = inimigos[j].y - heroi.y;
-        if (dx * dx + dy * dy <= sk.gatilho * sk.gatilho) { perto = true; break; }
+        if (dx * dx + dy * dy <= gat * gat) { perto = true; break; }
       }
       if (!perto) continue;
-      st.t = sk.intervalo;
+      st.t = ef.intervalo || sk.intervalo;
       ultimaSkill = sk.id;
       if (sk.tipo === 'medo') aplicaMedo(sk);
       else if (sk.modo === 'empurra') empurra(sk);

@@ -123,6 +123,22 @@
   em pt-BR). O `tempo` só corre em `atualizar(dt, true)` — o `true` vem do
   `update` de `jogo.js`; a simulação offline não conta. `normalizaStats`
   completa saves antigos (floor — o tempo ao vivo é fracionário).
+- IA tática em `js/ia.js` (carregado antes de `batalha.js`; usa
+  `Batalha.colideObst` em runtime): `agudeza(int)` (INT 4→0, 20→1) →
+  `decideHeroi` (alvo por peso = −distância + prioridade×40×agu + ruído
+  ×(1−agu); estados espera/perseguir/combate/kite/recuar — kite só em
+  classe à distância com agu≥0,35, recuar só agu≥0,45 e HP<0,25+0,15×agu);
+  `astucia(tipo, mapa)` (base da espécie + 0,12/mapa, teto 1) →
+  `decideInimigo` (slot de cerco ≥0,35 a 11px do herói com ângulo por
+  `en.slot`, antecipação ≥0,45 usando `heroi.escapa` (direção da fuga,
+  0,6s), esquiva ≥0,55 com cooldown 3,5−1,5×ast); `skillEfeito` aplicado
+  em `skillsPeriodicas`/`skillsPosicionamento` (raio/cooldown por
+  agudeza); `linhaLivre`/`caminho` (A* 16px/8-dir) chamados por
+  `Batalha.moverPara` **só** com linha bloqueada + entidade esperta
+  (herói agu≥0,35, monstro ast≥0,4 — burros escorregam na colisão).
+  Esquiva inimiga faz o golpe errar ('ESQUIVOU!') em `golpeCorpo` e na
+  chegada do projétil (AoE/nuke acertam sempre). Exposições em `info()`:
+  `heroi.estado`/`heroi.agu`/`esquivando`. Fumaça seções 22-23.
 - Efeitos visuais em `js/efeitos.js` (chamado por `Batalha` em
   `atualizar`/`desenhar`/`limparEfeitos`): **só primitivas que
   `testes/cena.js` rasteriza** — `fillRect`, `strokeRect` (com

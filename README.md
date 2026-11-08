@@ -55,6 +55,17 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   projétil teleguiado com rastro e explosão em anel, arco de corte
   luminoso, respingos + ícone de veneno no inimigo, motes de cura subindo
   e marcador de medo (capturados em `testes/tela-skill*.png`).
+- **IA tática** — o herói decide sozinho com **Inteligência de verdade**:
+  a cada 0,2s avalia os alvos e os estados por peso — prioriza o inimigo
+  perigoso e fraco, faz **kite** (classes à distância mantêm a distância
+  e atiram em retirada) e **recua** quando o HP fica crítico. **INT baixa
+  é burra de verdade** (escolhas ruidosas, vai no mais perto, nunca
+  recua); **INT alta** ganha cooldown de skill menor e raio de gatilho
+  maior. Os monstros têm **astúcia por espécie + mapa**: nos mapas fundos
+  eles **cercoam** o herói em slots ao redor, **antecipam** Esquiva e
+  Teleporte (miram na fuga para cortar) e o astuto **esquiva** golpes —
+  o dano erra com "ESQUIVOU!". Rotas desviam de obstáculos por **A* sob
+  demanda** (só quando a reta está bloqueada e a entidade é esperta).
 - `Pausar`/`Continuar` (botão embaixo) congela a batalha se quiser.
 - **Autosave** a cada 3s (e ao fechar a aba): o progresso nunca depende de
   `Enter`, e o navegador avisa se faltar espaço pra salvar.
@@ -66,8 +77,8 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
 
 - **Atributos** — Força, Destreza, Constituição, Inteligência e Carisma;
   cada ponto muda o dano, a vida, a **velocidade** e o crítico **em tempo real**
-  (a Velocidade também **acelera o ataque**, e o Carisma aumenta o **XP ganho
-  por abate**). Clique em `+`/`−` para mudar 1 ponto ou **segure** o botão
+  (a Velocidade também **acelera o ataque**, o Carisma aumenta o **XP ganho
+  por abate** e a Inteligência **refina a IA do herói** em combate). Clique em `+`/`−` para mudar 1 ponto ou **segure** o botão
   para repetir; o seletor `×1`/`×5` muda quantos pontos cada ação gasta.
 - **Progressão** — cada inimigo derrubado dá **XP**; ao subir de **nível**
   você ganha **+5 pontos** para distribuir e **+4 de vida** (o XP e o nível
@@ -119,6 +130,7 @@ js/
   itens.js          drops: armas/armaduras, bolsa e auto-equip
   skills.js         skills automáticas por classe (procs, sem botão)
   efeitos.js        efeitos visuais das skills (missis, cortes, motes)
+  ia.js             IA tática: decisões ponderadas por INT/astúcia + A*
   ui.js             botões, painéis, barras e texto no canvas
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
   gestao.js         painel de gestão (atributos/aparência/classe) compartilhado
@@ -157,7 +169,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 161 asserções: sprites, status, UI, idle, toque
+node testes/fumaca.js     # 180 asserções: sprites, status, UI, idle, toque
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -166,7 +178,7 @@ node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
-São **174 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **193 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.
@@ -186,7 +198,8 @@ distância** do mago/ladino/clérigo (projétil do golpe básico) e os
 **gatilhos de fuga** (Empurrão, Teleporte, Esquiva e Amedronta quando o
 bando se fecha) — tudo com **efeitos visuais** (projétil teleguiado, arco
 de corte, anel de impacto, respingos de veneno, motes de cura e marcador
-de medo), a **câmera sobre o
+de medo), a **IA tática** (agudeza/estados do herói, cerco/antecipação/
+esquiva dos monstros e rotas por A*), a **câmera sobre o
 mundo 384×268** com o **renascimento em local aleatório**, o **toque no
 celular** (clique, arrasto e soltura por dedo, com bloqueio de rolagem),
 a **escala responsiva** e o **layout de largura adaptativa** (768–1728,
