@@ -25,8 +25,8 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
   ✅ **B `economia-ouro`** (ouro, venda/sucata, aprimoramento, re-roll) ·
   ✅ **C `skills-estrategicas`** (loadout 3, keystone/classe, respec) ·
   ✅ **D `lendarios-equilibrio`** (6 lendários com efeito mecânico +
-  re-medição final) — **plano completo; falta a release 0.2.0** (com
-  aval, checklist do VERSIONING).
+  re-medição final) — **plano `gestao-estrategica` completo e
+  publicado na release v0.2.0** (2026-11-08).
 - **Ranking de jogadores** — *adiado pelo mantenedor até as
   estatísticas existirem* (já entregues em `estatisticas`; base `p.stats`
   pronta: nível/mapa/ondas/abates/bosses). Escopo local (heróis do

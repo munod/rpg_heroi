@@ -10,6 +10,12 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-08
+
+Gestão estratégica completa: itens com afixos, economia com ouro,
+skills com loadout/keystone e lendários — 4 levas, 22 requisitos
+rastreáveis, ritmo medido em cada uma.
+
 ### Added
 
 - **Itens com afixos (Leva A da gestão estratégica)**: raridade define
@@ -129,5 +135,6 @@ e deploy no GitHub Pages.
 - **Barras laterais no celular**: layout passou a seguir o aspecto da
   viewport (bug reportado por print) (`4c249e4`).
 
-[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/munod/rpg_heroi/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/munod/rpg_heroi/releases/tag/v0.1.0
