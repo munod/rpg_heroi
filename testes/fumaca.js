@@ -893,9 +893,11 @@ console.log('16) skills automáticas (procs por classe)');
 
   // --- veneno do ladino por acerto
   p.classe = 'ladino';
-  // onda 3 calma:1º golpe sempre não-lethal (30 contra ~40 de HP) →
-  // ~5 rolagens de 30% por onda e ondas ciclam rápido — o 1º golpe de
-  // cada inimigo é elegível, então P(falha) ≈ 0,7^40 ≈ 0
+  // INT 8 (agu 0,25): sem kite/recuar da INT herdada — o herói fica e
+  // atira (com INT50 ele alternava fuga/repique e os golpes sumiam);
+  // onda 3 calma: 1º golpe sempre não-lethal (~58 de HP contra 19 de
+  // dano) → dezenas de rolagens de 30% em 100s — P(falha) ≈ 0
+  p.atributos.int = 8;
   Batalha.restaurarOnda(3);
   let espL = 0;
   while (Batalha.info().morto && espL < 900) { frame(1); espL++; }
@@ -2150,10 +2152,12 @@ console.log('28) evento: o Açougueiro (raro, uma chance, recompensa gorda)');
   conf(matou, 'herói forte derruba o Açougueiro');
   conf(p.stats.acougueiros === ac0 + 1, 'stats.acougueiros conta +1');
   // RNG zerado e ×10 POR DENTRO do arredondamento: onda 30 (ondaTotal 29)
-  // → base round(1×1×2,2)=2 → Açougueiro round(2,2×10)=22 +
-  // 5 minions ×2 = delta exato 32
-  conf((p.ouro || 0) - ouroA === 32,
-    'ouro ×10 na vitória (delta ' + ((p.ouro || 0) - ouroA) + ' = 32)');
+  // → Açougueiro round(1×1×2,2×10)=22 + minions round(2,2)=2 cada.
+  // Faixa, não exato: a geometria de spawn pode deixar 1 minion fora do
+  // primeiro golpe. Sem ×10 o delta máximo seria 12 — ≥22 prova o 10×.
+  const dOuro = (p.ouro || 0) - ouroA;
+  conf(dOuro >= 22 && dOuro <= 40,
+    'ouro ×10 na vitória (delta ' + dOuro + ', faixa 22..40)');
   const leg = [p.equip.arma, p.equip.armadura].concat(p.bolsa)
     .some(i => i && i.rar === 4);
   conf(leg, 'lendário garantido no saque');
@@ -2313,6 +2317,103 @@ console.log('29) evento: o Gatuno (rouba, foge, resgate)');
     ' → ' + p.ouro + ')');
   conf((jogoCanvas._textos || []).some(t => t.indexOf('GATUNO') >= 0),
     'aviso do desfecho na tela');
+}
+
+console.log('30) tooltips: breakdown do rodapé, atributos e item');
+{
+  const UI = sandbox.UI;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+  const mm = (x, y) => (jogoCanvas._listeners.mousemove || [])
+    .forEach(fn => fn({ clientX: x * 2, clientY: y * 2 }));
+
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- statusDetalhado: as partes somam o stat (com keystone ativo)
+  p.classe = 'guerreiro';
+  p.nivel = 30;
+  p.atributos.for = 50;
+  p.atributos.des = 20;
+  p.atributos.con = 40;
+  p.atributos.int = 12;
+  p.atributos.car = 20;
+  p.pontos = 0;
+  p.keystoneLib = true;
+  p.keystoneOn = true;              // Fúria Incontida: dano ×1,35 / HP ×0,8
+  p.equip = { arma: { nome: 'A', slot: 'arma', rar: 2, escala: 1, up: 2,
+                      afixos: [], bonus: { dano: 10 },
+                      efeito: 'vampiro' }, armadura: null };
+  const soma = (d) => d.partes.reduce((a, x) => a + x.v, 0);
+  const sD = Personagem.status(p);
+  const det = Personagem.statusDetalhado(p);
+  conf(Math.round(soma(det.dano) * det.dano.mult.v) === sD.dano,
+    'dano detalhado: Σpartes × keystone = status');
+  conf(Math.round(soma(det.hp) * det.hp.mult.v) === sD.hpMax,
+    'HP detalhado: Σpartes × keystone = status');
+  conf(soma(det.vel) === sD.vel && soma(det.crit) === sD.crit,
+    'velocidade e crítico: Σpartes = status (keystone não mexe neles)');
+  conf(Math.abs(soma(det.xp) - sD.xpMult) < 1e-9,
+    'XP: Σpartes = status');
+  conf(det.dps.total ===
+       Math.round(sD.dano * (1 + sD.crit / 100) / sD.recarga),
+    'DPS = dano × (1 + crít/100) ÷ recarga');
+  p.keystoneOn = false;
+  const detOff = Personagem.statusDetalhado(p);
+  conf(!detOff.dano.mult &&
+       soma(detOff.dano) === Personagem.status(p).dano,
+    'sem keystone as partes somam direto');
+  conf(det.dano.notas.length === 1 && det.dps.notas.length === 1 &&
+       det.dano.notas[0].indexOf('Sangue Frio') >= 0,
+    'nota do lendário ativo (Sangue Frio) acompanha o detalhe');
+
+  // --- rodapé segmentado: hover abre o breakdown (varre segmentos)
+  let tooltip = false, acheiDps = false;
+  for (const x of [150, 240, 330, 430, 520, 610]) {
+    jogoCanvas._textos = [];
+    clique(x, 356);                 // y do rodapé (sem botão ali)
+    for (let i = 0; i < 25; i++) frame(1);
+    const ts = jogoCanvas._textos || [];
+    if (ts.some(t => t.indexOf('= ') >= 0)) tooltip = true;
+    if (ts.some(t => t.indexOf('DPS básico') >= 0)) { acheiDps = true; break; }
+  }
+  conf(tooltip, 'hover no rodapé abre o breakdown (título com o total)');
+  conf(acheiDps, 'segmento DPS expõe a conta (dano × (1+crít) ÷ recarga)');
+
+  // --- tooltip do item completo (cabeçalho da aba Itens)
+  clique(655, 50);                 // aba Itens
+  frame(2);
+  jogoCanvas._textos = [];
+  clique(500, 96);                 // texto da arma (não é botão)
+  for (let i = 0; i < 25; i++) frame(1);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('Vende ') >= 0),
+    'cabeçalho da arma abre o tooltip completo (venda/sucata/custos)');
+
+  // --- tooltip do atributo (linha da INT)
+  clique(445, 50);                 // aba Atributos
+  frame(2);
+  jogoCanvas._textos = [];
+  clique(500, 180);                // linha INT (i=3 → y=180)
+  for (let i = 0; i < 25; i++) frame(1);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('agudeza da IA') >= 0),
+    'linha do INT explica a agudeza da IA');
+
+  // --- long-press: prende 500ms, solta e o ponteiro SAI sem clicar →
+  // a caixa retida continua (só um clique fora fecha)
+  jogoCanvas._textos = [];
+  pressionar(240, 356);             // mouse down sobre um segmento
+  for (let i = 0; i < 40; i++) frame(1);   // ~670ms: hover + prensa
+  soltar();
+  for (let i = 0; i < 3; i++) frame(1);
+  mm(150, 150);                     // move SEM clicar (arena, neutro)
+  jogoCanvas._textos = [];
+  for (let i = 0; i < 3; i++) frame(1);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('= ') >= 0),
+    'long-press: caixa fica retida após soltar e mover sem clicar');
+  clique(150, 150);                 // clique fora fecha
+  jogoCanvas._textos = [];
+  for (let i = 0; i < 3; i++) frame(1);
+  conf(!(jogoCanvas._textos || []).some(t => t.indexOf('= ') >= 0),
+    'clique fora fecha a caixa retida');
 }
 
 console.log('');

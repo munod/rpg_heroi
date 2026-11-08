@@ -166,11 +166,12 @@ var Jogo = (function () {
     Gestao.desenhar(ctx, p);
 
     desenhaRodape(ctx, p);
+    UI.desenhaTooltip();   // por cima de tudo, sem hit-test
   }
 
   function desenhaRodape(ctx, p) {
     var W = Game.W;           // âncoras: esquerda fixa, direita em W-k
-    UI.linhaStatus(Personagem.status(p));
+    UI.linhaStatus(Personagem.status(p), p);
 
     if (UI.button(8, 372, 128, 32, 'Salvar')) {
       Gravacao.salvarPersonagem(Game.personagem, true);

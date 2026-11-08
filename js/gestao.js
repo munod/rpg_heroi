@@ -74,6 +74,30 @@ var Gestao = (function () {
     }
   }
 
+  // Tooltip dos atributos (Leva 3): o que cada um alimenta — o detalhe
+  // numérico por fonte vive no tooltip do rodapé
+  function dicasAtributo(linha, p) {
+    var v = p.atributos[linha.at];
+    var textos = {
+      for: 'FOR: dano do ataque (+1 a cada 2 pontos efetivos)',
+      des: 'DES: velocidade (×3), recarga (÷ vel) e crítico (×1,3)',
+      con: 'CON: vida máxima (+4 por ponto)',
+      int: 'INT: agudeza da IA — 4 = burro, 20 = gênio (skills/IA)',
+      car: 'CAR: XP (+3% por ponto acima de 8)'
+    };
+    var out = [
+      [(textos[linha.at] || linha.nome), '#e8c86a'],
+      ['Valor atual: ' + v, '#f2eef8']
+    ];
+    if (linha.at === 'int') {
+      // espelho de IA.agudeza: (int − 4) ÷ 16 em 0..1
+      var agu = Math.max(0, Math.min(1, (v - 4) / 16));
+      out.push(['Hoje: agudeza ' + agu.toFixed(2) +
+        ' (0 burro · 1 gênio)', '#9a90b8']);
+    }
+    return out;
+  }
+
   // As ações do painel acontecem aqui (fora do render): o clique aplica
   // na hora e, segurado, repete depois do arranque — em vez de um ponto
   // por clique, só.
@@ -141,6 +165,8 @@ var Gestao = (function () {
         { disabled: v <= 1 });
       UI.button(linha.mais.x, linha.mais.y, 24, 24, '+',
         { disabled: p.pontos <= 0 });
+      UI.dica({ x: 416, y: linha.y - 12, w: 300, h: 24 },
+        dicasAtributo(linha, p));
     });
 
     // toggle de quantos pontos cada clique/segurar gasta
@@ -263,9 +289,11 @@ var Gestao = (function () {
     var arma = p.equip.arma, arm = p.equip.armadura;
     UI.text('Arma: ' + (arma ? Itens.linha(arma, null, 26) : '—'), 416, 96,
       { color: arma ? Itens.corRar(arma.rar) : '#6f678a', font: '13px monospace' });
+    UI.dica({ x: 416, y: 84, w: 256, h: 24 }, Itens.dicas(p, arma));
     slotAcoes(p, arma, 84);
     UI.text('Armadura: ' + (arm ? Itens.linha(arm, null, 22) : '—'), 416, 124,
       { color: arm ? Itens.corRar(arm.rar) : '#6f678a', font: '13px monospace' });
+    UI.dica({ x: 416, y: 112, w: 256, h: 24 }, Itens.dicas(p, arm));
     slotAcoes(p, arm, 112);
 
     UI.text('Ouro ' + milhar(p.ouro || 0) + ' · Bolsa ' +
@@ -299,6 +327,7 @@ var Gestao = (function () {
           })) {
           Itens.equipar(p, item);
         }
+        UI.dica({ x: 416, y: y, w: 272, h: 26 }, Itens.dicas(p, item));
         if (UI.button(692, y, 30, 26, 'V', {
           color: '#8ce08c', font: '13px monospace'
         })) {

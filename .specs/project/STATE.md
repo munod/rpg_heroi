@@ -113,6 +113,18 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 - **Carência/cooldown: cada CHAMADA decrementa** — testes unitários de
   cooldown precisam de livro-caixa explícito (contar chamadas), senão a
   contagem vira flake enigmático.
+- **Tooltip: dwell por FRAME, não por relógio destrutivo** — o
+  candidato precisa de flag de consumo (`usada`): zerá-lo todo frame
+  reseta o delay e o tooltip nunca abre (bug real achado pelo teste);
+  saída do ponteiro = frame sem registro. `performance.now()` do
+  harness avança com `frame()` ✓ (16,7ms).
+- **Rodapé em 768px: math monoespaçada e separador compacto** —
+  `measureText` NÃO existe no rasterizador; 7 segmentos + arma com
+  `'  ·  '` estouravam a largura — `' · '` + rótulos curtos ('Crít',
+  'Alc') cabem.
+- **`statusDetalhado` numérico (não string)** — UI formata, teste soma:
+  Σpartes × keystone === status é assert exato; string de tooltip nunca
+  entra em asserção de valor.
 
 
 ## Bloqueios

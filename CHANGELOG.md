@@ -40,7 +40,22 @@ vive em `.specs/features/`.
   timeouts por unidade (`Eventos.atualiza*`), recompensas/punições em
   `mataInimigo` com ouro relativo aos kills; aba Stats +2 linhas
   (Açougueiros/Gatunos) — spec `.specs/features/eventos-aleatorios/`
-  (R-EVE-1..4). Pacing ajustado com dados do `ritmo.js` (chegada na
+  (R-EVE-1..4).
+- **Sistema de tooltips + breakdown de modificadores (Leva 3)**:
+  infraestrutura em `js/ui.js` (`UI.dica`/`UI.desenhaTooltip` — hover com
+  delay 250ms no desktop, **long-press 500ms** com caixa retida no
+  celular, 1 caixa, clamp nas bordas, desenhada por cima de tudo e
+  **sem hit-test**); **rodapé segmentado** com ordem fixa (HP · Dano ·
+  **DPS** · Vel · Crít · Alc · XP) onde cada número abre o
+  **breakdown por fonte** de `Personagem.statusDetalhado` (base ·
+  atributo · itens(±aprimoramento) · keystone · notas de lendários
+  ativos) — **DPS básico = dano × (1+crít/100) ÷ recarga** com a conta
+  visível; tooltips de **atributo** (o que cada um alimenta + agudeza da
+  IA) e de **item completo** (`Itens.dicas`: afixos 1 a 1, efeito,
+  aprimoramento, deltas, venda/sucata/custos) — spec
+  `.specs/features/tooltip-infra/` (R-TIP-1..4). Testes: seção 30 (13
+  confs: somas exatas, hover, DPS, item, INT, long-press retido e
+  fechamento). Pacing ajustado com dados do `ritmo.js` (chegada na
   onda30, hp×3/dano×1,35, 30s, gatuno 1,5%): mapa 1 em **44,6/48,6min**
   (2 runs) mantendo a faixa 40-55. Testes: seções 28/29 (47 confs) com
   eventos **desligados do harness nas seções 1-27** (senão disparavam em

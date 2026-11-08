@@ -140,6 +140,7 @@ var Selecao = (function () {
 
     Gravacao.desenharAviso(ctx,
       'Ajuste o herói e clique em JOGAR — Enter também entra');
+    UI.desenhaTooltip();   // por cima de tudo, sem hit-test
   }
 
   function desenhaLista(ctx) {

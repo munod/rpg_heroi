@@ -133,6 +133,18 @@
   frame no hit). **`personagem.js` não pode depender de `itens.js`**
   (grade/previa carregam só sprite+personagem) — chaves de bônus **e**
   `APR`/`MAX_UP` são espelhadas nos dois arquivos.
+- Tooltips (Leva 3) em `js/ui.js`: `UI.dica(ret, linhas)` é chamado
+  durante o render (retângulo LOCAL como os botões; o rodapé é global —
+  `deslocX` está 0 lá) e `UI.desenhaTooltip()` fecha o render de
+  `jogo.js`/`selecao.js` — desenhado por cima de tudo, **sem hit-test**.
+  Dwell por FRAME com flag `usada` (nunca zerar o candidato por frame —
+  senão o delay nunca completa). Long-press 500ms → caixa retida, clique
+  fora fecha. Linhas = `[[texto, cor?], …]`, fonte 13px, sem
+  `measureText` (rasterizador). Rodapé: segmentos fixos (HP · Dano ·
+  DPS · Vel · Crít · Alc · XP) com breakdown de
+  `Personagem.statusDetalhado(p)` (partes NUMÉRICAS — UI formata,
+  teste soma: Σpartes × keystone === status); item em `Itens.dicas`;
+  atributo em `Gestao.dicasAtributo`.
 - Gestão tem 5 abas (Atrib/Apar/Classe/Itens/Stats): botões de 66px com
   passo 70 a partir de x=412, y=40 — centros 445/515/585/655/725 em y=54;
   testes que clicam abas dependem dessa grade.

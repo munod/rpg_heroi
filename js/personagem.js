@@ -215,6 +215,92 @@ var Personagem = (function () {
     };
   }
 
+  // ---- detalhamento por fonte (Leva 3: tooltips do rodapé) ----------
+  // Cada stat com suas partes NUMÉRICAS — o UI monta as linhas e o teste
+  // confere a soma. Os efeitos lendários são lidos dos campos dos itens
+  // (efeito/up) direto: sem depender de itens.js (mesma regra dos espelhos).
+  var NOMES_EFEITOS = {
+    furia: 'Lâmina Espectral: +50% dano c/ HP<30% (só no combate)',
+    fenix: 'Véu da Fênix: 1ª letalidade não paga a morte',
+    mercador: 'Manto do Mercador: ouro ×1,5',
+    vampiro: 'Sangue Frio: 4% do dano vira vida',
+    tempestade: 'Cetro da Tempestade: ondas renovam as skills',
+    santificado: 'Égide Santificada: cura respinga dano nos próximos'
+  };
+
+  function statusDetalhado(p) {
+    var c = CLASSES[p.classe] || CLASSES.guerreiro;
+    var a = efetivos(p);
+    var b = bonusEquipamento(p);
+    var s = status(p);
+    var k = (p.keystoneLib && p.keystoneOn) ? keystoneDe(p.classe) : null;
+    var nv = (typeof p.nivel === 'number' && p.nivel >= 1)
+      ? Math.floor(p.nivel) : 1;
+    var eq = [p.equip && p.equip.arma, p.equip && p.equip.armadura];
+    var apr = false, notas = [], i, ef;
+    for (i = 0; i < eq.length; i++) {
+      if (eq[i] && eq[i].up > 0) apr = true;
+      ef = eq[i] && eq[i].efeito;
+      if (ef && NOMES_EFEITOS[ef]) notas.push(NOMES_EFEITOS[ef]);
+    }
+    var itRot = 'itens' + (apr ? ' (c/ aprimoramento)' : '');
+    var kd = k ? k.nome + ' (keystone)' : '';
+    function multKeystone(v) {
+      return (k && v) ? { v: v, rot: kd } : null;
+    }
+    function parteKeystone(v) {
+      return (k && v) ? { v: v, rot: kd } : null;
+    }
+    var partesDano = [
+      { v: c.danoBase, rot: 'base ' + c.nome },
+      { v: Math.floor(a[c.danoMod] / 2),
+        rot: c.danoMod.toUpperCase() + ' ' + a[c.danoMod] + ' ÷ 2' },
+      { v: b.dano, rot: itRot }
+    ];
+    var partesHp = [
+      { v: c.hpBase, rot: 'base ' + c.nome },
+      { v: a.con * 4, rot: 'CON ' + a.con + ' × 4' },
+      { v: (nv - 1) * 4, rot: 'nível ' + nv + ' × 4' },
+      { v: b.hp, rot: itRot }
+    ];
+    var partesVel = [
+      { v: 46, rot: 'base' },
+      { v: a.des * 3, rot: 'DES ' + a.des + ' × 3' },
+      { v: b.vel, rot: itRot }
+    ];
+    var kv = parteKeystone(k && k.vel ? k.vel : null);
+    if (kv) partesVel.push(kv);
+    var partesCrit = [
+      { v: 4, rot: 'base' },
+      { v: Math.floor(a.des * 1.3), rot: 'DES ' + a.des + ' × 1,3' },
+      { v: b.crit, rot: itRot }
+    ];
+    var kc = parteKeystone(k && k.crit ? k.crit : null);
+    if (kc) partesCrit.push(kc);
+    return {
+      hp: { total: s.hpMax, partes: partesHp,
+            mult: multKeystone(k && k.hpMax) },
+      dano: { total: s.dano, partes: partesDano,
+              mult: multKeystone(k && k.dano),
+              notas: notas },
+      vel: { total: s.vel, partes: partesVel },
+      crit: { total: s.crit, partes: partesCrit },
+      alcance: { total: s.alcance,
+                 partes: [{ v: s.alcance, rot: 'da classe' }] },
+      xp: { total: s.xpMult,
+            partes: [{ v: 1, rot: 'base' },
+                     { v: (a.car - 8) * 0.03,
+                       rot: 'CAR ' + a.car + ' (3% por ponto acima de 8)' }] },
+      dps: { total: s.recarga > 0
+              ? Math.round(s.dano * (1 + s.crit / 100) / s.recarga) : 0,
+             partes: [{ v: s.dano, rot: 'dano' },
+                      { v: s.crit, rot: 'crít % (esperado ×1,18 se 18%)' },
+                      { v: s.recarga, rot: 'recarga (s)' }],
+             formula: 'dano × (1 + crít ÷ 100) ÷ recarga',
+             notas: notas }
+    };
+  }
+
   // Look pronto pra desenhar (arma equipada sobrepõe a da classe).
   function lookDe(p) {
     var c = CLASSES[p.classe] || CLASSES.guerreiro;
@@ -458,6 +544,7 @@ var Personagem = (function () {
     novo: novo,
     custoProximo: custoProximo,
     status: status,
+    statusDetalhado: statusDetalhado,
     lookDe: lookDe,
     validar: validar,
     normalizar: normalizar,

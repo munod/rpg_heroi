@@ -44,8 +44,8 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    reequilibrado (HP/dano/regen), ritmo gasta ouro, alvos novos medidos
 2. ✅ `eventos-aleatorios` — Açougueiro (penalidade dobrada, ouro×10,
    lendário) + Gatuno fugitivo (roubo contrariável, prioridade na IA)
-3. ⬜ `tooltip-infra` — sistema de tooltips (hover + long-press), rodapé
-   segmentado com breakdown de modificadores + DPS básico
+3. ✅ `tooltip-infra` — tooltips (hover + long-press retido), rodapé
+   segmentado com breakdown por fonte + DPS básico
 4. ⬜ `stats-completos` — aba Stats +7 (ouro ganho/gasto, vendas,
    sucateados, aprimoramentos, re-rolls, lendários)
 5. ⬜ **release v0.3.0** (push/tag/gh release com aval)

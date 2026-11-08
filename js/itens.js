@@ -454,6 +454,53 @@ var Itens = (function () {
     return true;
   }
 
+  // ---- tooltip do item (Leva 3): linhas prontas p/ UI.dica — nome e
+  // raridade, bônus por chave (ordem fixa), afixos 1 a 1 (negativo em
+  // vermelho), efeito lendário, aprimoramento, deltas vs equipado,
+  // venda/sucata e custos de investimento.
+  var ROT_RAR = { 1: 'Comum', 2: 'Incomum', 3: 'Raro', 4: 'Lendário' };
+  var ROT_CHAVE = { dano: 'dano', hp: 'hp', vel: 'velocidade', crit: 'crítico' };
+
+  function dicas(p, item) {
+    if (!item) return [];
+    var out = [[item.nome, corRar(item.rar)]];
+    var i, k, v, linha = '';
+    out.push([(ROT_RAR[item.rar] || 'Comum') + ' · ' +
+      (item.slot === 'arma' ? 'arma' : 'armadura'), '#9a90b8']);
+    for (i = 0; i < CHAVES.length; i++) {
+      k = CHAVES[i];
+      v = item.bonus ? item.bonus[k] : 0;
+      if (v) linha += ' ' + (v > 0 ? '+' : '') + v + ' ' + (ROT_CHAVE[k] || k);
+    }
+    if (linha) out.push([linha.trim(), '#f2eef8']);
+    var afs = item.afixos || [];
+    for (i = 0; i < afs.length; i++) {
+      out.push(['✦ ' + afs[i].nome + ': ' + (afs[i].neg ? '-' : '+') +
+        afs[i].valor + ' ' + (ROT_CHAVE[afs[i].chave] || afs[i].chave),
+        afs[i].neg ? '#ff8a8a' : '#8ce08c']);
+    }
+    if (item.efeito) {
+      var txt = item.efeito;
+      for (i = 0; i < LEGENDARIOS.length; i++) {
+        if (LEGENDARIOS[i].efeito === item.efeito) txt = LEGENDARIOS[i].efeitoTxt;
+      }
+      out.push(['★ ' + txt, '#ff9d4d']);
+    }
+    if (item.up > 0) {
+      out.push(['Aprimoramento ' + item.up + '/MAX_UP (+' +
+        Math.round(item.up * APR * 100) + '% nos bônus)', '#c9c2dd']);
+    }
+    var atual = p && p.equip ? p.equip[item.slot] : null;
+    var d = deltas(item, atual);
+    if (d) out.push(['vs equipado:' + d, '#9a90b8']);
+    out.push(['Vende ' + precoVenda(item) + ' · Sucata ' +
+      precoSucata(item), '#e8c86a']);
+    var ca = custoAprim(item), cr = custoReroll(item);
+    out.push(['A+ custa ' + (ca >= 0 ? ca : '—') + ' · R+ custa ' +
+      (cr >= 0 ? cr : '—'), '#9a90b8']);
+    return out;
+  }
+
   // ---- efeitos lendários: a MATEMÁTICA mora aqui (pura e testável);
   // os gatilhos comportamentais estão em batalha.js (1 hook cada)
   function temEfeito(p, id) {
@@ -503,6 +550,7 @@ var Itens = (function () {
     geraItem: geraItem,
     sorteiaDrop: sorteiaDrop,
     valor: valor,
+    dicas: dicas,
     precoVenda: precoVenda,
     precoSucata: precoSucata,
     custoAprim: custoAprim,
