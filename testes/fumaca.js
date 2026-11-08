@@ -1171,6 +1171,95 @@ console.log('21) estatísticas do jogador (Personagem.stats)');
     'aba Stats mostra as estatísticas');
 }
 
+console.log('22) IA tática: agudeza, alvo, estados, skills e A*');
+{
+  const IA = sandbox.IA;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // --- agudeza: INT 4 = burro, 20 = gênio, teto em 1
+  conf(IA.agudeza(1) === 0 && IA.agudeza(4) === 0 &&
+       IA.agudeza(20) === 1 && IA.agudeza(30) === 1,
+    'agudeza: INT 4 -> 0 (burro), INT 20 -> 1 (gênio)');
+  conf(IA.agudeza(12) > IA.agudeza(6) && IA.agudeza(12) < 1,
+    'agudeza cresce com a INT (12 = médio: ' +
+    IA.agudeza(12).toFixed(2) + ')');
+
+  // --- astúcia dos NPCs: espécie + mapa, com teto
+  conf(IA.astucia('slime', 1) === 0 && IA.astucia('boss', 1) === 0.6 &&
+       IA.astucia('slime', 3) > IA.astucia('slime', 1) &&
+       IA.astucia('aranha', 30) === 1,
+    'astúcia: espécie + mapa, com teto em 1');
+
+  // --- alvo: gênio mira a prioridade (perigoso e fraco), burro vai no
+  // mais perto mesmo assim (ruído/agnorância de prioridade)
+  const mk = int => ({ x: 0, y: 0, hp: 100, hpMax: 100,
+    stats: { alcance: 26, atributos: { int: int } } });
+  const perto = { x: 60, y: 0, hp: 999, dmg: 1 };   // perto, tanque
+  const longe = { x: 150, y: 0, hp: 3, dmg: 20 };   // longe, fraco, perigoso
+  let g = 0;
+  const hg = mk(20);
+  for (let i = 0; i < 60; i++) {
+    IA.decideHeroi(hg, [perto, longe], 0.3);
+    if (hg.ia.alvo === longe) g++;
+  }
+  conf(g === 60, 'gênio (INT 20) escolhe o alvo prioritário (' + g + '/60)');
+  let b = 0;
+  const hb = mk(1);
+  for (let i = 0; i < 60; i++) {
+    IA.decideHeroi(hb, [perto, longe], 0.3);
+    if (hb.ia.alvo === longe) b++;
+  }
+  conf(b <= 15, 'burro (INT 1) quase sempre no mais perto (' + b + '/60)');
+
+  // --- skillEfeito: gênio dispara mais cedo e com menos espera
+  const efB = IA.skillEfeito({ gatilho: 40, intervalo: 10 }, 0);
+  const efG = IA.skillEfeito({ gatilho: 40, intervalo: 10 }, 1);
+  conf(efG.intervalo < efB.intervalo && efG.gatilho > efB.gatilho,
+    'skill: gênio usa com raio maior e cooldown menor');
+
+  // --- A*: reto livre => null (melhor caminho); atravessando obstáculo
+  // => volta em waypoints
+  conf(IA.linhaLivre(0, 0, 10, 10, 6) === true, 'linha livre = livre');
+  const obs = Batalha.info().obst[0];
+  if (obs) {
+    const r = IA.caminho(obs.x - 30, obs.y, obs.x + 30, obs.y, 6);
+    conf(Array.isArray(r) && r.length >= 1,
+      'A* dá a volta no obstáculo (' + (r ? r.length : 0) + ' waypoints)');
+    conf(IA.caminho(0, 0, 10, 10, 6) === null,
+      'A* nem é chamado quando a reta está livre');
+  }
+
+  // --- comportamento na arena: gênio recua com HP baixo; burro nunca
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  p.atributos.con = 60;                 // vida folgada p/ janela "ferido vivo"
+  p.atributos.for = 60;                 // dano alto p/ a luta nunca parar
+  p.atributos.int = 40;                 // gênio (efetivo >= 40)
+  p.pontos = 0;
+  const hpMax = Personagem.status(p).hpMax;
+  let recuou = false;
+  for (let i = 0; i < 12000 && !recuou; i++) {
+    frame(1);
+    const inf = Batalha.info();
+    if (!inf.morto && inf.hp > 0 && inf.hp < hpMax * 0.35 &&
+        inf.heroi.estado === 'recuar') {
+      recuou = true;
+    }
+  }
+  conf(recuou, 'gênio (INT alto) recua quando o HP fica baixo');
+
+  p.atributos.int = 1;                  // burro de verdade (efetivo < 4)
+  let algumaVez = false;
+  for (let i = 0; i < 6000 && !algumaVez; i++) {
+    frame(1);
+    const inf = Batalha.info();
+    // o estado só vale quando a agudeza do TICK é de burro (o tick anterior
+    // do gênio pode deixar 'recuar' pendente por até 0,2s)
+    if (inf.heroi.estado === 'recuar' && inf.heroi.agu < 0.45) algumaVez = true;
+  }
+  conf(!algumaVez, 'burro (INT 1) nunca recua — vai na raça');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');

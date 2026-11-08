@@ -459,6 +459,47 @@ var Batalha = (function () {
     }
   }
 
+  // Move em direção ao destino com rota REATIVA: reto quando a linha está
+  // livre (sempre o melhor caminho); bloqueado => A* pela IA (só entidades
+  // espertas — burros seguem na reta e escorregam na colisão). A rota fica
+  // em ent.caminho e o reteste tem cooldown (não recalcula todo frame).
+  function moverPara(ent, dest, raio, dt, esperto) {
+    if (!dest) return;
+    var dx = dest.x - ent.x, dy = dest.y - ent.y;
+    if (dx * dx + dy * dy > 48 * 48) {
+      ent.caminho = null;                 // destino andou demais: invalida
+    }
+    var ddx = dx, ddy = dy;
+    if (IA.linhaLivre(ent.x, ent.y, dest.x, dest.y, raio)) {
+      ent.caminho = null;
+    } else if (esperto) {
+      if (ent.caminho && ent.caminho.length) {
+        var prox = ent.caminho[0];
+        var px = prox.x - ent.x, py = prox.y - ent.y;
+        if (px * px + py * py < 12 * 12) {
+          ent.caminho.shift();
+          prox = ent.caminho[0];
+        }
+        if (prox) { ddx = prox.x - ent.x; ddy = prox.y - ent.y; }
+        else ent.caminho = null;
+      } else {
+        ent.caminhoT = (ent.caminhoT || 0) - dt;
+        if (ent.caminhoT <= 0) {
+          ent.caminhoT = 0.4;
+          ent.caminho = IA.caminho(ent.x, ent.y, dest.x, dest.y, raio) || [];
+          if (ent.caminho.length) {
+            ddx = ent.caminho[0].x - ent.x;
+            ddy = ent.caminho[0].y - ent.y;
+          }
+        }
+      }
+    }
+    var d = Math.sqrt(ddx * ddx + ddy * ddy);
+    if (d < 0.001) return;
+    var passo = (ent === heroi) ? ent.stats.vel * dt : ent.vel * dt;
+    mover(ent, (ddx / d) * passo, (ddy / d) * passo, raio);
+  }
+
   // ----------------------------------------------------------- efeitos
   function numero(x, y, txt, cor, big) {
     nums.push({ x: x, y: y, txt: txt, color: cor, big: !!big, t: big ? 1.4 : 0.9 });
@@ -616,7 +657,14 @@ var Batalha = (function () {
     var alvo = null;
     var melhor = Infinity;
     var alc2 = (st.alcance + 6) * (st.alcance + 6);
-    for (var i = 0; i < inimigos.length; i++) {
+    // o cérebro (IA) escolheu um alvo prioritário ainda válido? senão, o
+    // mais perto dentro do alcance
+    var mira = heroi.ia ? heroi.ia.alvo : null;
+    if (mira && mira.hp > 0) {
+      var mdx = mira.x - heroi.x, mdy = mira.y - heroi.y;
+      if (mdx * mdx + mdy * mdy <= alc2) alvo = mira;
+    }
+    for (var i = 0; !alvo && i < inimigos.length; i++) {
       var dx = inimigos[i].x - heroi.x, dy = inimigos[i].y - heroi.y;
       var d2 = dx * dx + dy * dy;
       if (d2 <= alc2 && d2 < melhor) { melhor = d2; alvo = inimigos[i]; }
@@ -859,13 +907,13 @@ var Batalha = (function () {
     if (h.atkCd > 0) h.atkCd -= dt;
     if (h.inv > 0) h.inv -= dt;
 
-    // alvo: inimigo vivo mais próximo
-    var alvo = null, melhor = Infinity;
-    for (var i = 0; i < inimigos.length; i++) {
-      var e = inimigos[i];
-      var dx = e.x - h.x, dy = e.y - h.y;
-      var d2 = dx * dx + dy * dy;
-      if (d2 < melhor) { melhor = d2; alvo = e; }
+    // cérebro tático (IA): alvo/estado/destino decididos por tick, com
+    // qualidade escalada pela INT (agudeza) — o alvo escolhido alimenta
+    // skills, mira à distância e a perseguição
+    IA.decideHeroi(h, inimigos, dt);
+    var alvo = h.ia.alvo;
+    if (h.ia.estado === 'perseguir' || h.ia.estado === 'combate') {
+      h.ia.destino = alvo;                // alvo vivo segue a cada frame
     }
 
     // skills com timer (nuke/cura) e gatilho por proximidade — antes do
@@ -896,18 +944,24 @@ var Batalha = (function () {
     }
 
     if (!atacando) {
-      if (alvo) {
+      if (h.ia.estado === 'recuar') {
+        // gênio ferido: abre mão do golpe e cria distância (destino fixo
+        // recalculado a cada tick do cérebro)
+        moverPara(h, h.ia.destino, 6, dt, h.ia.agu >= 0.35);
+        anima(h, 'walk', dt);
+      } else if (alvo) {
         var dx2 = alvo.x - h.x, dy2 = alvo.y - h.y;
-        var dist = Math.sqrt(melhor) || 1;
+        var dist = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1;
         var alc = h.stats.alcance;
         if (Math.abs(dx2) > 2) h.facing = dx2 > 0 ? 1 : -1;
 
-        if (dist > alc * 0.75) {
-          // fora de alcance: só se aproxima — nunca golpeia o ar
-          var passo = h.stats.vel * dt;
-          mover(h, (dx2 / dist) * passo, (dy2 / dist) * passo, 6);
-          anima(h, 'walk', dt);
-        } else {
+        // kite (ranged esperto): fora da faixa segura recua ANTES de
+        // atirar; dentro dela atira em retirada
+        var foge = h.ia.estado === 'kite' && dist < alc * 0.7;
+        var bate = !foge && (dist <= alc * 0.75 ||
+          (h.ia.estado === 'kite' && dist <= alc));
+
+        if (bate) {
           anima(h, 'idle', dt);
           if (h.atkCd <= 0) {
             h.atkT = 0.36;
@@ -915,6 +969,13 @@ var Batalha = (function () {
             h.atkCd = h.stats.recarga;
             h.hitDone = false;
           }
+        } else if (foge || dist > alc * 0.75) {
+          // fora de alcance: se aproxima — ou cria distância no kite.
+          // nunca golpeia o ar
+          moverPara(h, h.ia.destino || alvo, 6, dt, h.ia.agu >= 0.35);
+          anima(h, 'walk', dt);
+        } else {
+          anima(h, 'idle', dt);
         }
       } else {
         anima(h, 'idle', dt);
@@ -1294,7 +1355,10 @@ var Batalha = (function () {
       mundo: { w: MW, h: MH },
       cam: { x: Math.round(cam.x), y: Math.round(cam.y) },
       heroi: { x: Math.round(heroi ? heroi.x : 0),
-               y: Math.round(heroi ? heroi.y : 0) },
+               y: Math.round(heroi ? heroi.y : 0),
+               estado: (heroi && heroi.ia) ? heroi.ia.estado : null,
+               agu: (heroi && heroi.ia && typeof heroi.ia.agu === 'number')
+                 ? Math.round(heroi.ia.agu * 100) / 100 : 0 },
       inimigos: inimigos.length,
       boss: boss,
       // cenário procedural (semente do mapa) e skills de posicionamento
@@ -1316,6 +1380,7 @@ var Batalha = (function () {
 
   return {
     iniciar: iniciar,
+    colideObst: colideObst,
     reiniciar: reiniciar,
     dono: dono,
     atualizar: atualizar,
