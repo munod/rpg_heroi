@@ -234,14 +234,16 @@ var Gestao = (function () {
     }
   }
 
-  // Aba Itens: 2 slots equipados + bolsa paginada (clique equipa; o item
-  // equipado anterior volta para a bolsa).
+  // Aba Itens: 2 slots equipados (com o resumo dos bônus) + bolsa
+  // paginada (clique equipa; a linha mostra o delta por chave contra o
+  // equipado — item com afixo negativo aparece com '-'). Linhas em 13px
+  // p/ caber nome + afixos + deltas nos 340px do botão.
   function desenhaItens(ctx, p) {
     var arma = p.equip.arma, arm = p.equip.armadura;
-    UI.text('Arma: ' + (arma ? arma.nome : '—'), 416, 96,
-      { color: arma ? Itens.corRar(arma.rar) : '#6f678a' });
-    UI.text('Armadura: ' + (arm ? arm.nome : '—'), 416, 124,
-      { color: arm ? Itens.corRar(arm.rar) : '#6f678a' });
+    UI.text('Arma: ' + (arma ? Itens.linha(arma, null, 36) : '—'), 416, 96,
+      { color: arma ? Itens.corRar(arma.rar) : '#6f678a', font: '13px monospace' });
+    UI.text('Armadura: ' + (arm ? Itens.linha(arm, null, 33) : '—'), 416, 124,
+      { color: arm ? Itens.corRar(arm.rar) : '#6f678a', font: '13px monospace' });
 
     UI.text('Bolsa ' + p.bolsa.length + '/' + Itens.BOLSA_MAX,
       416, 152, { color: '#9a90b8' });
@@ -265,8 +267,9 @@ var Gestao = (function () {
       .forEach(function (item, i) {
         var y = 176 + i * 30;
         if (UI.button(416, y, 340, 26,
-          item.nome + '  ' + Itens.resumo(item), {
-            align: 'left', color: Itens.corRar(item.rar)
+          Itens.linha(item, p.equip[item.slot], 41), {
+            align: 'left', color: Itens.corRar(item.rar),
+            font: '13px monospace'
           })) {
           Itens.equipar(p, item);
         }

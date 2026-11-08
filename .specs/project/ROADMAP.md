@@ -20,6 +20,12 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Próximo (candidatos a 0.2.0)
 
+- **Gestão estratégica** (spec umbrella `gestao-estrategica`, 4 levas):
+  ✅ **A `itens-afixos`** (afixos, negativos, smart-loot, deltas) ·
+  ⬜ B `economia-ouro` (venda/salvagem/aprimoramento/re-roll) ·
+  ⬜ C `skills-estrategicas` (loadout + keystone + respec) ·
+  ⬜ D `lendarios-equilibrio` (lendários que mudam mecânica + re-medição,
+  release 0.2.0).
 - **Ranking de jogadores** — *adiado pelo mantenedor até as
   estatísticas existirem* (já entregues em `estatisticas`; base `p.stats`
   pronta: nível/mapa/ondas/abates/bosses). Escopo local (heróis do

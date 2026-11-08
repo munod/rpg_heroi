@@ -24,6 +24,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   miúda, custo zero no frame comum; burros escorregam de propósito.
 - **SemVer 0.x + Keep a Changelog + Conventional Commits** a partir da
   v0.1.0 (ver `VERSIONING.md`).
+- **Afixos enxutos (12) em vez de pool grande** — pesquisa mostrou
+  *affix bloat* como a armadilha clássica (item vira planilha); raridade
+  = quantidade de afixos (0/1/2), no máx. 1 negativo por item.
+- **Mods negativos com magnitude 1,5×** — o tradeoff é o que impede o
+  auto-equip de decidir tudo; item "amaldiçoado" é recusado por soma
+  assinada mas equipável à mão (decisão estratégica sem botão de luta).
+- **Smart-loot 70/30 por classe** — drop relevante sem monótono (30%
+  foge do viés); `sorteiaDrop` sem classe cai para uniforme (testes).
+- **Save sem bump de chave na migração de itens** — `normalizaItem`
+  aceita negativos/`afixos` e o corte de nome sobe para 40 (precedente:
+  `normalizaStats`); bump de chave só quando a normalização não basta.
 
 ## Bloqueios
 

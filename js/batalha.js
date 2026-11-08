@@ -595,7 +595,7 @@ var Batalha = (function () {
   function soltaItens(en) {
     var p = Game.personagem;
     if (!p || !p.equip || !p.bolsa) return;
-    var drops = Itens.sorteiaDrop(mapa, !!en.tipo.boss);
+    var drops = Itens.sorteiaDrop(mapa, !!en.tipo.boss, p.classe);
     for (var i = 0; i < drops.length; i++) {
       stat('itens');
       var it = drops[i];

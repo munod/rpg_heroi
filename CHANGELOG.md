@@ -10,6 +10,21 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Added
+
+- **Itens com afixos (Leva A da gestão estratégica)**: raridade define
+  quantos afixos rollam (comum 0 · incomum 1 · raro 2) num pool enxuto de
+  12 (prefixo/sufixo, faixa de valor); **mods negativos** com teto de 1
+  por item e magnitude 1,5× (item amaldiçoado que o auto-equip, por soma
+  assinada, recusa mas o jogador pode equipar à mão); **smart-loot** por
+  classe (70% dos afixos nas chaves da classe); UI da aba Itens com
+  **delta por chave** contra o equipado na linha da bolsa e resumo nos
+  cabeçalhos dos slots (linhas em 13px com corte de nome); migração de
+  save sem mudar chaves (`normalizaItem` aceita negativos/`afixos`, nome
+  até 40 chars) e clamps de status (hpMax ≥ 10, dano ≥ 1, vel ≥ 10,
+  crit ≥ 0) — spec `.specs/features/itens-afixos/` (R-AFI-1..7). Ritmo
+  medido: 1º nível 42,6s · 15min nv33/onda53 · mapa 1 em 28,5min.
+
 ## [0.1.0] — 2026-11-08
 
 Primeira versão: jogo idle completo no navegador, suíte de 193 asserções

@@ -96,11 +96,17 @@
   **independente** da semente do ruído — trocar o chão não pode mexer nos
   obstáculos. `info().obst` expõe o layout (fumaça seção 20).
 - Drops/equipamento em `js/itens.js`: `mataInimigo` chama
-  `Itens.sorteiaDrop`; auto-equip por `Itens.pontuar`, senão vai para
-  `p.bolsa` (teto 10). Itens vivem em `p.equip`/`p.bolsa` do personagem e
-  `Personagem.status`/`lookDe` leem os bônus. **`personagem.js` não pode
-  depender de `itens.js`** (grade/previa carregam só sprite+personagem) —
-  as chaves de bônus são espelhadas nos dois arquivos.
+  `Itens.sorteiaDrop(mapa, chefe, classe)`; auto-equip por
+  `Itens.pontuar` (soma **assinada** — afixo negativo conta contra), senão
+  vai para `p.bolsa` (teto 10). Raridade define afixos (comum 0/incomum
+  1/raro 2; pool de 12 em `AFIXOS`, teto de 1 negativo ×1,5, smart-loot
+  70% nas chaves da classe em `AFINS`); a UI da aba Itens usa
+  `Itens.linha/deltas` (delta por chave contra o equipado, linhas em
+  13px cortadas). Itens vivem em `p.equip`/`p.bolsa` do personagem e
+  `Personagem.status`/`lookDe` leem os bônus (com clamps hp≥10/dano≥1/
+  vel≥10/crit≥0). **`personagem.js` não pode depender de `itens.js`**
+  (grade/previa carregam só sprite+personagem) — as chaves de bônus são
+  espelhadas nos dois arquivos.
 - Gestão tem 5 abas (Atrib/Apar/Classe/Itens/Stats): botões de 66px com
   passo 70 a partir de x=412, y=40 — centros 445/515/585/655/725 em y=54;
   testes que clicam abas dependem dessa grade.

@@ -654,6 +654,96 @@ console.log('15) drops, equipamento e aba de itens');
   conf(sd.length === 2 && sd.every(i => i.rar >= 2),
     'chefe dropa 2 itens de raridade >= 2');
 
+  // --- sistema de afixos: raridade define a quantidade (R-AFI-1)
+  conf(Itens.geraItem(1, 1, 'guerreiro').afixos.length === 0,
+    'item comum não rola afixo');
+  conf(Itens.geraItem(2, 1, 'guerreiro').afixos.length === 1,
+    'item incomum rola 1 afixo');
+  conf(Itens.geraItem(3, 1, 'guerreiro').afixos.length === 2,
+    'item raro rola 2 afixos');
+
+  // --- teto de 1 negativo, magnitude 1,5× e frequência visível (R-AFI-2)
+  let excedeu = false, faixasOk = true, comNeg = 0;
+  for (let i = 0; i < 300; i++) {
+    const it = Itens.geraItem(3, 1, 'mago');
+    const negs = it.afixos.filter(a => a.neg);
+    if (negs.length > 1) excedeu = true;
+    if (negs.length) {
+      comNeg++;
+      negs.forEach(a => { if (a.valor < 3 || a.valor > 9) faixasOk = false; });
+    }
+    it.afixos.filter(a => !a.neg).forEach(a => {
+      if (a.valor < 2 || a.valor > 6) faixasOk = false;
+    });
+  }
+  conf(!excedeu, 'nunca mais de 1 afixo negativo por item');
+  conf(comNeg > 50, 'afixos negativos aparecem com frequência (teto 1/item)');
+  conf(faixasOk, 'faixas: positivo 2..6 e negativo 3..9 (1,5×) no mapa 1');
+
+  // --- smart-loot: afixos positivos do mago puxam dano/crit (R-AFI-3)
+  let pos = 0, afin = 0;
+  for (let i = 0; i < 200; i++) {
+    Itens.geraItem(3, 1, 'mago').afixos.filter(a => !a.neg)
+      .forEach(a => {
+        pos++;
+        if (a.chave === 'dano' || a.chave === 'crit') afin++;
+      });
+  }
+  conf(pos > 150 && afin / pos > 0.5,
+    'smart-loot: mago recebe afixos de dano/crit acima do acaso (esperado 0,85, achou ' +
+    (afin / pos).toFixed(2) + ')');
+
+  // --- nome = prefixo? + base + sufixo?; negativo fora do nome (R-AFI-1)
+  let nomeOk = true, negFora = true;
+  const bases = Itens.ARMAS.concat(Itens.ARMADURAS);
+  for (let i = 0; i < 100 && nomeOk && negFora; i++) {
+    const it = Itens.geraItem(3, 1, 'guerreiro');
+    if (!bases.some(m => it.nome.indexOf(m.nome) >= 0)) nomeOk = false;
+    it.afixos.forEach(a => {
+      if (a.neg) { if (it.nome.indexOf(a.nome) >= 0) negFora = false; }
+      else if (a.tipo === 'pre') {
+        if (it.nome.indexOf(a.nome + ' ') !== 0) nomeOk = false;
+      } else if (it.nome.slice(-(a.nome.length + 1)) !== ' ' + a.nome) {
+        nomeOk = false;
+      }
+    });
+  }
+  conf(nomeOk, 'nome do item monta prefixo + base + sufixo');
+  conf(negFora, 'afixo negativo fica fora do nome (só nos status)');
+
+  // --- deltas por chave p/ a UI de comparação (R-AFI-4)
+  const amostra = { nome: 'A', bonus: { dano: 5, hp: -3 } };
+  const eqAmostra = { nome: 'B', bonus: { dano: 2, hp: 8 } };
+  conf(Itens.deltas(amostra, eqAmostra) === ' +3D -11HP',
+    'delta por chave: item - equipado, com sinal');
+  conf(Itens.deltas(amostra, null) === ' +5D -3HP',
+    'sem item equipado o delta é o próprio item assinado');
+  const linhaCurta = Itens.linha(
+    { nome: 'NomeComMuitosCaracteres', bonus: { dano: 1 } }, null, 10);
+  conf(linhaCurta.length <= 10, 'linha da lista é cortada no limite do botão');
+
+  // --- migração: negativo/afixos preservados; legado ganha afixos []
+  const migrado = Personagem.importarJSON(JSON.stringify({
+    nome: 'N', equip: { arma: { nome: 'Espada Torta Misteriosa Doce',
+      slot: 'arma', rar: 3, bonus: { dano: 10, hp: -40 },
+      afixos: [{ nome: 'Frágil', chave: 'hp', neg: true, valor: 40 }] } }
+  }));
+  conf(migrado.equip.arma && migrado.equip.arma.bonus.hp === -40 &&
+       migrado.equip.arma.afixos.length === 1 &&
+       migrado.equip.arma.afixos[0].neg,
+    'save com afixo negativo migra preservando sinal e o afixo');
+  const legado = Personagem.importarJSON(
+    '{"nome":"L","equip":{"arma":{"nome":"V","slot":"arma","bonus":{"dano":3}}}}');
+  conf(legado.equip.arma && Array.isArray(legado.equip.arma.afixos) &&
+       legado.equip.arma.afixos.length === 0,
+    'item legado sem afixos ganha lista vazia');
+  legado.equip.arma = { nome: 'X', slot: 'arma', rar: 1, afixos: [],
+    bonus: { dano: -99999, hp: -99999, vel: -99999, crit: -99999 } };
+  const stLim = Personagem.status(legado);
+  conf(stLim.hpMax >= 10 && stLim.dano >= 1 && stLim.vel >= 10 &&
+       stLim.crit >= 0,
+    'status é limitado mesmo com bônus negativos extremos');
+
   // --- auto-equip compara por pontuação; o antigo volta pra bolsa
   p.equip = { arma: null, armadura: null };
   p.bolsa = [];
@@ -686,6 +776,20 @@ console.log('15) drops, equipamento e aba de itens');
   frame(2);
   conf(p.equip.armadura === manto && p.bolsa.indexOf(manto) < 0,
     'clicar na linha da bolsa equipa o item');
+
+  // --- delta por chave na linha da bolsa (manto hp 50 equipado)
+  const cara = { nome: 'Armadura Cara', slot: 'armadura', rar: 2,
+                 bonus: { hp: 35 } };
+  Itens.guardar(p, cara);
+  jogoCanvas._textos = [];
+  frame(2);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('-15HP') >= 0),
+    'linha da bolsa mostra o delta negativo contra o equipado');
+  clique(584, 246);                // linha 3 da bolsa (y=236..262: fraca,
+                                   // Colete que voltou do slot, cara)
+  frame(2);
+  conf(p.equip.armadura === cara && p.bolsa.indexOf(manto) >= 0,
+    'clique na linha equipa mesmo com delta negativo (contrato preservado)');
   clique(445, 50);                 // volta pra Atributos (estado neutro)
   frame(2);
 

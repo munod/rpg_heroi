@@ -128,16 +128,17 @@ var Personagem = (function () {
     var b = bonusEquipamento(p);
     var nv = (typeof p.nivel === 'number' && p.nivel >= 1)
       ? Math.floor(p.nivel) : 1;
-    var vel = 46 + a.des * 3 + b.vel;
+    var vel = Math.max(10, 46 + a.des * 3 + b.vel);   // clamp: afixo negativo
     return {
       // +4 de vida por nível (0 no nível 1, preservando o custo inicial)
-      hpMax: c.hpBase + a.con * 4 + (nv - 1) * 4 + b.hp,
-      dano: c.danoBase + Math.floor(a[c.danoMod] / 2) + b.dano,
+      // clamps: afixo negativo forte não zera status (hp ≥ 10, dano ≥ 1)
+      hpMax: Math.max(10, c.hpBase + a.con * 4 + (nv - 1) * 4 + b.hp),
+      dano: Math.max(1, c.danoBase + Math.floor(a[c.danoMod] / 2) + b.dano),
       vel: vel,
       // Velocidade também acelera o ataque: recarga do golpe em segundos
       // (vel 70 = 0,50s base; piso de 0,15s para não virar metralhadora)
       recarga: Math.max(0.15, 35 / vel),
-      crit: Math.min(45, 4 + Math.floor(a.des * 1.3) + b.crit),
+      crit: Math.max(0, Math.min(45, 4 + Math.floor(a.des * 1.3) + b.crit)),
       alcance: c.alcance,
       arma: c.armaNome,
       xpMult: 1 + (a.car - 8) * 0.03,
@@ -231,18 +232,42 @@ var Personagem = (function () {
       ? it.slot : slotEsperado;
     if (!slot) return null;
     var out = {
-      nome: it.nome.slice(0, 24),
+      // 40 chars: nome com prefixo/sufixo de afixo (itens antigos ≤ 24)
+      nome: it.nome.slice(0, 40),
       slot: slot,
       rar: (typeof it.rar === 'number' && it.rar >= 1 && it.rar <= 3)
         ? Math.floor(it.rar) : 1,
-      bonus: {}
+      bonus: {},
+      afixos: []
     };
     if (typeof it.arma === 'string' && it.arma) out.arma = it.arma.slice(0, 12);
     for (var i = 0; i < BONUS_ITENS.length; i++) {
       var k = BONUS_ITENS[i];
       var v = it.bonus ? it.bonus[k] : null;
-      if (typeof v === 'number' && isFinite(v) && v > 0) {
-        out.bonus[k] = Math.floor(v);
+      // aceita negativo (afixo amaldiçoado); teto defensivo de magnitude
+      if (typeof v === 'number' && isFinite(v) && v !== 0 &&
+          Math.abs(v) <= 99999) {
+        out.bonus[k] = v < 0 ? Math.ceil(v) : Math.floor(v);
+      }
+    }
+    // afixos rollados (itens legados não têm — fica [])
+    if (Array.isArray(it.afixos)) {
+      for (var j = 0; j < it.afixos.length && out.afixos.length < 4; j++) {
+        var af = it.afixos[j];
+        if (!af || typeof af !== 'object') continue;
+        if (typeof af.nome !== 'string' || !af.nome.trim()) continue;
+        var idx = BONUS_ITENS.indexOf(af.chave);
+        var val = af.valor;
+        if (idx < 0 || typeof val !== 'number' || !isFinite(val) ||
+            val <= 0 || val > 99999) continue;
+        var neg = !!af.neg || af.tipo === 'neg';
+        out.afixos.push({
+          nome: af.nome.slice(0, 16),
+          tipo: neg ? 'neg' : (af.tipo === 'suf' ? 'suf' : 'pre'),
+          chave: BONUS_ITENS[idx],
+          neg: neg,
+          valor: Math.floor(val)
+        });
       }
     }
     return out;
