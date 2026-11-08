@@ -1428,6 +1428,151 @@ console.log('23) IA dos NPCs: astúcia, cerco, antecipação e esquiva');
   conf(esquivando, 'na arena, monstro astuto esquiva dos golpes');
 }
 
+console.log('24) economia: ouro, venda/sucata, aprimoramento e re-roll');
+{
+  const Itens = sandbox.Itens;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // --- ouro de abate (R-ECO-1): volta ao mapa 1 (aqui o herói nv ~9
+  // mata rápido — no mapa 6 a ondaTotal 501 torna o kill impossível),
+  // RNG zerado => ouro mínimo garantido
+  const ouroAntes = p.ouro || 0;
+  const estavaPausada = Batalha.info().pausada;
+  if (estavaPausada) Batalha.alternarPausa();
+  Batalha.restaurarMapa(1);
+  Batalha.restaurarOnda(1);
+  const rnd0 = Math.random;
+  Math.random = function () { return 0; };
+  let ganhou = false;
+  for (let i = 0; i < 6000 && !ganhou; i++) {
+    frame(1);
+    if ((p.ouro || 0) > ouroAntes) ganhou = true;
+  }
+  Math.random = rnd0;
+  // congela a batalha p/ o resto da seção (ouro exato não pode variar
+  // com kill aleatório durante os testes)
+  if (!Batalha.info().pausada) Batalha.alternarPausa();
+  conf(ganhou, 'abate rende ouro (escala com mapa/onda)');
+
+  // --- venda paga 25% e sucata garante o piso (R-ECO-2)
+  p.ouro = 0;
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  const itV = { nome: 'Vendável', slot: 'arma', rar: 2, escala: 1, up: 0,
+                afixos: [], bonus: { dano: 10 } };   // valor 60 -> 15
+  Itens.guardar(p, itV);
+  conf(Itens.vender(p, itV) === 15 && p.ouro === 15 &&
+       p.bolsa.indexOf(itV) < 0,
+    'venda paga 25% do valor e tira da bolsa');
+  const itLixo = { nome: 'Lixo Amaldiçoado', slot: 'arma', rar: 1,
+                   escala: 1, up: 0, afixos: [], bonus: { dano: -8 } };
+  conf(Itens.precoVenda(itLixo) === 2 && Itens.precoSucata(itLixo) === 3,
+    'item ruim: venda 2 < sucata 3 (piso garantido)');
+  Itens.guardar(p, itLixo);
+  conf(Itens.sucatear(p, itLixo) === 3 && p.bolsa.length === 0,
+    'sucata paga o piso e limpa a linha');
+
+  // --- bolsa cheia sucateia o mais antigo (nunca lixo silencioso)
+  p.bolsa = [];
+  p.ouro = 0;
+  for (let i = 0; i < Itens.BOLSA_MAX; i++) {
+    Itens.guardar(p, { nome: 'X' + i, slot: 'arma', rar: 1, escala: 1,
+                       up: 0, afixos: [], bonus: { dano: 1 } });
+  }
+  Itens.guardar(p, { nome: 'Novo', slot: 'arma', rar: 2, escala: 1, up: 0,
+                     afixos: [], bonus: { dano: 2 } });
+  conf(p.bolsa.length === Itens.BOLSA_MAX && p.ouro === 3 &&
+       p.bolsa[p.bolsa.length - 1].nome === 'Novo',
+    'bolsa cheia: o mais antigo vira ouro e o novo entra');
+
+  // --- aprimoramento: custo, nível e +8% exato no status (R-ECO-3)
+  p.ouro = 1000;
+  p.equip = { arma: { nome: 'Up Arma', slot: 'arma', rar: 3, escala: 1,
+                      up: 0, afixos: [], bonus: { dano: 100 } },
+              armadura: null };
+  p.bolsa = [];
+  const d0 = Personagem.status(p).dano;
+  conf(Itens.custoAprim(p.equip.arma) === 25,
+    'custo do 1º aprimoramento é 25');
+  conf(Itens.aprimorar(p, p.equip.arma) && p.equip.arma.up === 1 &&
+       p.ouro === 975,
+    'aprimorar cobra o custo e sobe o nível');
+  const d1 = Personagem.status(p).dano;
+  conf(d1 === d0 + Math.round(100 * 0.08),
+    'APR (+8%) entra exatamente no status (+' + (d1 - d0) + ' dano)');
+
+  // --- auto-equip defende a vaga do item aprimorado (up 1 => 108 efet.)
+  conf(!Itens.equiparSeMelhor(p, { nome: 'Drop', slot: 'arma', rar: 3,
+        escala: 1, up: 0, afixos: [], bonus: { dano: 105 } }),
+    'drop de 105 não tira arma aprimada de 100 (108 efetivos)');
+  conf(Itens.equiparSeMelhor(p, { nome: 'Drop Bom', slot: 'arma', rar: 3,
+        escala: 1, up: 0, afixos: [], bonus: { dano: 200 } }),
+    'drop bem maior continua trocando');
+
+  p.ouro = 99999;
+  for (let i = 0; i < 10; i++) Itens.aprimorar(p, p.equip.arma);
+  conf(p.equip.arma.up === 8 && Itens.custoAprim(p.equip.arma) === -1,
+    'teto de aprimoramento (8 níveis)');
+
+  // --- re-roll determinístico com RNG stubado (0.99 em tudo)
+  p.ouro = 99999;
+  const itR = { nome: 'Poderoso Espada de Aço do Gigante',
+                base: 'Espada de Aço', slot: 'arma', rar: 3, escala: 1,
+                up: 0, rerolls: 0, bonus: { dano: 8, hp: 6 },
+                afixos: [
+                  { nome: 'Poderoso', tipo: 'pre', chave: 'dano',
+                    neg: false, valor: 5 },
+                  { nome: 'do Gigante', tipo: 'suf', chave: 'hp',
+                    neg: false, valor: 6 }
+                ] };
+  const ouroR = p.ouro;
+  const rndR = Math.random;
+  Math.random = function () { return 0.99; };
+  const okR = Itens.reroll(p, itR);
+  Math.random = rndR;
+  conf(okR && itR.rerolls === 1 && p.ouro === ouroR - 30,
+    're-roll cobra 10×rar×escala e conta tentativas');
+  conf(itR.afixos.length === 2 && !itR.afixos.some(a => a.neg),
+    're-roll mantém 2 afixos e o teto de negativos');
+  conf(itR.nome === 'Poderoso Espada de Aço da Agulha' &&
+       itR.afixos[1].nome === 'da Agulha' && itR.afixos[1].valor === 5,
+    'sufixo livre rolou no topo da faixa e o nome recompôs de base');
+  conf((itR.bonus.hp || 0) === 0 && itR.bonus.crit === 5 &&
+       itR.bonus.dano === 8,
+    'bônus recomputado: sai do Gigante (+6 HP), entra da Agulha (+5 C)');
+
+  // --- migração e UI (R-ECO-5, R-ECO-6)
+  const mig = Personagem.importarJSON(
+    '{"nome":"E","ouro":77,"equip":{"arma":{"nome":"V","slot":"arma",' +
+    '"up":99,"bonus":{"dano":3}}}}');
+  conf(mig.ouro === 77 && mig.equip.arma.up === 8 &&
+       mig.equip.arma.escala === 1 && mig.equip.arma.rerolls === 0,
+    'migração: ouro preservado, up no teto e defaults de economia');
+
+  p.ouro = 500;
+  p.equip = { arma: { nome: 'Arma UI', slot: 'arma', rar: 1, escala: 1,
+                      up: 0, afixos: [], bonus: { dano: 3 } },
+              armadura: null };
+  p.bolsa = [];
+  const itUI = { nome: 'Pra Vender', slot: 'armadura', rar: 2, escala: 1,
+                 up: 0, afixos: [], bonus: { hp: 10 } };
+  Itens.guardar(p, itUI);
+  jogoCanvas._textos = [];
+  clique(655, 50);                 // aba Itens (se não estiver nela)
+  frame(2);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('Ouro 500') >= 0),
+    'linha da aba Itens mostra o ouro');
+  clique(707, 189);                // botão V da linha 0 (y=176..202)
+  frame(2);
+  conf(p.bolsa.length === 0 && p.ouro === 515,
+    'clique no V vende a linha (500 + 15)');
+  clique(695, 96);                 // A+ do slot da arma (676..714, y=84..108)
+  frame(2);
+  conf(p.equip.arma.up === 1 && p.ouro === 490,
+    'clique no A+ aprimora e cobra (515 - 25)');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');

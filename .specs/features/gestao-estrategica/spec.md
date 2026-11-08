@@ -1,6 +1,6 @@
 # Spec: Gestão estratégica — itens, economia, skills (umbrella)
 
-Status: **em execução** — Leva A (`itens-afixos`) concluída; B/C/D planejadas
+Status: **em execução** — Levas A (`itens-afixos`) e B (`economia-ouro`) concluídas; C/D planejadas
 · Data: 2026-11-08 · Versão alvo: 0.2.0 (em 4 levas)
 Decisões do usuário: afixos + mods negativos + UI de deltas (sem slots novos
 na 1ª leva) · skills = loadout + keystone · economia com ouro em leva própria ·
@@ -40,7 +40,7 @@ com valor mínimo (loop econômico).
 - **R-GES-1.5**: save `_v2` com migração de itens legados
   (`Personagem.normalizar`), sem quebrar save antigo.
 
-### Leva B — `economia-ouro` (R-GES-2)
+### Leva B — `economia-ouro` (R-GES-2) ✅ (ver spec própria)
 - **R-GES-2.1**: ouro cai dos inimigos (escala com onda/mapa) e vira
   atributo de gestão (mostra no painel).
 - **R-GES-2.2**: **venda** (25% do valor, com delta claro) e **salvagem**

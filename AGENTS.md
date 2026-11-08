@@ -104,9 +104,14 @@
   `Itens.linha/deltas` (delta por chave contra o equipado, linhas em
   13px cortadas). Itens vivem em `p.equip`/`p.bolsa` do personagem e
   `Personagem.status`/`lookDe` leem os bônus (com clamps hp≥10/dano≥1/
-  vel≥10/crit≥0). **`personagem.js` não pode depender de `itens.js`**
-  (grade/previa carregam só sprite+personagem) — as chaves de bônus são
-  espelhadas nos dois arquivos.
+  vel≥10/crit≥0). **Economia** (Leva B): `p.ouro` (mataInimigo paga
+  `Mapas.forca × onda`, chefe ×8), `vender/sucatear` (bolsa cheia
+  sucateia sozinha), `aprimorar` (`custoAprim`, +8%/nível via
+  `pontuarEfet` no auto-equip) e `reroll` (neg sai só com rol positivo);
+  UI na aba Itens: `V`/`S` por linha, `A+`/`R+` nos slots, linha de ouro
+  e legenda. **`personagem.js` não pode depender de `itens.js`**
+  (grade/previa carregam só sprite+personagem) — chaves de bônus **e**
+  `APR`/`MAX_UP` são espelhadas nos dois arquivos.
 - Gestão tem 5 abas (Atrib/Apar/Classe/Itens/Stats): botões de 66px com
   passo 70 a partir de x=412, y=40 — centros 445/515/585/655/725 em y=54;
   testes que clicam abas dependem dessa grade.

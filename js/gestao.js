@@ -234,19 +234,45 @@ var Gestao = (function () {
     }
   }
 
-  // Aba Itens: 2 slots equipados (com o resumo dos bônus) + bolsa
-  // paginada (clique equipa; a linha mostra o delta por chave contra o
-  // equipado — item com afixo negativo aparece com '-'). Linhas em 13px
-  // p/ caber nome + afixos + deltas nos 340px do botão.
+  // Ações de investimento num slot (A+ aprimora · R+ re-rola), com o
+  // custo no rótulo; desativadas sem item/ouro/teto/afixos.
+  function slotAcoes(p, item, y) {
+    var ca = item ? Itens.custoAprim(item) : -1;
+    var cr = item ? Itens.custoReroll(item) : -1;
+    if (UI.button(676, y, 38, 24, 'A+' + (ca >= 0 ? ca : '—'), {
+      disabled: !item || ca < 0 || (p.ouro || 0) < ca,
+      font: '11px monospace'
+    })) {
+      if (Itens.aprimorar(p, item)) {
+        Gravacao.msg(item.nome + ' aprimorado (+' + item.up + ')');
+      }
+    }
+    if (UI.button(718, y, 38, 24, 'R+' + (cr >= 0 ? cr : '—'), {
+      disabled: !item || cr < 0 || (p.ouro || 0) < cr,
+      font: '11px monospace'
+    })) {
+      if (Itens.reroll(p, item)) Gravacao.msg('Re-roll: ' + item.nome);
+    }
+  }
+
+  // Aba Itens: 2 slots equipados (nome + bônus, com A+/R+), ouro e bolsa
+  // paginada. Linha da bolsa = equipar | V (vende 25%) | S (sucata, piso
+  // garantido) — o delta por chave aparece contra o equipado (item com
+  // afixo negativo aparece com '-'). Linhas em 13px.
   function desenhaItens(ctx, p) {
     var arma = p.equip.arma, arm = p.equip.armadura;
-    UI.text('Arma: ' + (arma ? Itens.linha(arma, null, 36) : '—'), 416, 96,
+    UI.text('Arma: ' + (arma ? Itens.linha(arma, null, 26) : '—'), 416, 96,
       { color: arma ? Itens.corRar(arma.rar) : '#6f678a', font: '13px monospace' });
-    UI.text('Armadura: ' + (arm ? Itens.linha(arm, null, 33) : '—'), 416, 124,
+    slotAcoes(p, arma, 84);
+    UI.text('Armadura: ' + (arm ? Itens.linha(arm, null, 22) : '—'), 416, 124,
       { color: arm ? Itens.corRar(arm.rar) : '#6f678a', font: '13px monospace' });
+    slotAcoes(p, arm, 112);
 
-    UI.text('Bolsa ' + p.bolsa.length + '/' + Itens.BOLSA_MAX,
-      416, 152, { color: '#9a90b8' });
+    UI.text('Ouro ' + milhar(p.ouro || 0) + ' · Bolsa ' +
+      p.bolsa.length + '/' + Itens.BOLSA_MAX,
+      416, 152, { color: '#e8c86a' });
+    UI.text('V venda · S sucata · A+ apr. · R+ rer.', 416, 168,
+      { color: '#6f678a', font: '11px monospace' });
     var paginas = Math.max(1, Math.ceil(p.bolsa.length / 5));
     if (paginaBolsa > paginas - 1) paginaBolsa = paginas - 1;
     if (UI.button(684, 144, 28, 28, '<', { disabled: paginaBolsa === 0 })) {
@@ -266,12 +292,24 @@ var Gestao = (function () {
     p.bolsa.slice(paginaBolsa * 5, paginaBolsa * 5 + 5)
       .forEach(function (item, i) {
         var y = 176 + i * 30;
-        if (UI.button(416, y, 340, 26,
-          Itens.linha(item, p.equip[item.slot], 41), {
+        if (UI.button(416, y, 272, 26,
+          Itens.linha(item, p.equip[item.slot], 33), {
             align: 'left', color: Itens.corRar(item.rar),
             font: '13px monospace'
           })) {
           Itens.equipar(p, item);
+        }
+        if (UI.button(692, y, 30, 26, 'V', {
+          color: '#8ce08c', font: '13px monospace'
+        })) {
+          var gv = Itens.vender(p, item);
+          if (gv) Gravacao.msg('+' + gv + ' ouro (vendido)');
+        }
+        if (UI.button(726, y, 30, 26, 'S', {
+          color: '#c9c2dd', font: '13px monospace'
+        })) {
+          var gs = Itens.sucatear(p, item);
+          if (gs) Gravacao.msg('+' + gs + ' ouro (sucata)');
         }
       });
   }

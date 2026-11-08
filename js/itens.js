@@ -14,6 +14,9 @@ var Itens = (function () {
   var CHANCE_NEG = 0.3;   // por rolagem de afixo (rar >= 2)
   var MULT_NEG = 1.5;     // magnitude do negativo (o tradeoff compensa)
   var PESO_CLASSE = 0.7;  // chance de afixo positivo sair na chave da classe
+  var APR = 0.08;         // +8% por nível de aprimoramento (espelhado em
+                          // personagem.js — ele não pode depender daqui)
+  var MAX_UP = 8;         // teto de aprimoramentos por item (espelhado lá)
 
   // modelos — o campo `arma` define o visual (sprite) quando equipada
   var ARMAS = [
@@ -203,7 +206,9 @@ var Itens = (function () {
     }
     var out = {
       nome: (pre ? pre + ' ' : '') + modelo.nome + (suf ? ' ' + suf : ''),
-      slot: slot, rar: rar, bonus: bonus, afixos: afixos
+      slot: slot, rar: rar, bonus: bonus, afixos: afixos,
+      base: modelo.nome,   // nome do modelo: recompõe o nome no re-roll
+      escala: mult         // mult. de Mapas.forca: faixas de afixo/re-roll
     };
     if (modelo.arma) out.arma = modelo.arma;
     return out;
@@ -223,17 +228,146 @@ var Itens = (function () {
     return out;
   }
 
-  function guardar(p, item) {
-    p.bolsa.push(item);
-    while (p.bolsa.length > BOLSA_MAX) p.bolsa.shift();  // mais antigo sai
+  // ---- economia (Leva B) ----------------------------------------------
+  // valor de mercado: soma assinada com piso 1 — todo drop vale algo
+  function valor(item) {
+    return Math.max(1, pontuar(item)) * 6;
+  }
+  function precoVenda(item) {           // 25% — vale p/ item bom
+    return Math.max(1, Math.round(valor(item) * 0.25));
+  }
+  function precoSucata(item) {          // piso por raridade/escala — item ruim
+    return Math.max(3, Math.round(2 * item.rar * (item.escala || 1)));
+  }
+  function custoAprim(item) {
+    var up = item.up || 0;
+    if (up >= MAX_UP) return -1;
+    return 25 * (up + 1) * (up + 1);   // convexo: fica caro rápido
+  }
+  function custoReroll(item) {
+    if (!item.afixos || !item.afixos.length) return -1;
+    return Math.round(10 * item.rar * (item.escala || 1) *
+      (1 + 0.5 * (item.rerolls || 0)));
+  }
+
+  // soma efetiva p/ o auto-equip: aprimoramento defende a vaga (senão o
+  // próximo drop comeria o investimento em silêncio)
+  function pontuarEfet(item) {
+    return pontuar(item) * (1 + APR * ((item && item.up) || 0));
+  }
+
+  // remoção da bolsa paga ouro; null se o item não está na bolsa
+  function vender(p, item) {
+    var i = p.bolsa.indexOf(item);
+    if (i < 0) return null;
+    p.bolsa.splice(i, 1);
+    var g = precoVenda(item);
+    p.ouro = (p.ouro || 0) + g;
+    return g;
+  }
+  function sucatear(p, item) {
+    var i = p.bolsa.indexOf(item);
+    if (i < 0) return null;
+    p.bolsa.splice(i, 1);
+    var g = precoSucata(item);
+    p.ouro = (p.ouro || 0) + g;
+    return g;
+  }
+
+  function aprimorar(p, item) {
+    var c = custoAprim(item);
+    if (c < 0 || (p.ouro || 0) < c) return false;
+    p.ouro -= c;
+    item.up = (item.up || 0) + 1;
     return true;
   }
 
-  // Auto-equip: só troca se for estritamente melhor (soma assinada dos
-  // bônus — negativo pesa contra); o item equipado volta para a bolsa.
+  // nome = prefixo? + base + sufixo? a partir dos afixos atuais
+  function montaNome(base, lista) {
+    var pre = '', suf = '';
+    for (var i = 0; i < lista.length; i++) {
+      var af = lista[i];
+      if (af.neg) continue;
+      if (af.tipo === 'pre') pre = af.nome;
+      else suf = af.nome;
+    }
+    return (pre ? pre + ' ' : '') + base + (suf ? ' ' + suf : '');
+  }
+
+  // itens da Leva A não têm `base`: deriva removendo os afixos atuais
+  function baseDe(item) {
+    var nome = item.nome;
+    for (var i = 0; i < item.afixos.length; i++) {
+      var af = item.afixos[i];
+      if (af.neg) continue;
+      if (af.tipo === 'pre') nome = nome.replace(af.nome + ' ', '');
+      else nome = nome.replace(' ' + af.nome, '');
+    }
+    return nome;
+  }
+
+  // Re-roll de UM afixo: o negativo se houver (rol novo só positivo —
+  // saída de maldição garantida), senão um aleatório (rol comum, pode
+  // sair neg: aposta). Respeita teto de 1 neg, tipos pre/suf livres e
+  // smart-loot; nome recompõe de `base`.
+  function reroll(p, item) {
+    var c = custoReroll(item);
+    if (c < 0 || (p.ouro || 0) < c) return false;
+    var lista = item.afixos;
+    var alvo = -1;
+    for (var i = 0; i < lista.length; i++) {
+      if (lista[i].neg) { alvo = i; break; }
+    }
+    if (alvo < 0) alvo = Math.floor(Math.random() * lista.length);
+    var velho = lista[alvo];
+    var saidaDeMaldicao = velho.neg;
+    var base = item.base || baseDe(item);   // antes de trocar (fallback)
+    var tipos = {}, negs = 0;
+    for (var j = 0; j < lista.length; j++) {
+      if (j === alvo) continue;
+      if (lista[j].neg) negs++;
+      else tipos[lista[j].tipo] = true;
+    }
+    var ehNeg = !saidaDeMaldicao && negs < 1 && Math.random() < CHANCE_NEG;
+    var pool = ehNeg ? poolNeg() : poolPos(tipos, p.classe);
+    if (!pool.length) return false;
+    var novo = pool[Math.floor(Math.random() * pool.length)];
+    var v = novo.faixa[0] + Math.random() * (novo.faixa[1] - novo.faixa[0]);
+    var escala = item.escala || 1;
+    var valorNovo = Math.max(1,
+      Math.round(v * escala * (ehNeg ? MULT_NEG : 1)));
+    // sai a contribuição antiga, entra a nova
+    item.bonus[velho.chave] =
+      (item.bonus[velho.chave] || 0) - (velho.neg ? -velho.valor : velho.valor);
+    item.bonus[novo.chave] =
+      (item.bonus[novo.chave] || 0) + (ehNeg ? -valorNovo : valorNovo);
+    lista[alvo] = {
+      nome: novo.nome, tipo: ehNeg ? 'neg' : novo.tipo,
+      chave: novo.chave, neg: ehNeg, valor: valorNovo
+    };
+    item.rerolls = (item.rerolls || 0) + 1;
+    item.nome = montaNome(base, lista);
+    p.ouro -= c;
+    return true;
+  }
+
+  function guardar(p, item) {
+    p.bolsa.push(item);
+    var pago = 0;
+    while (p.bolsa.length > BOLSA_MAX) {
+      // o mais antigo sai — vira ouro (sucata), nunca lixo silencioso
+      pago += precoSucata(p.bolsa.shift());
+    }
+    if (pago) p.ouro = (p.ouro || 0) + pago;
+    return true;
+  }
+
+  // Auto-equip: só troca se for estritamente melhor (soma efetiva
+  // assinada — negativo conta contra e aprimoramento segura a vaga);
+  // o item equipado volta para a bolsa.
   function equiparSeMelhor(p, item) {
     var atual = p.equip[item.slot];
-    if (atual && pontuar(item) <= pontuar(atual)) return false;
+    if (atual && pontuarEfet(item) <= pontuarEfet(atual)) return false;
     p.equip[item.slot] = item;
     if (atual) guardar(p, atual);
     return true;
@@ -256,15 +390,27 @@ var Itens = (function () {
     AFIXOS: AFIXOS,
     AFINS: AFINS,
     QTD_AFIXOS: QTD_AFIXOS,
+    APR: APR,
+    MAX_UP: MAX_UP,
     BOLSA_MAX: BOLSA_MAX,
     CHANCE: CHANCE,
     corRar: corRar,
     pontuar: pontuar,
+    pontuarEfet: pontuarEfet,
     resumo: resumo,
     deltas: deltas,
     linha: linha,
     geraItem: geraItem,
     sorteiaDrop: sorteiaDrop,
+    valor: valor,
+    precoVenda: precoVenda,
+    precoSucata: precoSucata,
+    custoAprim: custoAprim,
+    custoReroll: custoReroll,
+    aprimorar: aprimorar,
+    reroll: reroll,
+    vender: vender,
+    sucatear: sucatear,
     guardar: guardar,
     equiparSeMelhor: equiparSeMelhor,
     equipar: equipar

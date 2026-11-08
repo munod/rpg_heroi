@@ -83,6 +83,7 @@ var Personagem = (function () {
       xpProx: custoProximo(1),
       equip: { arma: null, armadura: null },
       bolsa: [],
+      ouro: 0,              // moeda: abates, venda e sucata de itens
       look: {
         skin: CORES_PELE[1],
         hair: CORES_CABELO[0],
@@ -106,7 +107,8 @@ var Personagem = (function () {
     return out;
   }
 
-  // Soma dos bônus dos itens equipados (arma + armadura).
+  // Soma dos bônus dos itens equipados (arma + armadura), já com o
+  // multiplicador de aprimoramento: round(bonus × (1 + 0,08 × up)).
   function bonusEquipamento(p) {
     var out = { dano: 0, hp: 0, vel: 0, crit: 0 };
     if (!p || !p.equip) return out;
@@ -114,10 +116,12 @@ var Personagem = (function () {
     for (var i = 0; i < lista.length; i++) {
       var it = lista[i];
       if (!it || !it.bonus) continue;
-      out.dano += it.bonus.dano || 0;
-      out.hp += it.bonus.hp || 0;
-      out.vel += it.bonus.vel || 0;
-      out.crit += it.bonus.crit || 0;
+      var up = (typeof it.up === 'number' && it.up > 0) ? it.up : 0;
+      var f = 1 + APR * up;
+      out.dano += Math.round((it.bonus.dano || 0) * f);
+      out.hp += Math.round((it.bonus.hp || 0) * f);
+      out.vel += Math.round((it.bonus.vel || 0) * f);
+      out.crit += Math.round((it.bonus.crit || 0) * f);
     }
     return out;
   }
@@ -203,6 +207,11 @@ var Personagem = (function () {
   // depender de itens.js: testes como grade carregam só sprite+personagem).
   var BONUS_ITENS = ['dano', 'hp', 'vel', 'crit'];
 
+  // Espelhos da economia (mesma razão do acima): +8% por nível de
+  // aprimoramento e o teto de níveis por item, iguais aos de Itens.
+  var APR = 0.08;
+  var MAX_UP_ITENS = 8;
+
   // Chaves das estatísticas — espelho de Batalha.stat (mesma razão do
   // espelho acima: grade/previa carregam só sprite+personagem)
   var STATS = ['abates', 'mortes', 'danoCausado', 'danoRecebido',
@@ -238,8 +247,13 @@ var Personagem = (function () {
       rar: (typeof it.rar === 'number' && it.rar >= 1 && it.rar <= 3)
         ? Math.floor(it.rar) : 1,
       bonus: {},
-      afixos: []
+      afixos: [],
+      // economia (Leva B) — defaults p/ saves anteriores
+      up: Math.min(num(it.up, 0, 0), MAX_UP_ITENS),
+      rerolls: num(it.rerolls, 0, 0),
+      escala: Math.min(num(it.escala, 1, 1), 999)
     };
+    if (typeof it.base === 'string' && it.base) out.base = it.base.slice(0, 24);
     if (typeof it.arma === 'string' && it.arma) out.arma = it.arma.slice(0, 12);
     for (var i = 0; i < BONUS_ITENS.length; i++) {
       var k = BONUS_ITENS[i];
@@ -307,6 +321,7 @@ var Personagem = (function () {
         armadura: normalizaItem(p.equip && p.equip.armadura, 'armadura')
       },
       bolsa: normalizaBolsa(p.bolsa),
+      ouro: num(p.ouro, 0, 0),
       look: {
         skin: corOu(p.look && p.look.skin, base.look.skin),
         hair: corOu(p.look && p.look.hair, base.look.hair),

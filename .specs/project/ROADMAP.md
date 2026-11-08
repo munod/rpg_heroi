@@ -22,7 +22,7 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 - **Gestão estratégica** (spec umbrella `gestao-estrategica`, 4 levas):
   ✅ **A `itens-afixos`** (afixos, negativos, smart-loot, deltas) ·
-  ⬜ B `economia-ouro` (venda/salvagem/aprimoramento/re-roll) ·
+  ✅ **B `economia-ouro`** (ouro, venda/sucata, aprimoramento, re-roll) ·
   ⬜ C `skills-estrategicas` (loadout + keystone + respec) ·
   ⬜ D `lendarios-equilibrio` (lendários que mudam mecânica + re-medição,
   release 0.2.0).

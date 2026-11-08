@@ -584,7 +584,13 @@ var Batalha = (function () {
       ganho = Math.round(ganho * 5);
       numero(en.x, en.y - 40, 'BOSS DERROTADO!', '#ffd866', true);
     }
-    numero(en.x, en.y - 24, '+' + ganho + ' XP', '#ffd866', false);
+    // ouro do abate: escala com o mapa e a onda (chefe paga ×8) — a
+    // moeda sustenta venda/sucata/aprimoramento/re-roll da aba Itens
+    var ouro = Math.round((1 + Math.random() * 2) * Mapas.forca(mapa) *
+      (1 + (ondaTotal() + 1) * 0.04) * (en.tipo.boss ? 8 : 1));
+    Game.personagem.ouro = (Game.personagem.ouro || 0) + ouro;
+    numero(en.x, en.y - 24, '+' + ganho + ' XP · +' + ouro + ' ouro',
+      '#ffd866', false);
     ganhaXP(ganho);
     soltaItens(en);
     tOnda = ESPERA_ONDA;

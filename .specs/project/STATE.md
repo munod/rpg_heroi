@@ -35,6 +35,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 - **Save sem bump de chave na migração de itens** — `normalizaItem`
   aceita negativos/`afixos` e o corte de nome sobe para 40 (precedente:
   `normalizaStats`); bump de chave só quando a normalização não basta.
+- **Economia de moeda única (ouro)** — sem materiais/loja nesta leva:
+  venda 25% × sucata com piso cria a decisão (item bom vende, ruim
+  sucateia); bolsa cheia sucateia automático (todo drop tem valor).
+- **Aprimoramento no ITEM, com vaga defendida** — auto-equip compara
+  `pontuarEfet` (soma × (1+0,08×up)), senão o próximo drop comeria o
+  investimento em silêncio; `APR`/`MAX_UP` espelhados em `personagem.js`
+  (regra dos espelhos: ele não depende de `itens.js`).
+- **Re-roll assimétrico** — sair de maldição (rol positivo garantido) é
+  seguro; mexer em afixo positivo é aposta (pode virar neg): custo
+  escala com tentativas p/ conter spam.
+
 
 ## Bloqueios
 

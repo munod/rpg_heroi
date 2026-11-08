@@ -24,6 +24,18 @@ vive em `.specs/features/`.
   até 40 chars) e clamps de status (hpMax ≥ 10, dano ≥ 1, vel ≥ 10,
   crit ≥ 0) — spec `.specs/features/itens-afixos/` (R-AFI-1..7). Ritmo
   medido: 1º nível 42,6s · 15min nv33/onda53 · mapa 1 em 28,5min.
+- **Economia com ouro (Leva B da gestão estratégica)**: ouro de todo
+  abate (escala com mapa/onda, chefe ×8) exibido na aba Itens; **venda**
+  (25% do valor) e **salvagem** (piso `max(3, 2×rar×escala)`) por linha
+  (`V`/`S`), com **bolsa cheia sucateando o mais antigo por ouro** (fim
+  do descarte silencioso); **aprimoramento** de item (custo
+  `25×(up+1)²`, teto 8, +8%/nível no status — auto-equip compara valor
+  efetivo e a vaga fica defendida) e **re-roll** de um afixo (custo
+  `10×rar×escala×(1+0,5×tentativas)`; negativo sai só com rol positivo,
+  positivo é aposta) — botões `A+`/`R+` nos slots, toast de feedback;
+  migração sem bump de chave (`p.ouro`, `up/rerolls/escala/base`) —
+  spec `.specs/features/economia-ouro/` (R-ECO-1..6). Ritmo reconfirmado
+  (37,9s · nv34/onda55 · mapa 1 em 29min).
 
 ## [0.1.0] — 2026-11-08
 
