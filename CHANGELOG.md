@@ -10,6 +10,13 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-11-08
+
+Sistema punitivo + transparência: morte com preço, eventos (Açougueiro e
+Gatuno), progressão ~50% mais lenta e gestão completa de stats/tooltips.
+
+### Added
+
 ### Added
 
 - **Sistema punitivo — Leva 1 de 4 (ritmo punitivo)**: pontos por nível
@@ -197,6 +204,7 @@ e deploy no GitHub Pages.
 - **Barras laterais no celular**: layout passou a seguir o aspecto da
   viewport (bug reportado por print) (`4c249e4`).
 
-[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/munod/rpg_heroi/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/munod/rpg_heroi/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/munod/rpg_heroi/releases/tag/v0.1.0
