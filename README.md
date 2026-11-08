@@ -34,6 +34,11 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   depois do último entra o **modo infinito** (o tema repete com a dificuldade
   crescente). Saves de antes dos mapas migram sozinhos (onda 250 → mapa 3,
   onda 50).
+- **Mapas procedurais** — o chão (manchas orgânicas e cachos de flores) e
+  a **posição dos obstáculos** de cada mapa saem de um **Perlin Noise com
+  semente do número do mapa**: mesmo mapa = mesmo layout, mapa novo =
+  layout novo (também no modo infinito), sempre com o centro livre para o
+  herói nascer/reviver.
 - Ao morrer ele **revive sozinho** em 3s — em **local aleatório do mapa**
   (longe de obstáculos e inimigos) — e a luta continua; os inimigos se
   agrupam onde ele caiu e a câmera acompanha o renascimento.
@@ -105,8 +110,11 @@ js/
   personagem.js     classes, atributos, status derivados, validação, níveis
   salvar.js         localStorage + export/import JSON
   gravacao.js       toast, autosave e save do personagem (compartilhado)
-  mapas.js          cada mapa: chão, obstáculos, monstros e chefe
+  mapas.js          cada mapa: tema do chão, obstáculos, monstros e chefe
+  perlin.js         Perlin Noise com semente do mapa (cenários procedurais)
   itens.js          drops: armas/armaduras, bolsa e auto-equip
+  skills.js         skills automáticas por classe (procs, sem botão)
+  efeitos.js        efeitos visuais das skills (missis, cortes, motes)
   ui.js             botões, painéis, barras e texto no canvas
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
   gestao.js         painel de gestão (atributos/aparência/classe) compartilhado
@@ -145,7 +153,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 142 asserções: sprites, status, UI, idle, toque
+node testes/fumaca.js     # 152 asserções: sprites, status, UI, idle, toque
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -154,7 +162,7 @@ node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
-São **155 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **165 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.

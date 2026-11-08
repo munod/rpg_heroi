@@ -86,6 +86,15 @@
   reconstruído por `garanteCenario()`. O estado salvo guarda `mapa` e
   `Salvar.lerEstado` migra saves legados (onda >100 → mapa/onda equivalentes)
   — a migração é na leitura, sem rewrite.
+- Mapas procedurais em `js/perlin.js` (Perlin melhorado + mulberry32):
+  a **semente é o número do mapa** (mesmo mapa = mesmo layout, em qualquer
+  sessão) e é aplicada em `Batalha.garanteCenario` → `Perlin.definirSemente`;
+  `constroiChao` amostra manchas/flores do campo e `constroiObst` sorteia
+  pontos **filtrados** (clareira do ruído, centro livre ≥36×32 base,
+  ≥30 de base entre vizinhos; densidade/tipos vêm de
+  `Mapas.info().obst = {tipos, qtd}`). Sorteios usam `Perlin.sorteio(n)`
+  **independente** da semente do ruído — trocar o chão não pode mexer nos
+  obstáculos. `info().obst` expõe o layout (fumaça seção 20).
 - Drops/equipamento em `js/itens.js`: `mataInimigo` chama
   `Itens.sorteiaDrop`; auto-equip por `Itens.pontuar`, senão vai para
   `p.bolsa` (teto 10). Itens vivem em `p.equip`/`p.bolsa` do personagem e

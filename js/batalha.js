@@ -59,7 +59,10 @@ var Batalha = (function () {
   var ESPERA_ONDA = 2.0;  // respiro depois de limpar a onda (segundos)
 
   // ------------------------------------------------------------ cenário
-  function constroiChao(tema) {
+  // Terreno procedural: manchas orgânicas amostradas do campo de Perlin
+  // (sede do mapa) e elementos apontados por sorteio com semente — mesmo
+  // mapa, mesmo chão; mapa novo, chão novo (inclusive no modo infinito).
+  function constroiChao(tema, semente) {
     chao = document.createElement('canvas');
     chao.width = MW;
     chao.height = MH;
@@ -69,36 +72,50 @@ var Batalha = (function () {
     c.fillRect(0, 0, MW, MH);
 
     var T = 16;
-    for (var y = 0; y < MH; y += T) {
-      for (var x = 0; x < MW; x += T) {
+    var x, y, i;
+    for (y = 0; y < MH; y += T) {
+      for (x = 0; x < MW; x += T) {
         c.fillStyle = ((x / T + y / T) % 2 === 0) ? tema.chao.par : tema.chao.imp;
         c.fillRect(x, y, T, T);
       }
     }
 
-    for (var i = 0; i < 36; i++) {
-      c.fillStyle = tema.chao.mancha[i % 2];
-      c.beginPath();
-      c.ellipse(Math.random() * MW, Math.random() * MH,
-        8 + Math.random() * 14, 5 + Math.random() * 7, 0, 0, Math.PI * 2);
-      c.fill();
+    // manchas em duas faixas do ruído (altas/baixas): remendos orgânicos
+    // ligados uns aos outros no lugar de elipses soltas aleatórias
+    var passo = 4;
+    for (y = 0; y < MH; y += passo) {
+      for (x = 0; x < MW; x += passo) {
+        var v = Perlin.valor(x / 56, y / 56);
+        if (v >= 0.62) c.fillStyle = tema.chao.mancha[0];
+        else if (v <= 0.38) c.fillStyle = tema.chao.mancha[1];
+        else continue;
+        c.fillRect(x, y, passo, passo);
+      }
     }
 
+    // flores em cachos: aceitas só onde o ruído desenha faixa estreita
     var flores = tema.chao.flores;
-    for (i = 0; flores.length && i < 30; i++) {
+    var rng = Perlin.sorteio(semente * 3 + 1);
+    var tent = 0;
+    for (i = 0; flores.length && i < 30 && tent < 500; tent++) {
+      var fx = Math.floor(rng() * MW);
+      var fy = Math.floor(rng() * MH);
+      var fa = Perlin.valor(fx / 40 + 11, fy / 40 + 5);
+      if (fa < 0.55 || fa > 0.67) continue;
       c.fillStyle = flores[i % flores.length];
-      c.fillRect((Math.random() * MW) | 0, (Math.random() * MH) | 0, 2, 2);
+      c.fillRect(fx, fy, 2, 2);
+      i++;
     }
 
     // pedrinhas e rachaduras: textura dura em fillRect puro
     c.fillStyle = tema.chao.borda2;
     for (i = 0; i < 26; i++) {
-      c.fillRect((Math.random() * MW) | 0, (Math.random() * MH) | 0,
-        Math.random() < 0.35 ? 2 : 1, 1);
+      c.fillRect(Math.floor(rng() * MW), Math.floor(rng() * MH),
+        rng() < 0.35 ? 2 : 1, 1);
     }
     c.fillStyle = tema.chao.imp;
     for (i = 0; i < 20; i++) {
-      c.fillRect((Math.random() * MW) | 0, (Math.random() * MH) | 0, 2, 1);
+      c.fillRect(Math.floor(rng() * MW), Math.floor(rng() * MH), 2, 1);
     }
 
     c.strokeStyle = tema.chao.borda;
@@ -109,16 +126,44 @@ var Batalha = (function () {
     c.strokeRect(4, 4, MW - 8, MH - 8);
   }
 
-  function constroiObst(tema) {
-    // coordenadas valem na base 192×134 (ver mapas.js) e são escaladas
-    // para o mundo — os sprites de obstáculo NÃO escalam (só a posição)
+  // Obstáculos proceduralmente posicionados: pontos sorteados na base
+  // 192×134 (mesma convenção das coordenadas antigas de mapas.js) filtrados
+  // pelo ruído de Perlin — só entram em "clareira" do campo, sempre longe
+  // do centro (spawn/renascimento do herói) e afastados uns dos outros.
+  // Tipos e densidade vêm do tema; a posição, da semente do mapa.
+  function constroiObst(tema, semente) {
     var ex = MW / 192, ey = MH / 134;
+    var rng = Perlin.sorteio(semente * 7 + 29);
+    var tipos = tema.obst.tipos;
+    var alvo = tema.obst.qtd;
+    var feitos = [];
     obst = [];
-    for (var i = 0; i < tema.obst.length; i++) {
-      var o = tema.obst[i];
+    var tent = 0;
+    while (obst.length < alvo && tent < 600) {
+      tent++;
+      var x = 12 + rng() * 168;         // base 192 com folga de borda
+      var y = 12 + rng() * 110;         // base 134
+      // centro livre: onde o herói nasce e onde o renascimento cai no pior caso
+      if (Math.abs(x - 96) < 36 && Math.abs(y - 67) < 32) continue;
+      var perto = false;
+      for (var i = 0; i < feitos.length; i++) {
+        var ddx = feitos[i].x - x, ddy = feitos[i].y - y;
+        if (ddx * ddx + ddy * ddy < 30 * 30) { perto = true; break; }
+      }
+      if (perto) continue;
+      // clareira do ruído (relaxada depois de 400 tentativas: o tema tem
+      // que ter a densidade mínima, mesmo num campo desfavorável)
+      if (tent < 400 && Perlin.valor(x / 48 + 3, y / 48 + 9) < 0.42) continue;
+      // vegetação nas altas do ruído, pedra nas baixas (quando há as duas)
+      var arvore = tipos.length > 1 && Perlin.valor(x / 30 + 5, y / 30 + 5) > 0.5;
+      var tipo = arvore ? 'tree' : tipos[tipos.length - 1];
+      feitos.push({ x: x, y: y });
       obst.push({
-        x: o.x * ex, y: o.y * ey, r: o.r, tipo: o.tipo,
-        cx: o.cx * ex, cy: o.cy * ey
+        x: x * ex, y: y * ey,
+        r: tipo === 'tree' ? 7 : 5,
+        tipo: tipo,
+        // âncora do sprite: árvore sobe 6, pedra 4 (convenção antiga)
+        cx: x * ex, cy: (y + (tipo === 'tree' ? -6 : -4)) * ey
       });
     }
   }
@@ -127,8 +172,9 @@ var Batalha = (function () {
   function garanteCenario() {
     if (cenarioMapa === mapa) return;
     var tem = Mapas.info(mapa);
-    constroiChao(tem);
-    constroiObst(tem);
+    Perlin.definirSemente(mapa);   // terreno/obstáculos = f(mapa)
+    constroiChao(tem, mapa);
+    constroiObst(tem, mapa);
     cenarioMapa = mapa;
   }
 
@@ -1225,7 +1271,10 @@ var Batalha = (function () {
                y: Math.round(heroi ? heroi.y : 0) },
       inimigos: inimigos.length,
       boss: boss,
-      // skills de posicionamento/medo: última disparada + efeitos ativos
+      // cenário procedural (semente do mapa) e skills de posicionamento
+      obst: obst.map(function (o) {
+        return { x: Math.round(o.x), y: Math.round(o.y), tipo: o.tipo };
+      }),
       ultimaSkill: ultimaSkill,
       medo: medo,
       empurra: empurra,

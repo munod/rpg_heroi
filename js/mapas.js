@@ -1,7 +1,9 @@
 // Mapas do jogo: tema visual, inimigos e chefe de cada um.
 // Ciclo de 100 ondas por mapa (FIM_MAPA em batalha.js) — a onda 100 é o
 // chefe; vencendo, o jogo avança para o próximo mapa (onda 1 de novo).
-// Coordenadas de obstáculos na arena 192×134 (mesma convenção de Batalha).
+// Obstáculos por tema: TIPOS + densidade — as posições vêm do gerador
+// procedural (Perlin com semente do mapa, em batalha.js), na base
+// 192×134 (mesma convenção de Batalha).
 var Mapas = (function () {
   var LISTA = [
     {
@@ -12,12 +14,7 @@ var Mapas = (function () {
         flores: ['#e8d060', '#e88a9a', '#d8d8f0'],
         borda: '#5a4a2e', borda2: '#6b5a38'
       },
-      obst: [
-        { x: 18, y: 26, r: 7, tipo: 'tree', cx: 18, cy: 20 },
-        { x: 174, y: 26, r: 7, tipo: 'tree', cx: 174, cy: 20 },
-        { x: 16, y: 122, r: 5, tipo: 'rock', cx: 16, cy: 118 },
-        { x: 176, y: 120, r: 5, tipo: 'rock', cx: 176, cy: 116 }
-      ],
+      obst: { tipos: ['tree', 'rock'], qtd: 4 },
       inimigos: {
         comum: { tipo: 'slime', cor: '#4aa03a' },
         raro: { tipo: 'visgo', cor: '#7a4ac0' }
@@ -32,13 +29,7 @@ var Mapas = (function () {
         flores: ['#cfe4f4', '#9ec6e8', '#e8f2fa'],
         borda: '#3a4a66', borda2: '#4c6084'
       },
-      obst: [
-        { x: 30, y: 24, r: 6, tipo: 'rock', cx: 30, cy: 20 },
-        { x: 162, y: 24, r: 6, tipo: 'rock', cx: 162, cy: 20 },
-        { x: 96, y: 16, r: 6, tipo: 'rock', cx: 96, cy: 12 },
-        { x: 16, y: 120, r: 5, tipo: 'rock', cx: 16, cy: 116 },
-        { x: 176, y: 120, r: 5, tipo: 'rock', cx: 176, cy: 116 }
-      ],
+      obst: { tipos: ['rock'], qtd: 5 },
       inimigos: {
         comum: { tipo: 'slime', cor: '#5ac8e8' },      // gelema glacial
         raro: { tipo: 'morcego', cor: '#7a5aa8' }
@@ -54,13 +45,7 @@ var Mapas = (function () {
         flores: ['#e87a3a', '#d8b04a', '#c84a2a'],
         borda: '#2e1418', borda2: '#5a3038'
       },
-      obst: [
-        { x: 30, y: 26, r: 6, tipo: 'rock', cx: 30, cy: 22 },
-        { x: 162, y: 26, r: 6, tipo: 'rock', cx: 162, cy: 22 },
-        { x: 96, y: 118, r: 5, tipo: 'rock', cx: 96, cy: 114 },
-        { x: 16, y: 122, r: 5, tipo: 'rock', cx: 16, cy: 118 },
-        { x: 176, y: 122, r: 5, tipo: 'rock', cx: 176, cy: 118 }
-      ],
+      obst: { tipos: ['rock'], qtd: 5 },
       inimigos: {
         comum: { tipo: 'aranha', cor: '#c84a3a' },
         raro: { tipo: 'visgo', cor: '#9a4ac0' }

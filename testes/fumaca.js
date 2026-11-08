@@ -1045,6 +1045,58 @@ console.log('19) viewport larga: layout ancorado e preenchido (celular)');
     'restaurou 768×432 em 16:9');
 }
 
+console.log('20) cenário procedural: Perlin Noise com semente do mapa');
+{
+  const Perlin = sandbox.Perlin;
+  const Batalha = sandbox.Batalha;
+
+  // --- determinismo do ruído (mesma semente => mesmo campo)
+  Perlin.definirSemente(7);
+  const v1 = [Perlin.valor(3.2, 9.7), Perlin.valor(41.5, 0.25)];
+  const z = Perlin.ruido(0, 0);
+  Perlin.definirSemente(8);
+  const outro = Perlin.valor(3.2, 9.7);
+  Perlin.definirSemente(7);
+  conf(Perlin.valor(3.2, 9.7) === v1[0] && Perlin.valor(41.5, 0.25) === v1[1],
+    'mesma semente reproduz exatamente o mesmo campo');
+  conf(outro !== v1[0], 'semente diferente gera outro campo (mapa único)');
+  conf(z >= -1 && z <= 1, 'ruido(0,0) dentro da faixa [-1, 1]');
+
+  // sorteio independente da semente do ruído e reproduzível
+  const ra = Perlin.sorteio(5), rb = Perlin.sorteio(5);
+  conf(ra() === rb() && ra() === rb(),
+    'sorteio(s) devolve a mesma sequência na mesma semente');
+
+  // --- obstáculos do cenário: densidade, tipos e restrições do gerador
+  Batalha.restaurarMapa(1);
+  const obs = Batalha.info().obst;
+  const antes = JSON.stringify(obs);
+  conf(obs.length >= 4,
+    'mapa 1 tem obstáculos procedurais (' + obs.length + ')');
+  conf(obs.every(o => o.tipo === 'tree' || o.tipo === 'rock'),
+    'tipos vêm do tema (tree/rock)');
+  conf(obs.every(o =>
+      Math.abs(o.x - 192) >= 72 || Math.abs(o.y - 134) >= 64),
+    'área central livre p/ spawn e renascimento');
+  let afastados = true;
+  for (let i = 0; i < obs.length && afastados; i++) {
+    for (let j = i + 1; j < obs.length; j++) {
+      const dx = obs[i].x - obs[j].x, dy = obs[i].y - obs[j].y;
+      if (dx * dx + dy * dy < 55 * 55) afastados = false;
+    }
+  }
+  conf(afastados, 'obstáculos afastados uns dos outros (>=55px de mundo)');
+
+  // --- mapa 2 tem layout próprio; voltar ao 1 reproduz o original
+  Batalha.restaurarMapa(2);
+  conf(JSON.stringify(Batalha.info().obst) !== antes,
+    'mapa 2 tem layout próprio (outra semente, ' +
+    Batalha.info().obst.length + ' obstáculos)');
+  Batalha.restaurarMapa(1);
+  conf(JSON.stringify(Batalha.info().obst) === antes,
+    'voltar ao mapa 1 reproduz o mesmo layout (semente = nº do mapa)');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');
