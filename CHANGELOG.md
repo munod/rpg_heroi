@@ -19,29 +19,40 @@ vive em `.specs/features/`.
   `mapa×100000 + onda×1000 + min(nível,999)` — ordena por progresso,
   nunca por sorteio; upsert **só na melhor marca por apelido** (cliente
   só envia melhoria e as **regras do Firestore** rejeitam score menor no
-  servidor). Envios no **fecho de mapa** e **na morte (antes da
+  servidor — sonda REST confirmou: escrita válida aceita, inválida
+  recusada com 403). Envios no **fecho de mapa** e **na morte (antes da
   penalidade de −5 ondas)**. Camada 100% opcional: o SDK entra por
   **lazy-load** (injeção de `<script>` só ao abrir a tela) e sem
   config/rede tudo degrada — "não configurado", cache local do último
-  top-10 e zero bloqueio no jogo. Setup manual pendente (config do
-  usuário em `js/ranking-config.js` + regras em
-  `.specs/features/ranking/regras-firestore.rules`) — até lá a tela
-  nasce em modo "não configurado". Spec `.specs/features/ranking/`.
-
-### Changed
-
-- **Curvas de velocidade maiores (destreza)**: a **recarga do golpe
-  perdeu o piso de 0,15s** — agora é `35/vel` puro e a curva nunca
-  estagna (medido: antes DES 100/300/500 davam **todos 6,67 golpes/s**;
-  agora DES 100 → 9,9 g/s · DES 500 → **44,2 g/s** — o teto natural é
-  o loop de frames). E o `mover()` ganhou **sub-passos ≤4px**: com a
-  DES em 1546 px/s (25,8px/frame, raio do herói 6, obstáculos r=5-7) o
-  salto de um frame **atravessava obstáculos** (sensibilidade provada:
-  8 atravessamentos detectados sem o fix → 0 com ele) — a colisão vale
-  agora em qualquer velocidade. Curva de movimento mantida
-  (`46 + DES×3`). Spec `.specs/features/velocidade-curva/`.
-
-### Added
+  top-10 e zero bloqueio no jogo. Config do Firebase preenchida
+  (`js/ranking-config.js` — chaves públicas por design) + regras em
+  `.specs/features/ranking/regras-firestore.rules`. Spec
+  `.specs/features/ranking/`.
+- **Ranking observável (nunca silencioso)**: `Ranking.ultimoEnvio()`
+  guarda `{ok, motivo, quando, detalhe}` com motivo distinguível —
+  `enviado ✓ · sem apelido · arquivo local (file://) · sem melhoria ·
+  falha no SDK · servidor recusou · sem rede` — com **toast na
+  jogatina** (dica única por sessão para apelido/file://) e **linha de
+  status "último envio: ..."** na tela do ranking. A rejeição do `set`
+  deixa de ser engolida (guarda a mensagem do servidor) e `file://` é
+  detectado antes de qualquer tentativa (origem `null` não passa no
+  CORS — o aviso explica em vez de falha misteriosa). Testes: seção 37.
+- **Cooldown das skills na aba Stats (com barra de rolagem)**: bloco
+  "Skills — cooldown" com o valor **efetivo de combate** —
+  `intervalo × (1,3 − 0,45×agudeza)` da INT real (base entre
+  parênteses), área como `≈Xs a cada N golpes` com a recarga atual e
+  veneno como chance/duração; skills bloqueadas em cinza com "nv X".
+  O conteúdo passou do painel de 300px → a aba Stats ganhou **rolagem**
+  (wheel + arrasto do thumb com offset de agarre; linhas fora da faixa
+  não são desenhadas — sem `clip`, que o rasterizador de testes não
+  tem). Testes: seção 36 (limites de clamp inclusive).
+- **Teto de nível 1000** (`Personagem.NIVEL_MAX`, fonte única): no cap
+  o **XP é descartado** (não acumula buffer invisível — prática da
+  pesquisa de gênero: Idle Heroes Saga e Fangclash capam em 1000), o
+  cabeçalho mostra barra cheia + **"MÁXIMO"** e `normalizar`
+  **clampa saves acima de 1000 na leitura** (save de nv 36.000 visto
+  em produção → 1000, atributos preservados; sem bump de chave). O
+  score do ranking já capava em 999 — inalterado.
 
 - **Checkboxes de gestão (aba Itens)**: um **`[x]` por slot** (arma e
   armadura) que **fixa o item equipado** — o auto-equip não troca por
@@ -54,6 +65,22 @@ vive em `.specs/features/`.
   detalhe por fonte continua no rodapé) — `statusDetalhado` ganha
   campos `base` numéricos (fonte única, teste soma).
   Spec `.specs/features/correcoes-ia-gestao/`.
+
+### Changed
+
+- **Curvas de velocidade maiores (destreza) — emendadas no playtest**:
+  a recarga do golpe virou **`max(0,08; 35/vel)`** — piso **0,08s =
+  teto 12,5 golpes/s** (pedido: "maiores, bem maiores"; o playtest
+  depois sentiu o sem-piso "rápido demais: bagunça/DPS" — sem piso
+  DES 500 batia 44 g/s; o piso original de 0,15s estagnava a DES em
+  6,67 g/s desde DES 62 — medido: DES 100 → 9,9 g/s · DES 300/500 →
+  12,5 g/s). E o `mover()` ganhou **sub-passos ≤4px**: com a DES em
+  1546 px/s (25,8px/frame, raio do herói 6, obstáculos r=5-7) o
+  salto de um frame **atravessava obstáculos** (sensibilidade provada:
+  8 atravessamentos detectados sem o fix → 0 com ele) — a colisão vale
+  agora em qualquer velocidade. Curva de movimento mantida
+  (`46 + DES×3`). Specs `.specs/features/velocidade-curva/` +
+  `.specs/features/ajustes-playtest-2/`.
 
 ### Fixed
 
@@ -82,8 +109,6 @@ vive em `.specs/features/`.
 
 Sistema punitivo + transparência: morte com preço, eventos (Açougueiro e
 Gatuno), progressão ~50% mais lenta e gestão completa de stats/tooltips.
-
-### Added
 
 ### Added
 

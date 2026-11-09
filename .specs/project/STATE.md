@@ -139,8 +139,11 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   tooltip (`'Valor atual'`).
 - **Medição de ouro em teste = batalha PAUSADA** — kills e penalidade
   de morte mexiam no saldo (60→29) e quebravam asserts exatos.
-- **Velocidades (spec `velocidade-curva`)** — decisão do usuário: recarga
-  SEM piso (`35/vel` puro — teto natural = loop de frames ~60 g/s) e
+- **Velocidades (spec `velocidade-curva`, emendada na leva
+  `ajustes-playtest-2`)** — decisão do usuário: recarga
+  **`max(0,08; 35/vel)`** (piso 0,08s = teto 12,5 g/s — o playtest
+  rejeitou o sem-piso: "rápido demais, bagunça/DPS"; antes da emenda a
+  decisão era sem piso nenhum) e
   movimento mantém `46+DES×3` com sub-passos ≤4px no `mover()`. Medição
   que motivou: DES 100/300/500 davam todos 6,67 g/s (piso 0,15 desde
   DES 62). **Sub-passos precisam de teste de sensibilidade**: a seção 34
@@ -163,6 +166,18 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   Arquitetura: SDK por **lazy-load** (só ao abrir a tela) e degradação
   total sem config/rede — o jogo nunca depende de rede; fake do SDK nos
   testes é um **thenable síncrono** (o harness não roda microtasks).
+- **Ajustes playtest 2 (spec `ajustes-playtest-2`)** — 4 decisões do
+  usuário: **piso 0,08s** na recarga (playtest: sem piso = 44 g/s
+  caótico) · **cooldowns efetivos na aba Stats** com rolagem (o valor
+  real de combate `intervalo×(1,3−0,45×agu)` — o tooltip mostrava o
+  base; e a aba precisou de wheel+thumb porque o conteúdo passou do
+  painel — sem `clip` no rasterizador: pula linha fora da faixa) ·
+  **teto de nível 1000** (pesquisa: Idle Heroes Saga/Fangclash capam em
+  1000; XP no cap é DESCARTADO — banco escondido confunde o jogador;
+  save de nv 36 mil clamped na leitura, atributos preservados) ·
+  **ranking NUNCA silencioso** (sonda REST provou regras OK — escrita
+  válida 200 / inválida 403; o bug era observabilidade: `ultimoEnvio`
+  com motivo + toasts + status na cena, e detecção de `file://`).
 - **Mosquetão de eventos: desligar no FIM de cada seção** — o Gatuno
   ficava religado após a 29 e corria nas 30+ (flake latente achado ao
   revisar o harness).
@@ -215,3 +230,10 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   harness): mudar layout exige atualizar `fumaca.js`/`cena.js` juntos.
 - Âncoras de texto em scripts de edição de docs quebram por quebra de
   linha — conferir com `grep` antes de substituir em lote.
+- **`file://` não serve p/ serviços web (CORS)** — o README manda abrir
+  `index.html` direto (o jogo funciona), mas a origem `null` é recusada
+  pelo Firestore: foi a causa provável do "ranking não salvando" no
+  playtest. O jogo agora detecta e avisa; p/ teste local use um servidor
+  estático (`python3 -m http.server`). E não rodar o gate NO MESMO bloco
+  de chamadas que edita os arquivos (corrida: o teste leu o meio da
+  edição e acusou falha fantasma).

@@ -68,6 +68,14 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    (46 confs). Setup manual do Firebase pendente com o mantenedor
    (config + regras).
 
+## Concluído — ajustes playtest 2
+
+1. ✅ `ajustes-playtest-2` — piso 0,08s na recarga (playtest: sem piso
+   = bagunça/DPS) · cooldowns efetivos na aba Stats + rolagem · teto de
+   nível 1000 (XP descartado, save 36k clamped, "MÁXIMO") · ranking
+   observável (motivos/toasts/status + detecção `file://`; sonda REST
+   das regras = 200) — seções 36/37
+
 ## Backlog de ideias (sem compromisso)
 
 - Mais mapas/temas no ciclo infinito com mecânicas próprias.

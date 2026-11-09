@@ -2796,7 +2796,7 @@ console.log('33) gestão: fixar slot, auto-aprimorar e stats base→total');
     'atributos com seta investido→efetivo (bônus de classe)');
 }
 
-console.log('34) velocidade: recarga sem piso e sub-passos (não atravessa)');
+console.log('34) velocidade: recarga com piso 0,08 e sub-passos (não atravessa)');
 {
   const Batalha = sandbox.Batalha;
   const p = Game.personagem;
@@ -2808,16 +2808,18 @@ console.log('34) velocidade: recarga sem piso e sub-passos (não atravessa)');
   p.keystoneOn = false;
   p.atributos = { for: 8, des: 8, con: 8, int: 8, car: 8 };
   p.pontos = 0;
-  let casos = [[8, 0.5], [100, 35 / 346], [500, 35 / 1546]];
+  let casos = [[8, 0.5], [100, 35 / 346], [500, 0.08]];
   for (const [des, esp] of casos) {
     p.atributos.des = des;
     const s = Personagem.status(p);
-    conf(Math.abs(s.recarga - esp) < 1e-9 && s.recarga === 35 / s.vel,
-      'recarga sem piso: DES ' + des + ' → ' + s.recarga.toFixed(4) +
-      's (' + (1 / s.recarga).toFixed(1) + ' g/s), fórmula 35/vel exata');
+    conf(Math.abs(s.recarga - esp) < 1e-9 &&
+         s.recarga === Math.max(0.08, 35 / s.vel),
+      'recarga com piso 0,08: DES ' + des + ' → ' + s.recarga.toFixed(4) +
+      's (' + (1 / s.recarga).toFixed(1) + ' g/s), fórmula max(0,08; 35/vel)');
   }
-  conf(Personagem.status(p).recarga < 0.15,
-    'DES 500 passa do antigo piso de 0,15s (6,67 g/s)');
+  conf(Math.abs(Personagem.status(p).recarga - 0.08) < 1e-9 &&
+       Math.abs(1 / Personagem.status(p).recarga - 12.5) < 1e-9,
+    'DES 500 teto em 12,5 g/s (piso 0,08s — antes: sem piso, 44 g/s)');
   p.atributos.des = 8;
 
   // --- 2) a checagem de atravessamento ACUSA um salto sintético
@@ -3140,6 +3142,258 @@ console.log('35) ranking: score, apelido, degradação, cena e gatilhos');
   clique(68, 388);                    // VOLTAR (8,372,120,32)
   frame(2);
   conf(Game.cena === 'selecao', 'VOLTAR volta para a seleção');
+}
+
+console.log('36) ajustes: piso da recarga, cooldown na Stats (rolagem) e teto');
+{
+  const Personagem = sandbox.Personagem;
+  const Batalha = sandbox.Batalha;
+  const IA = sandbox.IA;
+  const p = Game.personagem;
+
+  // --- 1) piso 0,08s vivo no status (fonte única — detalhe na seção 34)
+  p.classe = 'guerreiro';
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  p.keystoneOn = false;
+  p.atributos = { for: 8, des: 8, con: 8, int: 8, car: 8 };
+  p.pontos = 0;
+  p.atributos.des = 500;
+  const s500 = Personagem.status(p);
+  conf(Math.abs(s500.recarga - 0.08) < 1e-9 &&
+       Math.abs(1 / s500.recarga - 12.5) < 1e-9,
+    'piso 0,08s vivo no status (DES 500 = 12,5 g/s)');
+  p.atributos.des = 8;
+
+  // --- 2) teto de nível 1000
+  conf(Personagem.NIVEL_MAX === 1000, 'NIVEL_MAX = 1000 (fonte única)');
+  const salv = Personagem.normalizar({ nivel: 36000, xp: 999999,
+    xpProx: 756125,
+    atributos: { for: 500, des: 8, con: 8, int: 8, car: 8 } });
+  conf(salv.nivel === 1000 && salv.xp === 0 &&
+       salv.xpProx === Personagem.custoProximo(1000),
+    'normalizar clampa save nv 36.000 → 1000 (xp zerado, xpProx refaz)');
+  conf(salv.atributos.for === 500,
+    'atributos investidos preservados no clamp');
+
+  const nv0 = p.nivel;
+  p.nivel = Personagem.NIVEL_MAX - 1;
+  p.xp = 0;
+  p.xpProx = Personagem.custoProximo(p.nivel);
+  Batalha.ganhaXP(1e9);
+  conf(p.nivel === Personagem.NIVEL_MAX && p.xp === 0,
+    'ganhaXP: 999 → 1000 e a sobra do último nível é descartada');
+  Batalha.ganhaXP(1e9);
+  conf(p.nivel === Personagem.NIVEL_MAX && p.xp === 0,
+    'no teto o XP é DESCARTADO (não acumula buffer escondido)');
+  p.nivel = nv0;
+  p.xp = 0;
+  p.xpProx = Personagem.custoProximo(nv0);
+
+  // --- 3) cabeçalho: MÁXIMO no teto (e volta fora do teto)
+  clique(120, 388);                    // JOGAR (seleção -> jogatina)
+  frame(2);
+  conf(Game.cena === 'jogo', 'entrou na jogatina p/ ver o cabeçalho');
+  p.nivel = Personagem.NIVEL_MAX;
+  p.xp = 0;
+  p.xpProx = Personagem.custoProximo(Personagem.NIVEL_MAX);
+  jogoCanvas._textos = [];
+  frame(1);
+  conf(jogoCanvas._textos.some(t => t === 'MÁXIMO'),
+    'cabeçalho mostra MÁXIMO no teto');
+  p.nivel = nv0;
+  p.xp = 0;
+  p.xpProx = Personagem.custoProximo(nv0);
+  jogoCanvas._textos = [];
+  frame(1);
+  conf(!jogoCanvas._textos.some(t => t === 'MÁXIMO'),
+    'fora do teto a barra volta a mostrar xp/xpProx');
+
+  // --- 4) aba Stats: bloco de cooldowns com o valor EFETIVO da INT
+  p.classe = 'mago';
+  p.atributos = { for: 8, des: 8, con: 8, int: 8, car: 8 };
+  p.pontos = 0;
+  clique(725, 50);                     // aba Stats
+  frame(1);
+  jogoCanvas._textos = [];
+  frame(1);
+  let tx = jogoCanvas._textos;
+  conf(tx.some(t => t.indexOf('Abates') >= 0),
+    'aba Stats renderiza as estatísticas (dobra inicial)');
+  conf(!tx.some(t => t.indexOf('cooldown') >= 0),
+    'bloco de cooldowns FORA da dobra inicial (precisa rolar)');
+
+  // efetivo = o que o combate usa: IA.skillEfeito com a agudeza da INT
+  const agu = IA.agudeza(Personagem.status(p).atributos.int);
+  const efBola = IA.skillEfeito({ intervalo: 4.5 }, agu).intervalo;
+  const espTxt = String(Math.round(efBola * 10) / 10).replace('.', ',') +
+    's (base 4,5s)';
+
+  // --- 5) rolagem: wheel revela o fundo...
+  jogoCanvas._textos = [];
+  (ouvintesJanela.wheel || []).forEach(fn => fn({ deltaY: 100 }));
+  frame(1);
+  tx = jogoCanvas._textos;
+  conf(tx.some(t => t.indexOf('Skills — cooldown') >= 0),
+    'wheel para baixo revela o bloco de cooldowns');
+  conf(tx.some(t => t.indexOf('Bola de Fogo') >= 0),
+    'linhas das skills entram na faixa visível');
+  conf(tx.some(t => t.indexOf(espTxt) >= 0),
+    'cooldown EFETIVO com a INT (' + espTxt + ')');
+  conf(!tx.some(t => t.indexOf('Abates') >= 0) &&
+       tx.some(t => t.indexOf('Estatísticas') >= 0),
+    'topo saiu da vista mas o título fixo continua (rolagem real)');
+
+  // --- 6) arrasto do thumb: pressiona em cima e arrasta p/ o fundo
+  // (reseta os textos DEPOIS de soltar: só o estado final importa)
+  pressionar(750, 150);                // thumb (x746..754) perto do topo
+  frame(1);
+  (jogoCanvas._listeners.mousemove || [])
+    .forEach(fn => fn({ clientX: 1500, clientY: 660 }));  // x750, y330
+  frame(1);
+  soltar();
+  jogoCanvas._textos = [];
+  frame(1);
+  tx = jogoCanvas._textos;
+  conf(tx.some(t => t.indexOf('Rajada Arcana') >= 0) &&
+       !tx.some(t => t.indexOf('Abates') >= 0),
+    'arrasto do thumb levou ao fundo da lista');
+
+  // --- 7) limites: wheel gigante trava no topo e no fundo
+  jogoCanvas._textos = [];
+  (ouvintesJanela.wheel || []).forEach(fn => fn({ deltaY: -999999 }));
+  frame(1);
+  tx = jogoCanvas._textos;
+  conf(tx.some(t => t.indexOf('Abates') >= 0) &&
+       !tx.some(t => t.indexOf('cooldown') >= 0),
+    'wheel negativo gigante trava no TOPO (clamp em 0)');
+  jogoCanvas._textos = [];
+  (ouvintesJanela.wheel || []).forEach(fn => fn({ deltaY: 999999 }));
+  frame(1);
+  tx = jogoCanvas._textos;
+  conf(tx.some(t => t.indexOf('Rajada Arcana') >= 0) &&
+       tx.some(t => t.indexOf('Estatísticas') >= 0),
+    'wheel positivo gigante trava no FUNDO (clamp no limite)');
+}
+
+console.log('37) ranking observável: motivos, toasts e status na cena');
+{
+  const Ranking = sandbox.Ranking;
+  const Batalha = sandbox.Batalha;
+  const Gravacao = sandbox.Gravacao;
+
+  function resolvido(v) {
+    return { then: function (ok) { ok(v); return this; } };
+  }
+  function rejeitado(e) {
+    return { then: function (ok, erro) { if (erro) erro(e); return this; } };
+  }
+
+  // --- 1) sem apelido: motivo + dica única por sessão (não spama)
+  const nickAntes = Ranking.nick();
+  Ranking.nick('');
+  Ranking._reseta();
+  conf(Ranking.submete() === false && Ranking.ultimoEnvio() &&
+       Ranking.ultimoEnvio().motivo === 'sem-apelido',
+    'sem apelido: submete recusa com motivo sem-apelido');
+  jogoCanvas._textos = [];
+  frame(1);
+  conf(jogoCanvas._textos.some(t => t.indexOf('apelido na tela Ranking') >= 0),
+    'toast explica como pontuar (dica única)');
+  Gravacao.entrar(Game.personagem);     // limpa o toast p/ o teste seguinte
+  jogoCanvas._textos = [];
+  Ranking.submete();                    // 2ª tentativa sem apelido
+  frame(1);
+  conf(!jogoCanvas._textos.some(t => t.indexOf('apelido na tela Ranking') >= 0),
+    'a dica NÃO repete (uma vez por sessão)');
+  Ranking.nick(nickAntes);              // devolve o apelido (Jose)
+
+  // --- 2) file:// detectado antes de qualquer tentativa de rede
+  sandbox.location = { protocol: 'file:' };
+  Ranking._reseta();
+  conf(Ranking.submete() === false && Ranking.ultimoEnvio() &&
+       Ranking.ultimoEnvio().motivo === 'arquivo-local',
+    'file://: motivo arquivo-local (nem tenta carregar o SDK)');
+  jogoCanvas._textos = [];
+  frame(1);
+  conf(jogoCanvas._textos.some(t => t.indexOf('file://') >= 0),
+    'toast avisa que arquivo local não funciona (dica única)');
+  delete sandbox.location;
+
+  // --- 3) rejeição do SERVIDOR vira motivo com detalhe (não silencioso)
+  Ranking._reseta();
+  const sets37 = [];
+  sandbox.firebase = {
+    initializeApp: function () {},
+    firestore: function () {
+      return { collection: function () {
+        return {
+          doc: function () { return { set: function (dados) {
+            sets37.push(dados);
+            return rejeitado(new Error('permission denied (teste)'));
+          } }; },
+          orderBy: function () { return { limit: function () {
+            return { get: function () { return resolvido({ docs: [] }); } };
+          } }; }
+        };
+      } };
+    }
+  };
+  Batalha.restaurarMapa(Math.max(20, Batalha.info().mapa + 5));
+  conf(Ranking.submete() === true, 'tentativa parte (progresso maior)');
+  conf(Ranking.ultimoEnvio() && Ranking.ultimoEnvio().motivo === 'regras' &&
+       Ranking.ultimoEnvio().detalhe.indexOf('permission denied') >= 0,
+    'rejeição do set vira motivo "regras" com detalhe (nunca silencioso)');
+
+  // --- 4) sucesso: enviado + toast de confirmação
+  Ranking._reseta();
+  sandbox.firebase = {
+    initializeApp: function () {},
+    firestore: function () {
+      return { collection: function () {
+        return {
+          doc: function () { return { set: function () {
+            return resolvido();
+          } }; },
+          orderBy: function () { return { limit: function () {
+            return { get: function () { return resolvido({ docs: [] }); } };
+          } }; }
+        };
+      } };
+    }
+  };
+  Batalha.restaurarMapa(Math.max(40, Batalha.info().mapa + 5));
+  conf(Ranking.submete() === true && Ranking.ultimoEnvio() &&
+       Ranking.ultimoEnvio().ok === true &&
+       Ranking.ultimoEnvio().motivo === 'enviado',
+    'sucesso: ultimoEnvio.ok com motivo enviado ✓');
+  jogoCanvas._textos = [];
+  frame(1);
+  conf(jogoCanvas._textos.some(t => t.indexOf('enviado ao ranking') >= 0),
+    'toast de confirmação na jogatina');
+
+  // --- 5) progresso pior/igual: silencioso de propósito (nao-melhor)
+  Batalha.restaurarMapa(1);
+  Gravacao.entrar(Game.personagem);
+  conf(Ranking.submete() === false && Ranking.ultimoEnvio() &&
+       Ranking.ultimoEnvio().motivo === 'nao-melhor',
+    'sem melhoria: motivo nao-melhor (não é falha)');
+  jogoCanvas._textos = [];
+  frame(1);
+  const semToast = ['enviado ao ranking', 'apelido na tela Ranking',
+                    'recusou', 'use o site publicado'];
+  conf(!jogoCanvas._textos.some(t =>
+    semToast.some(m => t.indexOf(m) >= 0)),
+    'sem melhoria: NENHUM toast (silencioso de propósito)');
+
+  // --- 6) a cena Ranking mostra a linha de status com o motivo vigente
+  jogoCanvas._textos = [];
+  Game.setScene('ranking');
+  frame(2);
+  const tx37 = jogoCanvas._textos;
+  conf(tx37.some(t => t.indexOf('último envio:') >= 0 &&
+       t.indexOf('sem melhoria') >= 0),
+    'cena mostra "último envio: ... sem melhoria"');
 }
 
 console.log('');

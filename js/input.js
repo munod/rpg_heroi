@@ -3,6 +3,7 @@ var Input = (function () {
   var down = {};
   var pressed = {};
   var typed = [];
+  var wheelY = 0;           // deltaY acumulado do frame (rolagem)
   var mouse = { x: 0, y: 0, clicked: false, down: false };
   var canvas = null;
   // dimensões do JOGO (espaço lógico): o ponteiro é mapeado contra o
@@ -32,6 +33,12 @@ var Input = (function () {
 
     window.addEventListener('keyup', function (e) {
       down[e.code] = false;
+    });
+
+    // rolagem (wheel): acumula o deltaY do frame — consumido por quem
+    // precisa (aba Stats) via Input.roda(); o endFrame zera todo frame
+    window.addEventListener('wheel', function (e) {
+      wheelY += e.deltaY;
     });
 
     window.addEventListener('blur', function () {
@@ -125,10 +132,13 @@ var Input = (function () {
     isDown: function (code) { return !!down[code]; },
     pressed: function (code) { return !!pressed[code]; },
     typed: typed,
+    // deltaY acumulado neste frame (zerado no endFrame — padrão typed)
+    roda: function () { return wheelY; },
     mouse: mouse,
     endFrame: function () {
       pressed = {};
       typed.length = 0;
+      wheelY = 0;
       mouse.clicked = false;
     }
   };

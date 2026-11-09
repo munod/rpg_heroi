@@ -1,7 +1,12 @@
 # Spec: Curvas de velocidade — recarga sem piso + sub-passos
 
 Status: **concluída** (gate 3×, seção 34 com sensibilidade provada,
-ritmo média 43,3min/4 runs) · Data: 2026-11-09 · Iniciativa: playtest
+ritmo média 43,3min/4 runs) · Data: 2026-11-09
+**EMENDA (2026-11-09, leva `ajustes-playtest-2`)**: R-VEL-1 passa a
+`recarga = Math.max(0.08, 35/vel)` — piso **0,08s** (teto 12,5 g/s).
+Motivo: o playtest sentiu o sem-piso "rápido demais: bagunça/DPS"
+(DES 500 = 44 g/s). A parte de sub-passos (R-VEL-2) permanece intacta.
+Ver `.specs/features/ajustes-playtest-2/`. · Iniciativa: playtest
 (pedido: "curva de velocidade de movimento e ataque precisam ser maiores,
 bem maiores") · Decisões do usuário: **ataque sem piso** (`35/vel` puro)
 · **movimento mantém a curva** (`46 + DES×3`) com **sub-passos** no

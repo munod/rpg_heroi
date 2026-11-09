@@ -514,6 +514,9 @@ var Batalha = (function () {
   // -------------------------------------------------------- progressão
   function ganhaXP(qtd) {
     var p = Game.personagem;
+    // teto de nível (NIVEL_MAX): no cap o XP é DESCARTADO na hora —
+    // nenhum acumula escondido que drenaria num futuro raise do cap
+    if (p.nivel >= Personagem.NIVEL_MAX) return;
     // guarda contra save corrompido (xpProx <= 0 travaria a aba em loop)
     if (!(p.xpProx > 0)) {
       p.xpProx = Personagem.custoProximo(Math.max(1, Math.floor(p.nivel) || 1));
@@ -521,7 +524,7 @@ var Batalha = (function () {
     // Carisma aumenta o XP ganho ("sorte nas recompensas")
     var mult = Personagem.status(p).xpMult || 1;
     p.xp += Math.max(1, Math.round(qtd * mult));
-    while (p.xp >= p.xpProx) {
+    while (p.nivel < Personagem.NIVEL_MAX && p.xp >= p.xpProx) {
       p.xp -= p.xpProx;
       p.nivel++;
       p.pontos += 3;           // era 5: pontos escassos = gestão importa
@@ -539,6 +542,8 @@ var Batalha = (function () {
           nova.nome + ' desbloqueada!', nova.cor, true);
       }
     }
+    // chegou ao teto neste lote: sobra do último nível é descartada
+    if (p.nivel >= Personagem.NIVEL_MAX) p.xp = 0;
   }
 
   // Move em direção ao destino com rota REATIVA: reto quando a linha está
@@ -1718,6 +1723,7 @@ var Batalha = (function () {
     restaurarMapa: restaurarMapa,
     restaurarOnda: restaurarOnda,
     passaMapa: passaMapa,     // marco do ranking (também o chefe chama)
+    ganhaXP: ganhaXP,         // teto de nível testável (seção 36)
     limparEfeitos: limparEfeitos,
     info: info
   };

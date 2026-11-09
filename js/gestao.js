@@ -143,6 +143,8 @@ var Gestao = (function () {
     } else {
       autoT = 0;
     }
+    // aba Stats: rolagem do conteúdo (wheel + arrasto do thumb)
+    if (aba === 'stats') { atualizaStatsRolagem(); return; }
     if (aba !== 'atributos') { repT = 0; repI = 0; return; }
     // em tela larga o painel ancora à direita: os retângulos são locais
     // e o ponteiro é deslocado para o espaço do painel (dx = W - 768)
@@ -551,10 +553,90 @@ var Gestao = (function () {
     return Math.floor(min / 60) + 'h' + (min % 60) + 'min';
   }
 
+  // ---- rolagem da aba Stats (o conteúdo passou do painel de 300px com
+  // o bloco de cooldowns): wheel + arrasto do thumb (mouse/toque
+  // compartilham o ponteiro). Linhas fora da faixa NÃO são desenhadas —
+  // sem clip, que o rasterizador de testes não tem.
+  var statsScroll = 0;      // offset atual (px)
+  var statsArrasta = false; // arrastando o thumb
+  var statsArrastaOff = 0;  // agarre: distância do clique ao centro
+  var statsAlt = 0;         // base do conteúdo (medida no último render)
+  var ST_TOPO = 116, ST_BASE = 334;              // faixa rolável
+  var ST_TRILHO = { x: 746, y: 112, w: 8, h: 222 };
+
+  function statsMax() {
+    return Math.max(0, statsAlt - ST_BASE);
+  }
+
+  function statsThumb() {
+    var max = statsMax();
+    if (max <= 0) return null;
+    var altCont = Math.max(ST_BASE - ST_TOPO, statsAlt - ST_TOPO);
+    var th = Math.max(24, Math.round(
+      ST_TRILHO.h * (ST_BASE - ST_TOPO) / altCont));
+    return { x: ST_TRILHO.x,
+             y: ST_TRILHO.y + Math.round((ST_TRILHO.h - th) *
+               (statsScroll / max)),
+             w: ST_TRILHO.w, h: th };
+  }
+
+  function atualizaStatsRolagem() {
+    var dx = Game.W - 768;
+    var m = { x: Input.mouse.x - dx, y: Input.mouse.y,
+              clicked: Input.mouse.clicked, down: Input.mouse.down };
+    var w = Input.roda();
+    if (w) statsScroll += w * 0.5;      // rolagem suave
+    var t = statsThumb();
+    if (m.clicked && t && dentro(m, t)) {
+      statsArrasta = true;
+      // agarre: preserva a distância clique→centro do thumb (clicar na
+      // borda não pode pular o scroll)
+      statsArrastaOff = (t.y + t.h / 2) - m.y;
+    }
+    if (!m.down) statsArrasta = false;
+    t = statsThumb();
+    if (statsArrasta && t) {
+      var max = statsMax();
+      var faixa = ST_TRILHO.h - t.h;
+      // o centro do thumb segue o ponteiro (com o offset de agarre)
+      if (faixa > 0) {
+        statsScroll = (m.y + statsArrastaOff - ST_TRILHO.y - t.h / 2) /
+          faixa * max;
+      }
+    }
+    statsScroll = Math.max(0, Math.min(statsScroll, statsMax()));
+  }
+
+  // segundos -> '4,5s' (vírgula decimal pt-BR)
+  function fmtSeg(v) {
+    return String(Math.round(v * 10) / 10).replace('.', ',') + 's';
+  }
+
+  // Valor de cooldown na tela: EFETIVO de combate (o que a Batalha usa —
+  // IA.skillEfeito com a agudeza da INT) com a base entre parênteses;
+  // área vira tempo estimado com a recarga atual; veneno é chance.
+  function txtCooldown(sk, p, agu) {
+    if (sk.tipo === 'area') {
+      return '≈' + fmtSeg(sk.aCada * Personagem.status(p).recarga) +
+        ' a cada ' + sk.aCada + ' golpes';
+    }
+    if (sk.tipo === 'veneno') {
+      return Math.round(sk.chance * 100) + '% por golpe · ' + sk.dur + 's';
+    }
+    var ef = IA.skillEfeito(sk, agu).intervalo;
+    if (!ef) return '—';
+    return fmtSeg(ef) + ' (base ' + fmtSeg(sk.intervalo) + ')';
+  }
+
   // Aba Stats: estatísticas de vida inteira do herói (Personagem.stats)
+  // + bloco de cooldowns das skills. Rola porque o conteúdo passou do
+  // painel (spec ajustes-playtest-2).
   function desenhaStats(ctx, p) {
     var s = p.stats || {};
-    UI.text('Estatísticas', 416, 96, { color: '#e8c86a' });
+    UI.text('Estatísticas', 416, 96, { color: '#e8c86a' });   // fixo
+    var itens = [];   // { base, desenha(y) } — base = y SEM rolagem
+    function em(base, f) { itens.push({ base: base, desenha: f }); }
+
     var linhas = [
       ['Abates', milhar(s.abates)],
       ['Chefes derrotados', milhar(s.bosses)],
@@ -568,19 +650,18 @@ var Gestao = (function () {
       ['Tempo de jogo', tempoHumano(s.tempo)]
     ];
     linhas.forEach(function (l, i) {
-      // 15px de passo em 13px: as 10 linhas + o bloco base→total cabem
-      // no painel de 300px (dica h=14 p/ não se sobrepor às vizinhas)
-      var y = 116 + i * 15;
-      UI.text(l[0], 416, y, { color: '#c9c2dd', font: '13px monospace' });
-      UI.text(l[1], 752, y, { align: 'right', color: '#e8c86a',
-        font: '13px monospace' });
-      UI.dica({ x: 416, y: y - 7, w: 340, h: 14 },
-        [[l[0] + ': ' + (DESC_STATS[l[0]] || '—'), '#e8c86a']]);
+      em(116 + i * 15, function (y) {
+        UI.text(l[0], 416, y, { color: '#c9c2dd', font: '13px monospace' });
+        UI.text(l[1], 752, y, { align: 'right', color: '#e8c86a',
+          font: '13px monospace' });
+        UI.dica({ x: 416, y: y - 7, w: 340, h: 14 },
+          [[l[0] + ': ' + (DESC_STATS[l[0]] || '—'), '#e8c86a']]);
+      });
     });
 
     // ---- base → total (padrão D3: 'Life 143/143 (15+108+20)') -------
     // O que os modificadores (itens · aprimoramento · keystone · bônus
-    // de classe) estão acrescentando — ver SEM ter que abrir o hover.
+    // de classe) estão acrescentando — sem ter que abrir o hover.
     var det = Personagem.statusDetalhado(p);
     var ef = Personagem.status(p).atributos;   // efetivos (c/ classe)
     var bi = p.atributos;                      // investido
@@ -588,12 +669,14 @@ var Gestao = (function () {
       return rot + ' ' + base + (base === tot ? '' : '→' + tot);
     }
     var yB = 116 + linhas.length * 15 + 4;
-    UI.text('Base → total (itens · keystone)', 416, yB,
-      { color: '#9a90b8', font: '13px monospace' });
-    UI.dica({ x: 416, y: yB - 7, w: 340, h: 14 }, [
-      ['base = sem modificadores · seta = com eles', '#e8c86a'],
-      ['detalhe por fonte no rodapé (hover)', '#9a90b8']
-    ]);
+    em(yB, function (y) {
+      UI.text('Base → total (itens · keystone)', 416, y,
+        { color: '#9a90b8', font: '13px monospace' });
+      UI.dica({ x: 416, y: y - 7, w: 340, h: 14 }, [
+        ['base = sem modificadores · seta = com eles', '#e8c86a'],
+        ['detalhe por fonte no rodapé (hover)', '#9a90b8']
+      ]);
+    });
     var blocos = [
       par('Dano', det.dano.base, det.dano.total) + ' · ' +
         par('HP', det.hp.base, det.hp.total),
@@ -604,9 +687,53 @@ var Gestao = (function () {
       par('INT', bi.int, ef.int) + ' · ' + par('CAR', bi.car, ef.car)
     ];
     blocos.forEach(function (txt, i) {
-      UI.text(txt, 416, yB + 14 + i * 14,
-        { color: i < 2 ? '#f2eef8' : '#c9c2dd', font: '13px monospace' });
+      em(yB + 14 + i * 14, function (y) {
+        UI.text(txt, 416, y,
+          { color: i < 2 ? '#f2eef8' : '#c9c2dd', font: '13px monospace' });
+      });
     });
+
+    // ---- cooldowns das skills: valor EFETIVO com a INT atual --------
+    var agu = IA.agudeza(ef.int);   // espelho do aguHeroi da Batalha
+    var yS = yB + 14 + blocos.length * 14 + 6;
+    em(yS, function (y) {
+      UI.text('Skills — cooldown (com sua INT)', 416, y,
+        { color: '#9a90b8', font: '13px monospace' });
+      UI.dica({ x: 416, y: y - 7, w: 340, h: 14 }, [
+        ['efetivo = o que o combate usa (a INT acelera)', '#e8c86a'],
+        ['área conta golpes: o tempo varia com a sua DES', '#9a90b8']
+      ]);
+    });
+    Skills.daClasse(p.classe).forEach(function (sk, i) {
+      var aberta = sk.nivel <= p.nivel;
+      em(yS + 14 + i * 15, function (y) {
+        var cor = aberta ? '#f2eef8' : '#6f678a';
+        UI.text(sk.nome + (aberta ? '' : ' (nv ' + sk.nivel + ')'),
+          416, y, { color: cor, font: '13px monospace' });
+        // bloqueada: só o nível (a referência de cd fica no tooltip)
+        UI.text(aberta ? txtCooldown(sk, p, agu) : 'nv ' + sk.nivel,
+          752, y, { align: 'right',
+            color: aberta ? '#e8c86a' : '#6f678a', font: '13px monospace' });
+        UI.dica({ x: 416, y: y - 7, w: 340, h: 14 }, Skills.dicas(sk));
+      });
+    });
+
+    // ---- desenha só o que cabe na faixa visível
+    for (var i = 0; i < itens.length; i++) {
+      var y = itens[i].base - statsScroll;
+      if (y < ST_TOPO - 8 || y > ST_BASE + 8) continue;
+      itens[i].desenha(y);
+    }
+    statsAlt = itens[itens.length - 1].base + 8;
+
+    // ---- barra de rolagem (só quando o conteúdo passa do painel)
+    var t = statsThumb();
+    if (t) {
+      ctx.fillStyle = 'rgba(16, 12, 24, 0.9)';
+      ctx.fillRect(ST_TRILHO.x, ST_TRILHO.y, ST_TRILHO.w, ST_TRILHO.h);
+      ctx.fillStyle = '#5a4f78';
+      ctx.fillRect(t.x, t.y, t.w, t.h);
+    }
   }
 
   // Desenha o painel direito completo (painel + abas + conteúdo).

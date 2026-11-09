@@ -149,8 +149,10 @@ var Jogo = (function () {
     UI.text('HERÓI IDLE', 6, 16, { color: '#e8c86a', font: 'bold 16px monospace' });
     UI.text('Nv ' + p.nivel, 152, 16, { color: '#f2eef8' });
     var cx = Math.round(W / 2);
-    UI.bar(cx - 168, 10, 168, 14, p.xp / p.xpProx, '#e8c86a');
-    UI.text(p.xp + '/' + p.xpProx, cx + 12, 16, { color: '#c9c2dd' });
+    var noTeto = p.nivel >= Personagem.NIVEL_MAX;   // barra cheia + MÁXIMO
+    UI.bar(cx - 168, 10, 168, 14, noTeto ? 1 : p.xp / p.xpProx, '#e8c86a');
+    UI.text(noTeto ? 'MÁXIMO' : (p.xp + '/' + p.xpProx), cx + 12, 16,
+      { color: noTeto ? '#e8c86a' : '#c9c2dd' });
     UI.text('Pontos: ' + p.pontos, W - 12, 16, {
       align: 'right',
       color: p.pontos > 0 ? '#8ce08c' : '#9a90b8'

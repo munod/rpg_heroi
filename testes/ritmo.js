@@ -50,6 +50,10 @@ function gastar() {
 function run(n) {
   for (let i = 0; i < n; i++) {
     h.frame(1);
+    // limpa os textos do frame: runs longos (600min+) estouravam o
+    // _textos do contador (RangeError de acumulação — o fumaca zera a
+    // cada asserção, o ritmo nunca precisava até a sim do teto de nível)
+    if (h.jogoCanvas._textos) h.jogoCanvas._textos.length = 0;
     total++;
     if (total % 600 === 0) gastar();   // a cada ~10s de jogo
   }

@@ -165,9 +165,11 @@
   `iniciar()`, criado na preguiça p/ troca de classe em combate).
   `Batalha` e `Gestao` dependem de skills.js; `personagem.js` não
   (grade/previa carregam só ele).
-- Velocidades (spec `velocidade-curva`): `recarga = 35/vel` **sem
-  piso** (teto natural ≈ 60 g/s do loop; antes: piso 0,15 estagnava a
-  DES em 6,67 g/s desde DES 62) e `mover()` com **sub-passos ≤4px**
+- Velocidades (spec `velocidade-curva` + emenda `ajustes-playtest-2`):
+  `recarga = Math.max(0.08, 35/vel)` — **piso 0,08s = teto 12,5 g/s**
+  (história: piso 0,15 estagnava a DES em 6,67 g/s desde DES 62 → a
+  leva de velocidade tirou o piso → o playtest sentiu 44 g/s "rápido
+  demais" → piso 0,08) e `mover()` com **sub-passos ≤4px**
   (fração aplicada com `resolve()` — sem isso, DES alta salta por cima
   dos obstáculos de r=5-7; seção 34 prova com propriedade geométrica +
   caso sintético). `info().obst` expõe `cx/cy/r` (centro de colisão cru
@@ -189,6 +191,22 @@
   `ranking` registrada em `main.js`, botão na seleção (260,306,108,26).
   Seção 35: SDK fake é **thenable síncrono** (sem microtasks no
   harness); fake de gravação registra `['set', id, doc]` p/ asserções.
+- Ajustes playtest 2 (spec `ajustes-playtest-2`): **teto de nível
+  1000** — `Personagem.NIVEL_MAX` (fonte única); `Batalha.ganhaXP`
+  (exportado p/ teste) DESCARTA o XP no cap e zera a sobra; `normalizar`
+  clampa `nivel ≤ 1000` na leitura (save nv 36k → 1000, atributos
+  intactos, sem bump de chave); cabeçalho mostra **"MÁXIMO"**. Aba Stats:
+  **bloco de cooldowns efetivos** (`IA.skillEfeito` com a agudeza da
+  INT — espelho do `aguHeroi`; área ≈ `aCada × recarga atual`) +
+  **rolagem** (wheel via `Input.roda()`, zerado no `endFrame` como o
+  `typed`; thumb com offset de agarre em `Gestao`; linhas fora da faixa
+  são PULADAS — sem `clip`, que o rasterizador não tem). Ranking:
+  `Ranking.ultimoEnvio()` = `{ok, motivo, quando, detalhe}` + toast
+  (dica única por sessão p/ sem-apelido e file://) + linha de status na
+  cena — rejeição do `set` guarda a mensagem; `file://` detectado antes
+  de qualquer tentativa (o README manda abrir direto, mas Firebase
+  exige http(s)). Sonda REST das regras: válida 200 / inválida 403.
+  Testes: seções 36/37.
 - Playtest/correções: **medir antes de consertar** — sondas no
   `info()` (`inimigoPerto`, `atacando`, `destino`) existem p/ fixtures
   das seções 32; cada fix de IA/combate vira conf que falhava antes.

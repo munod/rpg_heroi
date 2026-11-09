@@ -25,6 +25,51 @@ var Ranking = (function () {
   var lista = [];            // último top-10 em memória
   var deCache = false;       // a lista atual veio do cache local
   var enviado = null;        // último doc aceito (teste/depuração)
+  var ultimoEnvio = null;    // {ok, motivo, quando, score, detalhe}
+  var dicaNick = false;      // dica "defina apelido" já mostrada (sessão)
+  var dicaFile = false;      // dica "file://" já mostrada (sessão)
+
+  // Rótulos curtos do status (cena) e textos de toast (jogatina).
+  // NUNCA silencioso: todo fim de envio vira um motivo aqui (R-AJ2-2).
+  var MOTIVO = {
+    'enviado': 'enviado ✓',
+    'sem-apelido': 'sem apelido',
+    'arquivo-local': 'arquivo local (file://)',
+    'nao-melhor': 'sem melhoria',
+    'desativado': 'desativado',
+    'sdk': 'falha no SDK',
+    'regras': 'servidor recusou',
+    'rede': 'sem rede',
+    'sem-personagem': 'sem personagem'
+  };
+  var TOAST = {
+    'enviado': 'Resultado enviado ao ranking ✓',
+    'sem-apelido':
+      'Ranking: defina um apelido na tela Ranking para pontuar',
+    'arquivo-local':
+      'Ranking indisponível em arquivo local (file://) — use o site publicado',
+    'sdk': 'Ranking: falha ao carregar o SDK — envio não saiu',
+    'regras': 'Ranking: o servidor recusou o envio',
+    'rede': 'Ranking: sem rede — envio não saiu'
+  };
+
+  function marcaEnvio(ok, motivo, res, detalhe) {
+    ultimoEnvio = { ok: ok, motivo: motivo, quando: Date.now(),
+                    score: res ? res.score : null,
+                    detalhe: detalhe || '' };
+  }
+
+  function avisa(motivo) {
+    var t = TOAST[motivo];
+    if (t && typeof Gravacao !== 'undefined' && Gravacao) Gravacao.msg(t);
+  }
+
+  // file:// não tem CORS p/ o Firestore (origem null) — detectado antes
+  // de tentar qualquer coisa p/ dar motivo claro em vez de erro de rede
+  function eArquivoLocal() {
+    return typeof location !== 'undefined' && location &&
+      location.protocol === 'file:';
+  }
 
   // ------------------------------------------------------- persistência
   function leChave(k) {
@@ -152,27 +197,61 @@ var Ranking = (function () {
   }
 
   // ----------------------------------------------------------- envio
-  // Gatilhos: fecho de mapa (passaMapa) e morte. false = não enviado
-  // (sem config, sem apelido, não melhorou); true = mandado ao SDK
+  // Gatilhos: fecho de mapa (passaMapa) e morte. NUNCA silencioso:
+  // marca ultimoEnvio com o motivo e (para falha real / sucesso) avisa
+  // no toast da jogatina. false = não enviado; true = mandado ao SDK
   // (a confirmação chega no callback do set).
   function submete() {
-    if (!ativo()) return false;
+    if (!ativo()) { marcaEnvio(false, 'desativado'); return false; }
     var res = resultadoAtual();
-    if (!res || !nickValido(res.nick)) return false;
+    if (!res) { marcaEnvio(false, 'sem-personagem'); return false; }
+    if (!nickValido(res.nick)) {
+      marcaEnvio(false, 'sem-apelido', res);
+      if (!dicaNick) { dicaNick = true; avisa('sem-apelido'); } // 1×/sessão
+      return false;
+    }
+    if (eArquivoLocal()) {
+      marcaEnvio(false, 'arquivo-local', res);
+      if (!dicaFile) { dicaFile = true; avisa('arquivo-local'); }
+      return false;
+    }
     var d = docDe(res);
-    if (!d.id) return false;
+    if (!d.id) {
+      // apelido sem caracteres válidos p/ o slug (impossível pela cena,
+      // mas defensivo: doc('') lançaria no SDK)
+      marcaEnvio(false, 'sem-apelido', res, 'slug vazio');
+      if (!dicaNick) { dicaNick = true; avisa('sem-apelido'); }
+      return false;
+    }
     var ult = leJson(ULT_K);
     if (ult && slug(ult.nick) === d.id && ult.score >= d.dados.score) {
-      return false;                 // pior (ou igual) que o meu melhor
+      marcaEnvio(false, 'nao-melhor', res);   // silencioso: não é falha
+      return false;
     }
     carregaSdk(function (erro) {
-      if (erro) return;             // sem rede/SDK: fica p/ a próxima
+      if (erro) {
+        var m0 = eArquivoLocal() ? 'arquivo-local' : 'sdk';
+        marcaEnvio(false, m0, res, erro.message);
+        avisa(m0);
+        return;
+      }
       var p = db.collection(COLECAO).doc(d.id).set(d.dados);
       if (p && typeof p.then === 'function') {
         p.then(function () {
           enviado = d.dados;
           gravaChave(ULT_K, JSON.stringify(d.dados));
-        }, function () { /* regras do servidor recusaram: ignora */ });
+          marcaEnvio(true, 'enviado', res);
+          avisa('enviado');
+        }, function (e) {
+          // rejeição do SERVIDOR não é mais engolida: guarda motivo
+          var msg = String((e && e.message) || e);
+          var m1 = /permission|insufficient/i.test(msg) ? 'regras' : 'rede';
+          marcaEnvio(false, m1, res, msg);
+          avisa(m1);
+        });
+      } else {
+        marcaEnvio(false, 'sdk', res, 'set sem retorno');
+        avisa('sdk');
       }
     });
     return true;
@@ -184,6 +263,12 @@ var Ranking = (function () {
     if (!ativo()) {
       estado = 'desativado';
       cb(new Error('ranking não configurado'), null, false);
+      return;
+    }
+    if (eArquivoLocal()) {
+      estado = 'erro';
+      cb(new Error('arquivo local (file://): Firebase indisponível'),
+        null, false);
       return;
     }
     estado = 'carregando';
@@ -326,6 +411,13 @@ var Ranking = (function () {
     UI.text(nick() + cur, 512 + rd, 80, { color: '#f2eef8' });
     UI.text('digite para trocar (até 20)', 512 + rd, 108,
       { color: '#6f678a', font: '13px monospace' });
+    // status do último envio (observabilidade — nunca silencioso)
+    if (ultimoEnvio) {
+      UI.text('último envio: ' +
+        (ultimoEnvio.ok ? MOTIVO['enviado'] : MOTIVO[ultimoEnvio.motivo]),
+        512 + rd, 132, { color: ultimoEnvio.ok ? '#8ce08c' : '#ff8a8a',
+          font: '13px monospace' });
+    }
 
     UI.panel(500 + rd, 164, 260, 172, 'MEU MELHOR');
     var me = leJson(ULT_K);
@@ -368,6 +460,7 @@ var Ranking = (function () {
     top: top,
     estado: function () { return estado; },
     enviado: function () { return enviado; },
+    ultimoEnvio: function () { return ultimoEnvio; },
     ehCache: function () { return deCache; },
     // só teste: zera o estado em memória (não toca no localStorage)
     _reseta: function () {
@@ -378,6 +471,9 @@ var Ranking = (function () {
       lista = [];
       deCache = false;
       enviado = null;
+      ultimoEnvio = null;
+      dicaNick = false;
+      dicaFile = false;
     },
     cena: { enter: cenaEnter, update: cenaUpdate, render: cenaRender }
   };

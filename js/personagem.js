@@ -71,6 +71,13 @@ var Personagem = (function () {
     return CUSTO_INICIAL + CUSTO_BASE * nv;
   }
 
+  // Teto de nível do personagem (fonte única — usado por Batalha.ganhaXP,
+  // normalizar e o cabeçalho da jogatina). Pesquisa de gênero: 1000 é um
+  // cap reconhecido (Idle Heroes Saga, Fangclash); no teto o XP é
+  // DESCARTADO (não acumula buffer invisível — o jogador não raciocina
+  // com banco escondido). Score do ranking capa em 999 por fórmula.
+  var NIVEL_MAX = 1000;
+
   function novo() {
     return {
       id: uid(),
@@ -213,9 +220,10 @@ var Personagem = (function () {
       dano: dano,
       vel: vel,
       // Velocidade também acelera o ataque: recarga do golpe em segundos
-      // (vel 70 = 0,50s base). SEM piso: a curva nunca estagna — em DES
-      // alta o teto natural é o loop de frames (~60 g/s com dt 16,7ms)
-      recarga: 35 / vel,
+      // (vel 70 = 0,50s base). PISO 0,08s = teto de 12,5 golpes/s —
+      // playtest: sem piso a DES alta virava metralhadora caótica
+      // (44 g/s). Antes do piso novo: sem piso nenhum; antes disso: 0,15.
+      recarga: Math.max(0.08, 35 / vel),
       crit: crit,
       alcance: c.alcance,
       arma: c.armaNome,
@@ -492,7 +500,11 @@ var Personagem = (function () {
   function normalizar(p) {
     p = (p && typeof p === 'object') ? p : {};
     var base = novo();
-    var nivel = num(p.nivel, 1, 1);
+    // teto de nível na LEITURA: save legado acima do cap (já houve nv
+    // 36 mil em produção) vira NIVEL_MAX — atributos investidos ficam
+    // intocados; XP do cap é zerado (regra do teto)
+    var nivel = Math.min(num(p.nivel, 1, 1), NIVEL_MAX);
+    var noTeto = nivel >= NIVEL_MAX;
     var out = {
       id: typeof p.id === 'string' && p.id ? p.id : base.id,
       nome: String(p.nome || base.nome).slice(0, 14),
@@ -501,8 +513,9 @@ var Personagem = (function () {
       pontos: num(p.pontos, 0, base.pontos),
       nivel: nivel,
       // teto defensivo: xp absurdo (save corrompido) travaria o loop de níveis
-      xp: Math.min(num(p.xp, 0, 0), 1e9),
-      xpProx: num(p.xpProx, 1, custoProximo(nivel)),
+      xp: noTeto ? 0 : Math.min(num(p.xp, 0, 0), 1e9),
+      xpProx: noTeto ? custoProximo(NIVEL_MAX)
+        : num(p.xpProx, 1, custoProximo(nivel)),
       equip: {
         arma: normalizaItem(p.equip && p.equip.arma, 'arma'),
         armadura: normalizaItem(p.equip && p.equip.armadura, 'armadura')
@@ -561,6 +574,7 @@ var Personagem = (function () {
     KEY_NIVEL: KEY_NIVEL,
     KEY_CUSTO: KEY_CUSTO,
     KEY_RESPEC: KEY_RESPEC,
+    NIVEL_MAX: NIVEL_MAX,
     keystoneDe: keystoneDe,
     comprarKeystone: comprarKeystone,
     alternarKeystone: alternarKeystone,
