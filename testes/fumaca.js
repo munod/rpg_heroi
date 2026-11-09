@@ -39,6 +39,12 @@ const SEM_GAT = function () { return 0; };
 Eventos.nasceAco = SEM_ACO;
 Eventos.nasceGat = SEM_GAT;
 
+// ranking: o setup local do Firebase pode trazer chaves reais
+// (ativo: true em js/ranking-config.js) — o teste DESLIGA na largada
+// para a suíte não depender do setup de quem roda; a seção 35 reativa
+// (com SDK stubado) nas fases que precisam.
+sandbox.RankingConfig.ativo = false;
+
 const Game = sandbox.Game;
 const Personagem = sandbox.Personagem;
 const Salvar = sandbox.Salvar;
@@ -2930,7 +2936,8 @@ console.log('35) ranking: score, apelido, degradação, cena e gatilhos');
     'doc: id = slug + campos na forma exata do Firestore');
 
   // --- 3) degradação SEM config (placeholder recém-entregue)
-  conf(RankingConfig.ativo === false, 'config nasce desativada');
+  conf(RankingConfig.ativo === false,
+    'seção desligada na largada (independe do setup local do Firebase)');
   conf(Ranking.estado() === 'desativado', 'estado inicial: desativado');
   conf(Ranking.submete() === false && Ranking.enviado() === null,
     'submete sem config: no-op (nada enviado, sem lançar)');
