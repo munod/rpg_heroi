@@ -139,7 +139,7 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   tooltip (`'Valor atual'`).
 - **Medição de ouro em teste = batalha PAUSADA** — kills e penalidade
   de morte mexiam no saldo (60→29) e quebravam asserts exatos.
-- **Curvas de velocidade (destreza)** — decisão do usuário: recarga
+- **Velocidades (spec `velocidade-curva`)** — decisão do usuário: recarga
   SEM piso (`35/vel` puro — teto natural = loop de frames ~60 g/s) e
   movimento mantém `46+DES×3` com sub-passos ≤4px no `mover()`. Medição
   que motivou: DES 100/300/500 davam todos 6,67 g/s (piso 0,15 desde
@@ -150,6 +150,19 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   (dist < r−2) E os dois extremos longes da borda (> r+2) = atravessou
   (escorregão legítimo na borda não acusa). `info().obst` expõe
   `cx/cy/r` (o y exposto NÃO é o centro de colisão — offset da âncora).
+- **Ranking global (spec `ranking`)** — decisão do usuário: **Firebase
+  (Firestore, plano Spark)** para leaderboard entre jogadores, sem
+  servidor (o projeto é estático no Pages). Escopo fechado em4
+  perguntas: **score composto** `mapa×100000 + onda×1000 + min(nv,999)`
+  (não tempo — vale para runs infinitas) · **apelido livre** com doc por
+  slug e melhor-melhor-apelido (falsificável aceito; as regras do
+  Firestore cortam spam: forma validada + `score` estritamente crescente
+  no update) · **cena nova** com botão na seleção (não mexeu na grade
+  de abas dos testes) · **gatilhos** em `passaMapa` e morte **antes**
+  da penalidade (registra o progresso real, não o pós-rollback).
+  Arquitetura: SDK por **lazy-load** (só ao abrir a tela) e degradação
+  total sem config/rede — o jogo nunca depende de rede; fake do SDK nos
+  testes é um **thenable síncrono** (o harness não roda microtasks).
 - **Mosquetão de eventos: desligar no FIM de cada seção** — o Gatuno
   ficava religado após a 29 e corria nas 30+ (flake latente achado ao
   revisar o harness).
@@ -170,8 +183,6 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 
 ## Adiados (decisão do mantenedor)
 
-- **Ranking de jogadores** — adiado até as estatísticas existirem
-  (entregues); próximo candidato de 0.2.0, escopo local.
 - Nome do herói com teclado virtual no celular.
 - Uso do espaço central entre painéis em telas largas.
 
@@ -186,6 +197,12 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 
 ## Lições
 
+- **Cena com backend: render de estado só muda via `enter`/`atualiza`**
+  (lição da seção 35) — `Ranking.top(cb)` direto chama o callback do
+  TESTE, não o da cena; para o render mostrar a nova situação é preciso
+  `Game.setScene(...)` de novo. E o fake do SDK é um **thenable
+  síncrono** (`{then(ok){ok(v)}}`): o harness não esvazia microtasks
+  entre asserts, então `Promise` real deixaria os asserts cegos.
 - Testes usam `Math.random` real: flakes raros são possíveis (já houve1
   aparente em leva de IA) — repetir a fumaça 3× antes de concluir.
 - **Fixture de luta precisa fixar a agudeza**: a seção 21 flakava ~1 em

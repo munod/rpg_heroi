@@ -10,6 +10,24 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Added
+
+- **Ranking global (Firebase/Firestore)**: nova tela **Ranking** (botão
+  na seleção) com **top 10** (mapa·onda·nível, classe, data), bloco
+  **meu melhor** destacado e apelido editável na própria cena (1-20
+  chars, lembrado em `rpg_rank_nick_v1`). Score composto
+  `mapa×100000 + onda×1000 + min(nível,999)` — ordena por progresso,
+  nunca por sorteio; upsert **só na melhor marca por apelido** (cliente
+  só envia melhoria e as **regras do Firestore** rejeitam score menor no
+  servidor). Envios no **fecho de mapa** e **na morte (antes da
+  penalidade de −5 ondas)**. Camada 100% opcional: o SDK entra por
+  **lazy-load** (injeção de `<script>` só ao abrir a tela) e sem
+  config/rede tudo degrada — "não configurado", cache local do último
+  top-10 e zero bloqueio no jogo. Setup manual pendente (config do
+  usuário em `js/ranking-config.js` + regras em
+  `.specs/features/ranking/regras-firestore.rules`) — até lá a tela
+  nasce em modo "não configurado". Spec `.specs/features/ranking/`.
+
 ### Changed
 
 - **Curvas de velocidade maiores (destreza)**: a **recarga do golpe

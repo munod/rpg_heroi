@@ -143,6 +143,9 @@ js/
   skills.js         skills automáticas por classe (procs, sem botão)
   efeitos.js        efeitos visuais das skills (missis, cortes, motes)
   ia.js             IA tática: decisões ponderadas por INT/astúcia + A*
+  eventos.js        eventos aleatórios (Açougueiro, gatuno) — rolagens puras
+  ranking-config.js config pública do Firebase (preenchida pelo mantenedor)
+  ranking.js        ranking global: score, apelido, SDK lazy-load + cena
   ui.js             botões, painéis, barras e texto no canvas
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
   gestao.js         painel de gestão (atributos/aparência/classe) compartilhado
@@ -199,7 +202,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 180 asserções: sprites, status, UI, idle, toque
+node testes/fumaca.js     # 428 asserções: sprites, status, UI, idle, toque, ranking
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -208,7 +211,7 @@ node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
 ```
 
-São **193 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **441 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.
@@ -236,6 +239,9 @@ esquiva dos monstros e rotas por A*), a **câmera sobre o
 mundo 384×268** com o **renascimento em local aleatório**, o **toque no
 celular** (clique, arrasto e soltura por dedo, com bloqueio de rolagem),
 a **escala responsiva** e o **layout de largura adaptativa** (768–1728,
-ancorado nas bordas, preenchendo a tela em paisagem), e a lista de
+ancorado nas bordas, preenchendo a tela em paisagem), a lista de
 personagens na seleção
-com paginação, novo herói e exclusão em duas etapas.
+com paginação, novo herói e exclusão em duas etapas, e o **ranking
+global** (tela própria com top 10 e "meu melhor" por apelido — funciona
+com o Firebase configurado; sem config/rede mostra o estado
+"não configurado" e nada trava).

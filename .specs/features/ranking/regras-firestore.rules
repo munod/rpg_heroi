@@ -1,0 +1,41 @@
+// Regras do Cloud Firestore para o ranking (cole no console:
+// Firestore → Regras). Verbatim em .specs/features/ranking/.
+//
+// O que garantem:
+//   - leitura livre (leaderboard é público);
+//   - escrita só na FORMA esperada (hasOnly dos campos + tipos/tamanhos);
+//   - score crescente: update exige score > anterior — a "melhor marca
+//     por apelido" é imposta no SERVIDOR, não só no cliente;
+//   - sem delete (marcas nunca somem).
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rank/{id} {
+      allow read: if true;
+      allow create: if valido() && request.resource.data.score > 0;
+      allow update: if valido() &&
+        request.resource.data.score > resource.data.score;
+      allow delete: if false;
+
+      function valido() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['nick', 'score', 'mapa', 'onda',
+                                 'nivel', 'classe', 'at'])
+          && d.nick is string
+          && d.nick.size() >= 1 && d.nick.size() <= 20
+          && d.score is int
+          && d.score >= 0 && d.score <= 10000000000
+          && d.mapa is int
+          && d.mapa >= 1 && d.mapa <= 100000
+          && d.onda is int
+          && d.onda >= 1 && d.onda <= 100
+          && d.nivel is int
+          && d.nivel >= 0 && d.nivel <= 999999
+          && d.classe is string
+          && d.classe.size() <= 20
+          && d.at is int
+          && d.at > 0;
+      }
+    }
+  }
+}

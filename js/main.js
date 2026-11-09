@@ -30,6 +30,7 @@ var Game = (function () {
     // a criação/seleção é a tela inicial; o jogo só abre por JOGAR
     scenes.selecao = Selecao;
     scenes.jogo = Jogo;
+    scenes.ranking = Ranking.cena;   // botão Ranking (fora da jogatina)
 
     window.addEventListener('resize', resize);
     // celular nem sempre dispara resize na rotação (só orientationchange)

@@ -2880,6 +2880,261 @@ console.log('34) velocidade: recarga sem piso e sub-passos (não atravessa)');
     viol + ' violações)');
 }
 
+console.log('35) ranking: score, apelido, degradação, cena e gatilhos');
+{
+  const Ranking = sandbox.Ranking;
+  const Batalha = sandbox.Batalha;
+  const RankingConfig = sandbox.RankingConfig;
+
+  // --- 1) fórmula do score (bordas e monotonia)
+  conf(Ranking.scoreDe({ mapa: 1, onda: 1, nivel: 1 }) === 101001,
+    'score fórmula exata (M1 O1 N1 = 101001)');
+  conf(Ranking.scoreDe({ mapa: 1, onda: 100, nivel: 50 }) === 200050,
+    'score borda: mapa 1 onda 100 = 200050');
+  conf(Ranking.scoreDe({ mapa: 2, onda: 1, nivel: 50 }) >
+       Ranking.scoreDe({ mapa: 1, onda: 100, nivel: 50 }),
+    'mapa 2 onda 1 sempre vence mapa 1 onda 100');
+  conf(Ranking.scoreDe({ mapa: 1, onda: 100, nivel: 999 }) <
+       Ranking.scoreDe({ mapa: 2, onda: 1, nivel: 0 }),
+    'pior nível do mapa 2 vence o melhor do mapa 1');
+  conf(Ranking.scoreDe({ mapa: 1, onda: 100, nivel: 9999 }) === 200999,
+    'nível capado em 999 (nunca empurra a onda)');
+  conf(Ranking.scoreDe({ mapa: 1, onda: 0, nivel: 50 }) ===
+       Ranking.scoreDe({ mapa: 1, onda: 1, nivel: 50 }),
+    'onda 0 (recém-passou de mapa) conta como 1');
+  let ant = -1, mono = true;
+  for (let m = 1; m <= 5; m++) {
+    for (let o = 1; o <= 100; o++) {
+      const s = Ranking.scoreDe({ mapa: m, onda: o, nivel: 999 });
+      if (s <= ant) mono = false;
+      ant = s;
+    }
+  }
+  conf(mono, 'score estritamente crescente em todo o espaço (mapa × onda)');
+
+  // --- 2) apelido: slug, validação e forma do doc
+  conf(Ranking.slug('José da Silva') === 'jose-da-silva',
+    'slug remove acentos e espaços');
+  conf(Ranking.slug('AÇÃO!!') === 'acao', 'slug normaliza caixa e símbolos');
+  conf(Ranking.slug('  --Foo--  ') === 'foo', 'slug aparrega traços');
+  conf(Ranking.slug('???') === '', 'slug de lixo vira vazio (inválido)');
+  conf(Ranking.nickValido('a') && !Ranking.nickValido('') &&
+       Ranking.nickValido('x'.repeat(20)) &&
+       !Ranking.nickValido('x'.repeat(21)),
+    'apelido válido: 1..20 chars');
+  const doc = Ranking.docDe({ nick: 'José', mapa: 2, onda: 5, nivel: 10,
+                              classe: 'mago', at: 123 });
+  conf(doc.id === 'jose' && doc.dados.nick === 'José' &&
+       doc.dados.score === Ranking.scoreDe({ mapa: 2, onda: 5, nivel: 10 }) &&
+       doc.dados.classe === 'mago',
+    'doc: id = slug + campos na forma exata do Firestore');
+
+  // --- 3) degradação SEM config (placeholder recém-entregue)
+  conf(RankingConfig.ativo === false, 'config nasce desativada');
+  conf(Ranking.estado() === 'desativado', 'estado inicial: desativado');
+  conf(Ranking.submete() === false && Ranking.enviado() === null,
+    'submete sem config: no-op (nada enviado, sem lançar)');
+  let topErr = null;
+  Ranking.top(function (e) { topErr = e; });
+  conf(topErr && Ranking.estado() === 'desativado',
+    'top sem config: callback de erro + estado desativado');
+
+  // --- 4) gatilhos: passaMapa e morte chamam submete (spy)
+  let chamadas = 0;
+  const subOrig = Ranking.submete;
+  Ranking.submete = function () {
+    chamadas++;
+    return subOrig.apply(Ranking, arguments);
+  };
+  const mapa0 = Batalha.info().mapa;
+  Batalha.passaMapa();
+  conf(Batalha.info().mapa === mapa0 + 1 && chamadas === 1,
+    'gatilho 1: passaMapa avança o mapa E chama Ranking.submete');
+  Batalha.restaurarMapa(mapa0);
+
+  // morte: onda de PRESSÃO (lição do STATE: com onda fraca a regen
+  // 4%/s + 2hp/s em nv20 supera o dano e o herói não cai)
+  const p = Game.personagem;
+  p.atributos.con = 1;
+  p.atributos.for = 1;
+  p.atributos.des = 8;
+  p.pontos = 0;
+  Batalha.restaurarOnda(50);
+  let caiu = false;
+  for (let i = 0; i < 6000 && !caiu; i++) {
+    frame(1);
+    if (Batalha.info().morto) caiu = true;
+  }
+  conf(caiu && chamadas >= 2,
+    'gatilho 2: a morte chama Ranking.submete (' + chamadas +
+    ' chamadas no total)');
+  Ranking.submete = subOrig;          // devolve o método original
+
+  // --- 5) cena: botão na seleção + estado "não configurado"
+  clique(236, 388);                   // Trocar herói (rodapé da jogatina)
+  frame(2);
+  conf(Game.cena === 'selecao', 'saiu para a seleção');
+  jogoCanvas._textos = [];
+  clique(314, 319);                   // botão Ranking (260,306,108,26)
+  frame(2);
+  conf(Game.cena === 'ranking', 'botão Ranking abre a cena');
+  conf(jogoCanvas._textos.some(t => t.indexOf('não configurado') >= 0),
+    'sem config: a cena mostra "não configurado"');
+
+  // --- 6) digitação do apelido na cena (com filtro)
+  function digita(k) {
+    tecla('keydown', 'Key' + k.toUpperCase(), k);
+    frame(1);
+  }
+  for (const k of ['J', 'o', 's', 'e']) digita(k);
+  conf(Ranking.nick() === 'Jose', 'digitou o apelido na cena (Jose)');
+  conf(localStorageStub.getItem('rpg_rank_nick_v1') === 'Jose',
+    'apelido gravado em rpg_rank_nick_v1 (chave versionada)');
+  digita('!');                        // caractere fora do filtro
+  conf(Ranking.nick() === 'Jose', 'caractere inválido é ignorado');
+  tecla('keydown', 'Backspace', 'Backspace');
+  frame(1);
+  conf(Ranking.nick() === 'Jos', 'Backspace apaga uma letra');
+  digita('e');
+  conf(Ranking.nick() === 'Jose', 'digita de novo depois de apagar');
+
+  // --- 7) lazy-load: com ativo mas SEM SDK, injeta o <script>
+  RankingConfig.ativo = true;
+  const criados = [];
+  const criaOrig = sandbox.document.createElement;
+  sandbox.document.createElement = function (t) {
+    criados.push(t);
+    return criaOrig.call(sandbox.document, t);
+  };
+  let cbTop = false;
+  Ranking.top(function () { cbTop = true; });
+  conf(criados.indexOf('script') >= 0,
+    'lazy-load: injeta <script> do SDK ao abrir o ranking');
+  conf(criados.filter(t => t === 'script').length === 1,
+    'injeta um script por vez (o 2º espera o onload do 1º)');
+  conf(Ranking.estado() === 'carregando',
+    'estado "carregando" enquanto o SDK não chega');
+  conf(!cbTop, 'callback só completa quando o SDK carrega (sem rede: não)');
+  sandbox.document.createElement = criaOrig;
+  Ranking._reseta();
+
+  // --- 8) SDK stubado no sandbox (sem rede): grava e lê na unha
+  const sets = [];
+  let leitura = 'ok';
+  function resolvido(v) {
+    return { then: function (ok) { ok(v); return this; } };
+  }
+  function rejeitado(e) {
+    return { then: function (ok, erro) { if (erro) erro(e); return this; } };
+  }
+  const docsFake = [
+    { data: () => ({ nick: 'Zezinho', score: 999999, mapa: 9, onda: 50,
+                     nivel: 80, classe: 'mago', at: 1762000000000 }) },
+    { data: () => ({ nick: 'Maria', score: 5, mapa: 1, onda: 1,
+                     nivel: 3, classe: 'ladino', at: 1761000000000 }) }
+  ];
+  sandbox.firebase = {
+    initializeApp: function (cfg) { sets.push(['init', !!cfg]); },
+    firestore: function () {
+      return {
+        collection: function (nome) {
+          sets.push(['col', nome]);
+          return {
+            doc: function (id) {
+              return { set: function (dados) {
+                sets.push(['set', id, dados]);
+                return resolvido();
+              } };
+            },
+            orderBy: function () {
+              return { limit: function () {
+                return { get: function () {
+                  sets.push(['get']);
+                  return leitura === 'ok'
+                    ? resolvido({ docs: docsFake })
+                    : rejeitado(new Error('rede'));
+                } };
+              } };
+            }
+          };
+        }
+      };
+    }
+  };
+
+  const info = Batalha.info();
+  const esp = Ranking.scoreDe({ mapa: info.mapa, onda: info.onda,
+                                nivel: info.nivel });
+  conf(Ranking.submete() === true, 'com config+SDK: submete aceita o progresso');
+  let setsFeitos = sets.filter(c => c[0] === 'set');
+  conf(sets.some(c => c[0] === 'col' && c[1] === 'rank') &&
+       setsFeitos.length === 1 && setsFeitos[0][1] === 'jose' &&
+       setsFeitos[0][2].score === esp,
+    'escreveu doc "jose" na coleção "rank" com score exato (' + esp + ')');
+  conf(Ranking.enviado() && Ranking.enviado().nick === 'Jose' &&
+       localStorageStub.getItem('rpg_rank_ultimo_v1') !== null,
+    'enviado() registra o doc aceito e grava meu melhor');
+  conf(Ranking.submete() === false &&
+       sets.filter(c => c[0] === 'set').length === 1,
+    'progresso igual NÃO reenvia (melhor marca por apelido)');
+  const mapaAlvo = Math.max(9, Batalha.info().mapa + 7);
+  Batalha.restaurarMapa(mapaAlvo);
+  conf(Ranking.submete() === true &&
+       sets.filter(c => c[0] === 'set').length === 2,
+    'progresso maior reenvia (mapa ' + mapaAlvo + ')');
+
+  // --- 9) cena COM dados: top 10 + meu melhor
+  jogoCanvas._textos = [];
+  Game.setScene('ranking');           // reentra: dispara a leitura
+  frame(2);
+  conf(Ranking.estado() === 'ok', 'cena com SDK stubado: estado ok');
+  const txts = jogoCanvas._textos;
+  conf(txts.some(t => t.indexOf('Zezinho') >= 0),
+    'top 10 renderiza os nomes (Zezinho)');
+  conf(txts.some(t => t === 'MEU MELHOR'), 'bloco MEU MELHOR presente');
+  conf(txts.some(t => t.indexOf('score ') === 0),
+    'meu melhor mostra o score registrado');
+
+  // --- 10) erro SEM cache → "Falha"; falha COM cache → cache local
+  // (a cena só atualiza aviso/cache no PRÓPRIO atualiza() — re-entra)
+  localStorageStub.removeItem('rpg_rank_cache_v1');
+  leitura = 'falha';
+  let err2 = null;
+  Ranking.top(function (e) { err2 = e; });      // nível de API: cb de erro
+  conf(err2 && Ranking.estado() === 'erro',
+    'leitura falha e sem cache: estado erro');
+  jogoCanvas._textos = [];
+  Game.setScene('ranking');                     // reentra: dispara atualiza()
+  frame(2);
+  conf(jogoCanvas._textos.some(t => t.indexOf('Falha') >= 0),
+    'cena mostra "Falha" no estado de erro');
+  leitura = 'ok';
+  Game.setScene('ranking');
+  frame(2);                                     // leitura boa: regrava cache
+  leitura = 'falha';
+  let lista3 = null, deC3 = false, err3 = 'x';
+  Ranking.top(function (e, l, deC) { err3 = e; lista3 = l; deC3 = deC; });
+  conf(err3 === null && lista3 && lista3.length === 2 && deC3 === true &&
+       Ranking.estado() === 'ok' && Ranking.ehCache(),
+    'falha COM cache: serve o cache local (2 itens, flag cache)');
+  jogoCanvas._textos = [];
+  Game.setScene('ranking');                     // cena com a leitura falha
+  frame(2);
+  conf(jogoCanvas._textos.some(t => t.indexOf('cache local') >= 0),
+    'cena avisa que está mostrando o cache');
+  leitura = 'ok';
+
+  // --- 11) botões do rodapé: ATUALIZAR e VOLTAR
+  const gets0 = sets.filter(c => c[0] === 'get').length;
+  clique(700, 388);                   // ATUALIZAR (W-128..W-8 em W=768)
+  frame(2);
+  conf(sets.filter(c => c[0] === 'get').length === gets0 + 1,
+    'ATUALIZAR relê o ranking');
+  clique(68, 388);                    // VOLTAR (8,372,120,32)
+  frame(2);
+  conf(Game.cena === 'selecao', 'VOLTAR volta para a seleção');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');

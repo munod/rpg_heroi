@@ -172,6 +172,23 @@
   dos obstáculos de r=5-7; seção 34 prova com propriedade geométrica +
   caso sintético). `info().obst` expõe `cx/cy/r` (centro de colisão cru
   — `y` exposto é a âncora do sprite, não o centro).
+- Ranking global (spec `ranking`) em `js/ranking.js` + config em
+  `js/ranking-config.js` (declaram os dois no `index.html` **antes** de
+  `batalha.js`, que os chama nos gatilhos): Firebase/Firestore **sem
+  servidor** — SDK por **lazy-load** (injeção de `<script>` do CDN só
+  ao abrir a cena) e **degradação total** sem config/rede (`submete`/
+  `top` viram no-op, cena mostra "não configurado", cache local em
+  `rpg_rank_cache_v1`) — o jogo **nunca** depende de rede. Score =
+  `mapa×100000 + onda×1000 + min(nv,999)` (onda 0 conta como 1; ordem
+  estrita: mapa M onda 100 < mapa M+1 onda 1). Doc por **slug** do
+  apelido; envio só na MELHORIA (cliente) e as regras do Firestore
+  reforçam no servidor (`update` exige `score >` anterior; ver
+  `.specs/features/ranking/regras-firestore.rules`). Gatilhos em
+  `Batalha.passaMapa()` e na morte **antes** de `penalizaMorte` (progresso
+  real, não pós-rollback); `passaMapa` está exportado p/ teste. Cena
+  `ranking` registrada em `main.js`, botão na seleção (260,306,108,26).
+  Seção 35: SDK fake é **thenable síncrono** (sem microtasks no
+  harness); fake de gravação registra `['set', id, doc]` p/ asserções.
 - Playtest/correções: **medir antes de consertar** — sondas no
   `info()` (`inimigoPerto`, `atacando`, `destino`) existem p/ fixtures
   das seções 32; cada fix de IA/combate vira conf que falhava antes.
@@ -265,8 +282,9 @@
 ## Persistência
 
 - Chaves do `localStorage` são versionadas: `rpg_personagens_v1`,
-  `rpg_ultimo_id`, `rpg_estado_v1`. Ao alterar o formato do save, suba o
-  sufixo `_v1` e/ou normalize na leitura (`Personagem.normalizar`) — não
+  `rpg_ultimo_id`, `rpg_estado_v1` (e as do ranking: `rpg_rank_nick_v1`,
+  `rpg_rank_cache_v1`, `rpg_rank_ultimo_v1`). Ao alterar o formato do
+  save, suba o sufixo `_v1` e/ou normalize na leitura (`Personagem.normalizar`) — não
   quebre saves antigos em silêncio (hoje: `p.stats` via
   `Personagem.normalizaStats`).
 

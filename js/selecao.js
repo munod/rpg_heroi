@@ -206,6 +206,13 @@ var Selecao = (function () {
       Salvar.exportar(foco);
       Gravacao.msg('Arquivo .json exportado!');
     }
+
+    // Ranking global (fora da jogatina): grava antes de trocar de tela,
+    // porque o autosave daqui só roda no update
+    if (UI.button(260, 306, 108, 26, 'Ranking')) {
+      if (foco) Gravacao.salvarPersonagem(foco, false);
+      Game.setScene('ranking');
+    }
   }
 
   function desenhaRodape(ctx, p) {

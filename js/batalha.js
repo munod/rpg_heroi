@@ -362,6 +362,7 @@ var Batalha = (function () {
     tOnda = ESPERA_ONDA;
     aviso('MAPA ' + mapa + ' — ' + Mapas.info(mapa).nome.toUpperCase(),
       '#8ce08c');
+    Ranking.submete();   // marco do ranking: fim de mapa (seção 35)
   }
 
   // Zera números/partículas depois de uma simulação offline.
@@ -667,6 +668,9 @@ var Batalha = (function () {
         Efeitos.cura(heroi.x, heroi.y - 6, '#ffd866');
         return;
       }
+      // marco do ranking ANTES da penalidade (−5 ondas): registra o
+      // progresso real alcançado, não o pós-rollback (seção 35)
+      Ranking.submete();
       penalizaMorte(1);        // 2ª vida (Fênix) retornou antes: não paga
       heroi.hp = 0;
       heroi.morto = true;
@@ -1713,6 +1717,7 @@ var Batalha = (function () {
     alternarPausa: alternarPausa,
     restaurarMapa: restaurarMapa,
     restaurarOnda: restaurarOnda,
+    passaMapa: passaMapa,     // marco do ranking (também o chefe chama)
     limparEfeitos: limparEfeitos,
     info: info
   };

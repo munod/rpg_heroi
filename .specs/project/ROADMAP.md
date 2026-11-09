@@ -38,7 +38,7 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 - **Specs contínuas** — toda feature nova começa com
   `.specs/features/<nome>/spec.md` antes do primeiro commit.
 
-## Em execução — v0.3.0: sistema punitivo + stats/tooltips
+## Concluído — v0.3.0: sistema punitivo + stats/tooltips
 
 1. ✅ `ritmo-punitivo` — pontos 5→3, morte −5 ondas/−10% ouro, combo
    reequilibrado (HP/dano/regen), ritmo gasta ouro, alvos novos medidos
@@ -49,7 +49,7 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 4. ✅ `stats-completos` — aba Stats +7 (ouro ganho/gasto, vendas,
    sucateados, aprimoramentos, re-rolls, lendários) + tooltips de
    skill/keystone/linha de stat
-5. ⬜ **release v0.3.0** (push/tag/gh release com aval)
+5. ✅ **release v0.3.0** (tag + gh release + Pages, 2026-11-08)
 
 ## Concluído — correções de playtest (bugfixes + gestão)
 
@@ -58,6 +58,15 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    (fixar slot por linha, auto A+) + bloco `Base → total` na aba Stats
 2. ✅ `velocidade-curva` — recarga sem piso (`35/vel`) + sub-passos ≤4px
    no `mover()` (colisão vale em qualquer velocidade)
+
+## Concluído — ranking global (Firebase)
+
+1. ✅ `ranking` — tela Ranking (botão na seleção) com top 10 + meu
+   melhor, apelido por slug, score composto `mapa×100000 + onda×1000 +
+   min(nv,999)`, envios em fecho de mapa/morte, SDK Firebase por
+   lazy-load com degradação total sem config/rede; gatilhos + seção 35
+   (46 confs). Setup manual do Firebase pendente com o mantenedor
+   (config + regras).
 
 ## Backlog de ideias (sem compromisso)
 
