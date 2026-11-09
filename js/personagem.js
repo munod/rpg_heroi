@@ -85,6 +85,8 @@ var Personagem = (function () {
       bolsa: [],
       ouro: 0,              // moeda: abates, venda e sucata de itens
       loadout: null,        // skills escolhidas (null = automático)
+      trava: { arma: false, armadura: false },  // slot fixado (não auto-troca)
+      autoApr: false,       // auto-aprimorar (A+) itens equipados
       keystoneLib: false,   // keystone desbloqueado (compra única)
       keystoneOn: false,    // keystone ativo (aplica o tradeoff)
       look: {
@@ -283,14 +285,20 @@ var Personagem = (function () {
     ];
     var kc = parteKeystone(k && k.crit ? k.crit : null);
     if (kc) partesCrit.push(kc);
+    // base = SEM itens e SEM keystone (padrão D3/D4 p/ o bloco da aba
+    // Stats: '46→120' mostra o que os modificadores estão fazendo)
+    var baseHp = c.hpBase + a.con * 4 + (nv - 1) * 4;
+    var baseDano = c.danoBase + Math.floor(a[c.danoMod] / 2);
+    var baseVel = 46 + a.des * 3;
+    var baseCrit = 4 + Math.floor(a.des * 1.3);
     return {
-      hp: { total: s.hpMax, partes: partesHp,
+      hp: { total: s.hpMax, base: baseHp, partes: partesHp,
             mult: multKeystone(k && k.hpMax) },
-      dano: { total: s.dano, partes: partesDano,
+      dano: { total: s.dano, base: baseDano, partes: partesDano,
               mult: multKeystone(k && k.dano),
               notas: notas },
-      vel: { total: s.vel, partes: partesVel },
-      crit: { total: s.crit, partes: partesCrit },
+      vel: { total: s.vel, base: baseVel, partes: partesVel },
+      crit: { total: s.crit, base: baseCrit, partes: partesCrit },
       alcance: { total: s.alcance,
                  partes: [{ v: s.alcance, rot: 'da classe' }] },
       xp: { total: s.xpMult,
@@ -501,6 +509,11 @@ var Personagem = (function () {
       bolsa: normalizaBolsa(p.bolsa),
       ouro: num(p.ouro, 0, 0),
       loadout: normalizaLoadout(p.loadout),
+      trava: {
+        arma: !!(p.trava && p.trava.arma),
+        armadura: !!(p.trava && p.trava.armadura)
+      },
+      autoApr: p.autoApr === true,
       keystoneLib: p.keystoneLib === true,
       keystoneOn: p.keystoneOn === true,
       look: {

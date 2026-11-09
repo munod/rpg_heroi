@@ -10,6 +10,43 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Added
+
+- **Checkboxes de gestão (aba Itens)**: um **`[x]` por slot** (arma e
+  armadura) que **fixa o item equipado** — o auto-equip não troca por
+  melhor enquanto marcado (clique manual na bolsa continua livre);
+  **`Auto A+ [x]`** que **aprimora sozinho** o slot de menor custo
+  (teto `MAX_UP` e saldo respeitados, padrão OFF) — flags persistidas
+  com default seguro em saves antigos; e a **aba Stats ganha o bloco
+  `Base → total`** no padrão D3/D4 (`Dano 31→93 · HP …`): o que itens,
+  aprimoramento e keystone estão acrescentando, visível sem hover (o
+  detalhe por fonte continua no rodapé) — `statusDetalhado` ganha
+  campos `base` numéricos (fonte única, teste soma).
+  Spec `.specs/features/correcoes-ia-gestao/`.
+
+### Fixed
+
+- **Correções de IA/combate com causa raiz medida** (skill
+  `systematic-debugging`, reprodução no harness antes de cada fix):
+  - **Heróis à distância não atacavam com o alvo colado** — o estado
+    `kite` bloqueava o golpe em `<0.7×alcance` (medido: 7815 frames de
+    inimigo colado → **0 golpes**); agora a fuga decide só o MOVIMENTO
+    entre golpes e o tiro sai point-blank (7777 frames → 256 golpes).
+  - **INT alta encurralava nos vértices** — os destinos de fuga
+    (`recuar` 90px, `kite` 24px) não tinham clamp: **77% dos frames de
+    fuga apontavam para fora do mapa** e o herói empurrava a parede em
+    gelo; agora `clampFuga` prende o destino aos limites (margem 16) e,
+    com o destino a <24px (sem espaço), o gênio para de correr e **briga**
+    (medido: 7560 fugas, 0 fora do mapa).
+  - **Destreza parava de acelerar o ataque em ~17 pontos** — a animação
+    tinha `atkT = 0.36` fixo, então o ciclo real era
+    `max(recarga, 0.36s)` (medido: intervalo 30 frames → 23 e PLATEAU);
+    agora a animação acompanha a recarga (`min(0.36, recarga)` com
+    frames/hit relativos) — **des8=29 vs des62=68 golpes/10s (2,3×)**,
+    piso de 0,15s intacto.
+  - **O botão `−` dos atributos abria o tooltip** — o retângulo da dica
+    (x=416..716) cobria o botão (684..708); encurtado até x=680.
+
 ## [0.3.0] — 2026-11-08
 
 Sistema punitivo + transparência: morte com preço, eventos (Açougueiro e

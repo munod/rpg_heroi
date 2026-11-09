@@ -2317,6 +2317,7 @@ console.log('29) evento: o Gatuno (rouba, foge, resgate)');
     ' → ' + p.ouro + ')');
   conf((jogoCanvas._textos || []).some(t => t.indexOf('GATUNO') >= 0),
     'aviso do desfecho na tela');
+  Eventos.nasceGat = SEM_GAT;         // silêncio de novo (fim das seções 29)
 }
 
 console.log('30) tooltips: breakdown do rodapé, atributos e item');
@@ -2505,6 +2506,282 @@ console.log('31) estatísticas de economia e tooltips de skill/keystone/stats');
     'tooltip do keystone expõe o tradeoff e os custos');
   conf(p.keystoneOn === keOn,
     'botão desativado sem ouro não alterna o keystone');
+}
+
+console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip');
+{
+  const Batalha = sandbox.Batalha;
+  const UI = sandbox.UI;
+  const p = Game.personagem;
+  const mm = (x, y) => (jogoCanvas._listeners.mousemove || [])
+    .forEach(fn => fn({ clientX: x * 2, clientY: y * 2 }));
+
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  let e0 = 0;
+  while (Batalha.info().morto && e0 < 900) { frame(1); e0++; }
+
+  // --- 1) ranged ataca mesmo COLADO (<0.7×alcance) — bug clássico do
+  // kite: 7815 frames de inimigo colado davam 0 golpes
+  p.classe = 'mago';
+  p.nivel = 4;                    // sem skills: só o golpe básico conta
+  p.atributos.for = 40;
+  p.atributos.con = 999;
+  p.atributos.int = 12;
+  p.atributos.des = 8;
+  p.pontos = 0;
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  Batalha.restaurarOnda(3);
+  const alc = Personagem.status(p).alcance;
+  const limiar = Math.round(alc * 0.7);
+  let colado = 0, danoColado = 0, ult = p.stats.danoCausado;
+  let golpeColado = 0, atkAntes = false;
+  for (let i = 0; i < 9000; i++) {
+    frame(1);
+    const f = Batalha.info();
+    const perto = f.inimigoPerto >= 0 && f.inimigoPerto < limiar;
+    if (perto) {
+      colado++;
+      danoColado += p.stats.danoCausado - ult;
+      if (f.atacando && !atkAntes) golpeColado++;
+    }
+    ult = p.stats.danoCausado;
+    atkAntes = f.atacando;
+  }
+  conf(colado > 500 && golpeColado > 0,
+    'ranged ataca com o inimigo colado (' + colado + ' frames perto, ' +
+    golpeColado + ' golpes, ' + danoColado + ' de dano)');
+
+  // --- 2) destino de fuga NUNCA fora do mapa (INT alta)
+  p.classe = 'mago';
+  p.nivel = 4;
+  p.atributos.con = 1;
+  p.atributos.for = 1;
+  p.atributos.int = 50;           // agu 1.0: recuar/kite direto
+  p.atributos.des = 8;
+  p.pontos = 0;
+  Batalha.restaurarOnda(30);
+  e0 = 0;
+  while (Batalha.info().morto && e0 < 900) { frame(1); e0++; }
+  let fugas = 0, fora = 0;
+  for (let i = 0; i < 9000; i++) {
+    frame(1);
+    const f = Batalha.info();
+    if ((f.heroi.estado === 'recuar' || f.heroi.estado === 'kite') &&
+        f.destino) {
+      fugas++;
+      const d = f.destino;
+      // limites com margem 16 (mundo 384×268): fora disso = bug
+      if (d.x < 16 || d.x > 368 || d.y < 16 || d.y > 252) fora++;
+    }
+  }
+  conf(fugas > 500 && fora === 0,
+    'destino de fuga sempre dentro do mapa (' + fugas +
+    ' fugas, ' + fora + ' fora)');
+
+  // --- 3) DES volta a acelerar o ataque (ciclo = recarga, não 0,36s)
+  // Mesma onda fraca p/ dois heróis: conta golpes em janela igual.
+  function golpesComDes(des) {
+    p.classe = 'guerreiro';
+    p.nivel = 20;
+    // for=1: o herói NÃO mata os inimigos da onda 15 em 10s → combate
+    // contínuo e o golpe é limitado pela RECARGA (com for=999 o 1-shot
+    // fazia os dois casos darem o mesmo nº de golpes)
+    p.atributos.for = 1;
+    p.atributos.con = 999;
+    p.atributos.int = 8;
+    p.atributos.des = des;
+    p.atributos.car = 8;
+    p.pontos = 0;
+    p.equip = { arma: null, armadura: null };
+    Batalha.restaurarOnda(15);
+    let ee = 0;
+    while (Batalha.info().morto && ee < 900) { frame(1); ee++; }
+    // espera o inimigo colado
+    for (let i = 0; i < 3000 && Batalha.info().inimigoPerto > 55; i++) {
+      frame(1);
+    }
+    let n = 0, antes = false;
+    for (let i = 0; i < 900; i++) {
+      frame(1);
+      const f = Batalha.info();
+      const emRange = f.inimigoPerto >= 0 && f.inimigoPerto <= 60;
+      if (emRange && f.atacando && !antes) n++;
+      antes = f.atacando;
+    }
+    return n;
+  }
+  const g8 = golpesComDes(8);      // recarga 0,50s → ~30 frames/golpe
+  const g62 = golpesComDes(62);    // recarga 0,15s (piso) → ~9 frames
+  conf(g8 > 4 && g62 >= Math.round(g8 * 1.8),
+    'DES acelera o ataque até o piso (des8=' + g8 +
+    ' golpes/10s, des62=' + g62 + ', razão ' +
+    (g62 / Math.max(1, g8)).toFixed(1) + '×)');
+
+  // --- 4) tooltip da linha de atributo NÃO abre pelo botão −
+  jogoCanvas._textos = [];
+  clique(445, 50);                 // aba Atributos
+  frame(2);
+  // y da 1ª linha = 96; botão − em 684..708 × 84..108
+  mm(694, 96);                     // mouse SOBRE o −
+  for (let i = 0; i < 40; i++) frame(1);   // ~670ms > delay 250ms
+  // marcador específico do tooltip ('Valor atual: N') — o rótulo
+  // 'Força' é desenhado o tempo todo e não distingue
+  const abriuNoMenos = (jogoCanvas._textos || [])
+    .some(t => t.indexOf('Valor atual') >= 0 ||
+               t.indexOf('dano do ataque') >= 0);
+  conf(!abriuNoMenos,
+    'segurar o − não abre o tooltip da linha');
+  mm(500, 96);                     // mouse no rótulo (deve abrir)
+  jogoCanvas._textos = [];
+  for (let i = 0; i < 40; i++) frame(1);
+  conf((jogoCanvas._textos || [])
+       .some(t => t.indexOf('dano do ataque') >= 0),
+    'hover no rótulo abre o tooltip normalmente');
+}
+
+console.log('33) gestão: fixar slot, auto-aprimorar e stats base→total');
+{
+  const Itens = sandbox.Itens;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  let e1 = 0;
+  while (Batalha.info().morto && e1 < 900) { frame(1); e1++; }
+
+  // --- flags nascem desligadas e sobrevivem à normalização
+  const pn = sandbox.Personagem.novo();
+  conf(pn.trava && pn.trava.arma === false && pn.trava.armadura === false &&
+       pn.autoApr === false,
+    'herói novo: slots soltos e auto A+ desligado');
+  const pnorm = sandbox.Personagem.normalizar({ nivel: 5 });
+  conf(pnorm.trava.arma === false && pnorm.autoApr === false,
+    'save antigo ganha trava/autoApr com default seguro');
+
+  // --- fixar slot: equiparSeMelhor respeita a trava
+  p.equip = { arma: { nome: 'A', slot: 'arma', rar: 2, escala: 1, up: 0,
+                      afixos: [], bonus: { dano: 10 } }, armadura: null };
+  p.bolsa = [];
+  p.trava = { arma: true, armadura: false };
+  const melhor = { nome: 'B', slot: 'arma', rar: 3, escala: 1, up: 0,
+                   afixos: [], bonus: { dano: 99 } };
+  conf(Itens.equiparSeMelhor(p, melhor) === false &&
+       p.equip.arma.nome === 'A',
+    'slot fixado: drop melhor NÃO substitui (vai p/ bolsa)');
+  conf(Itens.guardar(p, melhor) === true && p.equip.arma.nome === 'A',
+    'drop foi guardado na bolsa em vez de equipado');
+  p.trava.arma = false;
+  conf(Itens.equiparSeMelhor(p, Itens.normalizaItem
+         ? Itens.normalizaItem(melhor, 'arma') : melhor) === true ||
+       p.equip.arma.nome === 'B',
+    'slot solto: equipar volta a funcionar');
+
+  // --- botão [x] da UI alterna a trava
+  p.trava = { arma: false, armadura: false };
+  clique(655, 50);                 // aba Itens
+  frame(2);
+  clique(656, 96);                 // centro do [x] da arma (640..672 × 84..108)
+  frame(1);
+  conf(p.trava.arma === true,
+    'clique no checkbox fixa a arma');
+  clique(656, 96);
+  frame(1);
+  conf(p.trava.arma === false,
+    'clique de novo solta a arma');
+  clique(656, 124);                // [x] da armadura (112..136)
+  frame(1);
+  conf(p.trava.armadura === true,
+    'checkbox da armadura é independente');
+  p.trava = { arma: false, armadura: false };
+
+  // --- auto-aprimorar: só gasta quando ligado, respeita saldo
+  // batalha PAUSADA: sem kills nem penalidade de morte mexendo no ouro
+  if (!Batalha.info().pausada) Batalha.alternarPausa();
+  p.equip = { arma: { nome: 'A', slot: 'arma', rar: 2, escala: 1, up: 0,
+                      afixos: [], bonus: { dano: 10 } }, armadura: null };
+  p.ouro = 0;
+  p.autoApr = false;
+  const apr0 = p.stats.aprimoramentos || 0;
+  const g0 = p.stats.ouroGasto || 0;
+  for (let i = 0; i < 300; i++) frame(1);   // ~5s com ouro 0
+  conf(p.equip.arma.up === 0 &&
+       (p.stats.aprimoramentos || 0) === apr0 &&
+       (p.stats.ouroGasto || 0) === g0,
+    'auto A+ desligado: nada muda mesmo rodando');
+  p.autoApr = true;
+  p.ouro = 60;                     // 1º aprim custa 25, 2º custa 100
+  for (let i = 0; i < 300; i++) frame(1);   // ~5s
+  conf(p.equip.arma.up === 1 &&
+       (p.stats.aprimoramentos || 0) === apr0 + 1 &&
+       p.ouro === 35,
+    'auto A+ ligado: aprimora 1× e para sem saldo (up=' +
+    p.equip.arma.up + ', ouro=' + Math.round(p.ouro) + ')');
+  conf((p.stats.ouroGasto || 0) === g0 + 25,
+    'ouro gasto contado em stats.ouroGasto (+25)');
+  p.autoApr = false;
+  p.ouro = 100000;
+  const upA = p.equip.arma.up;
+  for (let i = 0; i < 600; i++) frame(1);
+  conf(p.equip.arma.up === upA && p.ouro === 100000,
+    'auto A+ desligado de volta: não gasta mais');
+  // teto MAX_UP
+  p.equip.arma.up = Itens.MAX_UP;
+  p.ouro = 99999;
+  p.autoApr = true;
+  const ouroTeto = p.ouro;
+  for (let i = 0; i < 300; i++) frame(1);
+  conf(p.ouro === ouroTeto && p.equip.arma.up === Itens.MAX_UP,
+    'teto MAX_UP respeitado (não joga ouro fora)');
+  p.autoApr = false;
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  p.trava = { arma: false, armadura: false };
+
+  // --- botão [x] do auto A+ na UI (640..674 × 138..162)
+  clique(657, 150);
+  frame(1);
+  conf(p.autoApr === true, 'clique no checkbox liga o Auto A+');
+  clique(657, 150);
+  frame(1);
+  conf(p.autoApr === false, 'clique de novo desliga');
+
+  // --- bloco base→total na aba Stats
+  p.classe = 'guerreiro';
+  p.nivel = 30;
+  p.atributos.for = 50;
+  p.atributos.con = 40;
+  p.atributos.des = 20;
+  p.atributos.int = 8;
+  p.atributos.car = 8;
+  p.pontos = 0;
+  p.keystoneOn = false;
+  p.equip = { arma: { nome: 'A', slot: 'arma', rar: 2, escala: 1, up: 3,
+                      afixos: [], bonus: { dano: 50, vel: 30, crit: 8 } },
+              armadura: { nome: 'V', slot: 'armadura', rar: 2, escala: 1,
+                          up: 2, afixos: [], bonus: { hp: 120 } } };
+  const det = Personagem.statusDetalhado(p);
+  const st = Personagem.status(p);
+  conf(det.dano.base < det.dano.total &&
+       det.dano.base === det.dano.partes[0].v + det.dano.partes[1].v,
+    'base do dano = classe+atributo (sem itens): ' + det.dano.base +
+    ' + itens = ' + det.dano.total);
+  conf(det.hp.base < det.hp.total && det.vel.base < det.vel.total &&
+       det.crit.base < det.crit.total,
+    'HP/Vel/Crít: base < total com itens equipados');
+  conf(det.dano.base + det.dano.partes[2].v === st.dano,
+    'sem keystone: base + itens = status (' + det.dano.base + '+' +
+    det.dano.partes[2].v + ' = ' + st.dano + ')');
+  clique(725, 50);                 // aba Stats
+  frame(2);
+  const ts = jogoCanvas._textos || [];
+  conf(ts.some(t => t.indexOf('Base → total') >= 0),
+    'aba Stats mostra o cabeçalho "Base → total"');
+  conf(ts.some(t => t.indexOf('Dano ' + det.dano.base + '→' +
+    det.dano.total) >= 0),
+    'linha do Dano com seta base→total (' + det.dano.base + '→' +
+    det.dano.total + ')');
+  conf(ts.some(t => t.indexOf('FOR 50→') >= 0),
+    'atributos com seta investido→efetivo (bônus de classe)');
 }
 
 console.log('');

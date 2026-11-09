@@ -115,8 +115,35 @@ var Gestao = (function () {
   // As ações do painel acontecem aqui (fora do render): o clique aplica
   // na hora e, segurado, repete depois do arranque — em vez de um ponto
   // por clique, só.
+  // auto-aprimorar: um passo a cada 0,5s no slot de MENOR custo —
+  // teto (custoAprim = -1) e saldo respeitados; contadores/ouro já
+  // contam dentro de Itens.aprimorar
+  var autoT = 0;
+  function autoAprPasso(p) {
+    var alvo = null, melhor = -1, i, slot, it, c;
+    for (i = 0; i < 2; i++) {
+      slot = i === 0 ? 'arma' : 'armadura';
+      it = p.equip[slot];
+      if (!it) continue;
+      c = Itens.custoAprim(it);
+      if (c > 0 && (p.ouro || 0) >= c && (melhor < 0 || c < melhor)) {
+        alvo = it;
+        melhor = c;
+      }
+    }
+    if (alvo) Itens.aprimorar(p, alvo);
+  }
+
   function update(dt, p) {
-    if (!p || aba !== 'atributos') { repT = 0; repI = 0; return; }
+    if (!p) { repT = 0; repI = 0; autoT = 0; return; }
+    // roda em QUALQUER aba (é gestão, não visual)
+    if (p.autoApr) {
+      autoT += dt;
+      if (autoT >= 0.5) { autoT = 0; autoAprPasso(p); }
+    } else {
+      autoT = 0;
+    }
+    if (aba !== 'atributos') { repT = 0; repI = 0; return; }
     // em tela larga o painel ancora à direita: os retângulos são locais
     // e o ponteiro é deslocado para o espaço do painel (dx = W - 768)
     var dx = Game.W - 768;
@@ -179,7 +206,9 @@ var Gestao = (function () {
         { disabled: v <= 1 });
       UI.button(linha.mais.x, linha.mais.y, 24, 24, '+',
         { disabled: p.pontos <= 0 });
-      UI.dica({ x: 416, y: linha.y - 12, w: 300, h: 24 },
+      // 264 = até x=680: NÃO cobre o − (684..708) nem o + (716..740) —
+      // segurar o − abria o tooltip (bug reportado)
+      UI.dica({ x: 416, y: linha.y - 12, w: 264, h: 24 },
         dicasAtributo(linha, p));
     });
 
@@ -299,20 +328,57 @@ var Gestao = (function () {
   // paginada. Linha da bolsa = equipar | V (vende 25%) | S (sucata, piso
   // garantido) — o delta por chave aparece contra o equipado (item com
   // afixo negativo aparece com '-'). Linhas em 13px.
+  // checkbox de fixar slot (R-GES-1): impede o auto-equip de trocar
+  // por melhor — a troca MANUAL pela bolsa continua livre
+  function slotFixar(p, slot, y) {
+    var on = !!(p.trava && p.trava[slot]);
+    if (UI.button(640, y, 32, 24, on ? '[x]' : '[ ]', {
+      ativo: on,
+      color: on ? '#e8c86a' : '#6f678a',
+      font: '11px monospace'
+    })) {
+      if (!p.trava) p.trava = { arma: false, armadura: false };
+      p.trava[slot] = !p.trava[slot];
+      Gravacao.msg((slot === 'arma' ? 'Arma' : 'Armadura') +
+        (p.trava[slot] ? ' fixada — não troca por melhor' : ' solta'));
+    }
+    UI.dica({ x: 640, y: y, w: 32, h: 24 }, [[
+      on ? 'FIXADA: drop não substitui' : 'Fixar: drop não substitui',
+      '#e8c86a']]);
+  }
+
   function desenhaItens(ctx, p) {
     var arma = p.equip.arma, arm = p.equip.armadura;
-    UI.text('Arma: ' + (arma ? Itens.linha(arma, null, 26) : '—'), 416, 96,
+    // nomes enxutos (20/16 chars): a linha termina antes do [x] em 640
+    UI.text('Arma: ' + (arma ? Itens.linha(arma, null, 20) : '—'), 416, 96,
       { color: arma ? Itens.corRar(arma.rar) : '#6f678a', font: '13px monospace' });
-    UI.dica({ x: 416, y: 84, w: 256, h: 24 }, Itens.dicas(p, arma));
+    UI.dica({ x: 416, y: 84, w: 220, h: 24 }, Itens.dicas(p, arma));
+    slotFixar(p, 'arma', 84);
     slotAcoes(p, arma, 84);
-    UI.text('Armadura: ' + (arm ? Itens.linha(arm, null, 22) : '—'), 416, 124,
+    UI.text('Armadura: ' + (arm ? Itens.linha(arm, null, 16) : '—'), 416, 124,
       { color: arm ? Itens.corRar(arm.rar) : '#6f678a', font: '13px monospace' });
-    UI.dica({ x: 416, y: 112, w: 256, h: 24 }, Itens.dicas(p, arm));
+    UI.dica({ x: 416, y: 112, w: 220, h: 24 }, Itens.dicas(p, arm));
+    slotFixar(p, 'armadura', 112);
     slotAcoes(p, arm, 112);
 
     UI.text('Ouro ' + milhar(p.ouro || 0) + ' · Bolsa ' +
       p.bolsa.length + '/' + Itens.BOLSA_MAX,
-      416, 152, { color: '#e8c86a' });
+      416, 152, { color: '#e8c86a', font: '13px monospace' });
+    // checkbox Auto A+ (R-GES-2): gasta ouro sozinho no slot mais barato
+    var autoOn = p.autoApr === true;
+    if (UI.button(640, 138, 34, 24, autoOn ? '[x]' : '[ ]', {
+      ativo: autoOn,
+      color: autoOn ? '#8ce08c' : '#6f678a',
+      font: '11px monospace'
+    })) {
+      p.autoApr = !autoOn;
+      Gravacao.msg(autoOn ? 'Auto A+ desligado' : 'Auto A+ ligado — gasta ouro no A+');
+    }
+    UI.dica({ x: 640, y: 138, w: 34, h: 24 }, [
+      ['Auto A+: aprimora sozinho o', '#8ce08c'],
+      ['slot mais barato (teto e', '#8ce08c'],
+      ['saldo respeitados)', '#8ce08c']
+    ]);
     UI.text('V venda · S sucata · A+ apr. · R+ rer.', 416, 168,
       { color: '#6f678a', font: '11px monospace' });
     var paginas = Math.max(1, Math.ceil(p.bolsa.length / 5));
@@ -502,11 +568,44 @@ var Gestao = (function () {
       ['Tempo de jogo', tempoHumano(s.tempo)]
     ];
     linhas.forEach(function (l, i) {
-      var y = 120 + i * 22;   // 10 linhas cabem no painel de 300px
-      UI.text(l[0], 416, y, { color: '#c9c2dd' });
-      UI.text(l[1], 752, y, { align: 'right', color: '#e8c86a' });
-      UI.dica({ x: 416, y: y - 11, w: 340, h: 22 },
+      // 15px de passo em 13px: as 10 linhas + o bloco base→total cabem
+      // no painel de 300px (dica h=14 p/ não se sobrepor às vizinhas)
+      var y = 116 + i * 15;
+      UI.text(l[0], 416, y, { color: '#c9c2dd', font: '13px monospace' });
+      UI.text(l[1], 752, y, { align: 'right', color: '#e8c86a',
+        font: '13px monospace' });
+      UI.dica({ x: 416, y: y - 7, w: 340, h: 14 },
         [[l[0] + ': ' + (DESC_STATS[l[0]] || '—'), '#e8c86a']]);
+    });
+
+    // ---- base → total (padrão D3: 'Life 143/143 (15+108+20)') -------
+    // O que os modificadores (itens · aprimoramento · keystone · bônus
+    // de classe) estão acrescentando — ver SEM ter que abrir o hover.
+    var det = Personagem.statusDetalhado(p);
+    var ef = Personagem.status(p).atributos;   // efetivos (c/ classe)
+    var bi = p.atributos;                      // investido
+    function par(rot, base, tot) {
+      return rot + ' ' + base + (base === tot ? '' : '→' + tot);
+    }
+    var yB = 116 + linhas.length * 15 + 4;
+    UI.text('Base → total (itens · keystone)', 416, yB,
+      { color: '#9a90b8', font: '13px monospace' });
+    UI.dica({ x: 416, y: yB - 7, w: 340, h: 14 }, [
+      ['base = sem modificadores · seta = com eles', '#e8c86a'],
+      ['detalhe por fonte no rodapé (hover)', '#9a90b8']
+    ]);
+    var blocos = [
+      par('Dano', det.dano.base, det.dano.total) + ' · ' +
+        par('HP', det.hp.base, det.hp.total),
+      par('Vel', det.vel.base, det.vel.total) + ' · ' +
+        par('Crít', det.crit.base, det.crit.total) + '%',
+      par('FOR', bi.for, ef.for) + ' · ' + par('DES', bi.des, ef.des) +
+        ' · ' + par('CON', bi.con, ef.con),
+      par('INT', bi.int, ef.int) + ' · ' + par('CAR', bi.car, ef.car)
+    ];
+    blocos.forEach(function (txt, i) {
+      UI.text(txt, 416, yB + 14 + i * 14,
+        { color: i < 2 ? '#f2eef8' : '#c9c2dd', font: '13px monospace' });
     });
   }
 

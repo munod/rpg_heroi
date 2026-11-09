@@ -457,6 +457,9 @@ var Itens = (function () {
   // assinada — negativo conta contra e aprimoramento segura a vaga);
   // o item equipado volta para a bolsa.
   function equiparSeMelhor(p, item) {
+    // slot fixado (checkbox na aba Itens): não troca por melhor — o drop
+    // vai pra bolsa como sempre. Troca MANUAL (clique) continua livre.
+    if (p.trava && p.trava[item.slot]) return false;
     var atual = p.equip[item.slot];
     if (atual && pontuarEfet(item) <= pontuarEfet(atual)) return false;
     p.equip[item.slot] = item;

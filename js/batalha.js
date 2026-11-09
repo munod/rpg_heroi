@@ -242,7 +242,7 @@ var Batalha = (function () {
       x: MW / 2, y: MH / 2, facing: 1,
       anim: 'idle', frame: 0, frameT: 0,
       hp: s.hpMax, hpMax: s.hpMax, stats: s,
-      atkT: 0, atkCd: 0, hitDone: true, inv: 1, fuga: null,
+      atkT: 0, atkCd: 0, atkDur: 0.36, hitDone: true, inv: 1, fuga: null,
       morto: false, revT: 0
     };
     var c0 = alvoCamera();
@@ -1136,15 +1136,31 @@ var Batalha = (function () {
     var atacando = h.atkT > 0;
     if (atacando) {
       h.atkT -= dt;
-      var e2 = 0.36 - Math.max(0, h.atkT);
+      // a animação acompanha a RECHARGA (bug: 0,36s fixos estagnavam a
+      // Destreza em ~17 pontos) — frames e hit relativos à duração real
+      var dur = h.atkDur || 0.36;
+      var e2 = dur - Math.max(0, h.atkT);
       h.anim = 'attack';
-      h.frame = Math.max(0, Math.min(2, Math.floor(e2 / 0.12)));
-      if (!h.hitDone && e2 >= 0.10) { h.hitDone = true; golpeia(); }
+      h.frame = Math.max(0, Math.min(2, Math.floor(e2 / (dur / 3))));
+      if (!h.hitDone && e2 >= Math.min(0.10, dur * 0.5)) {
+        h.hitDone = true;
+        golpeia();
+      }
       if (h.atkT <= 0) h.atkT = 0;
     }
 
     if (!atacando) {
-      if (h.ia.estado === 'recuar') {
+      var alc = h.stats.alcance;
+      // o destino de fuga está a <24px? encostado/preso na parede fugir
+      // não resolve — para de correr e briga (bug: gênio encurralado
+      // ficava em gelo sem atacar)
+      var temEspaco = false;
+      if (h.ia.destino) {
+        var idx = h.ia.destino.x - h.x, idy = h.ia.destino.y - h.y;
+        temEspaco = idx * idx + idy * idy >= 24 * 24;
+      }
+      var fugindo = h.ia.estado === 'recuar' && temEspaco;
+      if (fugindo) {
         // gênio ferido: abre mão do golpe e cria distância (destino fixo
         // recalculado a cada tick do cérebro)
         moverPara(h, h.ia.destino, 6, dt, h.ia.agu >= 0.35);
@@ -1152,20 +1168,23 @@ var Batalha = (function () {
       } else if (alvo) {
         var dx2 = alvo.x - h.x, dy2 = alvo.y - h.y;
         var dist = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1;
-        var alc = h.stats.alcance;
         if (Math.abs(dx2) > 2) h.facing = dx2 > 0 ? 1 : -1;
 
-        // kite (ranged esperto): fora da faixa segura recua ANTES de
-        // atirar; dentro dela atira em retirada
-        var foge = h.ia.estado === 'kite' && dist < alc * 0.7;
-        var bate = !foge && (dist <= alc * 0.75 ||
-          (h.ia.estado === 'kite' && dist <= alc));
+        // kite (ranged esperto): a fuga decide só o MOVIMENTO entre
+        // golpes — o tiro NUNCA é bloqueado por estar colado (bug:
+        // ranged não atacava em <0.7×alcance; sem espaço p/ fugir,
+        // ficava parado)
+        var foge = h.ia.estado === 'kite' && dist < alc * 0.7 && temEspaco;
+        var bate = dist <= alc * 0.75 ||
+          (h.ia.estado === 'kite' && dist <= alc);
 
-        if (bate) {
+        if (bate && !(foge && h.atkCd > 0)) {
           anima(h, 'idle', dt);
           if (h.atkCd <= 0) {
-            h.atkT = 0.36;
-            // a Velocidade do herói também acelera o golpe
+            // a animação acompanha a recarga: ciclo real = recarga em
+            // qualquer DES (piso de 0,15s intacto)
+            h.atkDur = Math.min(0.36, h.stats.recarga);
+            h.atkT = h.atkDur;
             h.atkCd = h.stats.recarga;
             h.hitDone = false;
           }
@@ -1627,6 +1646,23 @@ var Batalha = (function () {
                agu: (heroi && heroi.ia && typeof heroi.ia.agu === 'number')
                  ? Math.round(heroi.ia.agu * 100) / 100 : 0 },
       inimigos: inimigos.length,
+      // diagnóstico p/ teste (seções 32): distância do inimigo mais
+      // perto, se o golpe está em animação e o destino de fuga atual
+      inimigoPerto: (function () {
+        var dMin = Infinity;
+        for (var i = 0; i < inimigos.length; i++) {
+          var dx = inimigos[i].x - (heroi ? heroi.x : 0);
+          var dy = inimigos[i].y - (heroi ? heroi.y : 0);
+          var d = Math.sqrt(dx * dx + dy * dy);
+          if (d < dMin) dMin = d;
+        }
+        return dMin === Infinity ? -1 : Math.round(dMin);
+      })(),
+      atacando: !!(heroi && heroi.atkT > 0),
+      destino: (heroi && heroi.ia && heroi.ia.destino)
+        ? { x: Math.round(heroi.ia.destino.x),
+            y: Math.round(heroi.ia.destino.y) }
+        : null,
       boss: boss,
       // cenário procedural (semente do mapa) e skills de posicionamento
       obst: obst.map(function (o) {

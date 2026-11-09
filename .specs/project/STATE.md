@@ -125,6 +125,27 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 - **`statusDetalhado` numérico (não string)** — UI formata, teste soma:
   Σpartes × keystone === status é assert exato; string de tooltip nunca
   entra em asserção de valor.
+- **Bugs de IA/combate: medir ANTES de consertar** (lição grande da
+  leva de correções) — as 4 causas raiz saíram de sondas no harness:
+  faixa de golpes por distância, destino de fuga vs limites, intervalo
+  real entre golpes e cobertura do retângulo do botão. Cada fix virou
+  conf reproduzível (seção 32) que FALHAVA com o código antigo.
+- **Fixture de DPS precisa de alvo que NÃO morre** — `for=999` 1-shot
+  fazia os dois cenários darem o mesmo nº de golpes (limitado por
+  spawn, não por recarga); `for=1` + onda 15 = combate contínuo e a
+  recarga vira o gargalo (29 vs 68 golpes/10s).
+- **Assert de tooltip precisa de marcador EXCLUSIVO** — testar `'Força'`
+  casava com o rótulo permanente da linha; o marcador é o conteúdo do
+  tooltip (`'Valor atual'`).
+- **Medição de ouro em teste = batalha PAUSADA** — kills e penalidade
+  de morte mexiam no saldo (60→29) e quebravam asserts exatos.
+- **Mosquetão de eventos: desligar no FIM de cada seção** — o Gatuno
+  ficava religado após a 29 e corria nas 30+ (flake latente achado ao
+  revisar o harness).
+- **Ritmo pós-correções: média ~47-48min (6 runs: 39/45/>50/>50/
+  50/49)** — dentro da faixa 40-55; onda@15 média ~44 ✓; mortes 5-7 ✓.
+  A DES acelerar de verdade não mudou o ritmo (o `ritmo.js` só bombeia
+  FOR). Não reequilibrar por variancia de RNG (±7min).
 - **Stats de economia: incremento onde o ouro MUDA, não em ponto único**
   — `conta()` em `itens.js` + `Batalha.stat(n)` em `mataInimigo`; as
   chaves vivem no espelho `Personagem.STATS` (normalizaStats zera save

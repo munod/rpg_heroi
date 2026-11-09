@@ -165,6 +165,17 @@
   `iniciar()`, criado na preguiça p/ troca de classe em combate).
   `Batalha` e `Gestao` dependem de skills.js; `personagem.js` não
   (grade/previa carregam só ele).
+- Playtest/correções: **medir antes de consertar** — sondas no
+  `info()` (`inimigoPerto`, `atacando`, `destino`) existem p/ fixtures
+  das seções 32; cada fix de IA/combate vira conf que falhava antes.
+  `clampFuga` em `ia.js` prende destinos de fuga aos limites (384×268,
+  margem 16); em `batalha.js`, destino a <24px = sem espaço → o herói
+  briga em vez de empurrar parede; a animação do golpe é
+  `min(0.36, recarga)` (o `atkT` fixo de 0,36s estagnava a DES em ~17
+  pontos). Aba Itens: `p.trava.{arma,armadura}` (fixar slot — só o
+  auto-equip respeita) e `p.autoApr` (Auto A+, roda em
+  `Gestao.update`, 0,5s, menor custo, padrão OFF). Aba Stats: bloco
+  `Base → total` de `statusDetalhado(p).{hp,dano,vel,crit}.base`.
 - Estatísticas do jogador em `p.stats` (`Personagem.STATS`: abates,
   mortes, dano causado/recebido, ondas, bosses, itens, tempo, gatunos,
   acougueiros, ouroGanho, ouroGasto, vendidos, sucateados,

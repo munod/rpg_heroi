@@ -96,13 +96,20 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
 - **Aparência** — pele, cabelo, estilo (curto, longo, cavalo, moicana, bandana)
   e cor de roupa; aparece no herói que está lutando.
 - **Estatísticas** — aba **Stats** no painel: abates, chefes derrotados,
-  ondas limpas, dano causado e recebido, mortes, itens dropados e **tempo
-  de jogo** (só a jogatina conta; o crédito offline não). Tudo é gravado
-  no save — saves antigos ganham os campos zerados.
+  açougueiros/gatunos, ondas limpas, dano causado e recebido, mortes, itens
+  dropados, **tempo de jogo** (só a jogatina conta; o crédito offline não)
+  e o bloco **`Base → total`**: o que atributos, itens, aprimoramento e
+  keystone estão acrescentando, visível sem hover (`Dano 31→93` — o
+  detalhe por fonte continua no hover do rodapé). Tudo é gravado no save —
+  saves antigos ganham os campos zerados.
 - **Equipamento** — inimigos **dropam** armas e armaduras (3 raridades) a
   cada abate; o item melhor que o equipado é **usado na hora** e o resto vai
   para a **bolsa** (até 10). A aba **Itens** mostra os 2 slots e a bolsa —
-  clique numa linha para equipar (o anterior volta para a bolsa). A arma
+  clique numa linha para equipar (o anterior volta para a bolsa). Cada slot
+  tem um **checkbox `[x]` de fixar**: marcado, o auto-equip **não troca**
+  aquele item por um drop melhor (a troca manual continua livre); e o
+  **`Auto A+`** aprimora sozinho o slot mais barato quando você marca
+  (padrão desligado — gasta ouro com teto e saldo respeitados). A arma
   equipada aparece no herói (sem equipamento, vale a da classe) e o bônus
   entra no dano, vida, velocidade e crítico. O chefe do mapa sempre dropa 2
   itens raros.
@@ -216,6 +223,8 @@ offline, a **velocidade acelerando o ataque**, a **barra de HP dos inimigos**
 sem contorno que a tapava, o **chefe do fim de mapa** (nasce na onda 100, o
 avanço muda de mapa e não trava), o **avance de mapa** com migração de save
 legado, **drops com auto-equip/bolsa** e a **aba Itens** equipando no clique,
+o **fixar slot** (`[x]` impede a troca automática) e o **Auto A+**
+(aprimoramento automático opcional),
 as **skills com os 6 tipos de proc** (área, nuke, veneno, cura, mobilidade
 e medo) — **5 por classe**, com aviso de desbloqueio, o **ataque à
 distância** do mago/ladino/clérigo (projétil do golpe básico) e os

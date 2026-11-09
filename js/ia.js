@@ -44,6 +44,17 @@ var IA = (function () {
   // ----------------------------------------------------------- herói
   // Decide alvo, estado e ponto de destino. h.ia = { t, estado, alvo,
   // destino, agu }. Estados: espera | perseguir | combate | kite | recuar.
+  // Limites do mundo (espelho de batalha.js: 384×268) com margem: o
+  // destino de fuga SEMPRE fica dentro do mapa — sem isso o herói
+  // empurrava a parede no vértice e ficava preso (bug: INT alta).
+  var MUNDO_L = 384, MUNDO_A = 268, MARGEM_FUGA = 16;
+  function clampFuga(x, y) {
+    return {
+      x: Math.max(MARGEM_FUGA, Math.min(MUNDO_L - MARGEM_FUGA, x)),
+      y: Math.max(MARGEM_FUGA, Math.min(MUNDO_A - MARGEM_FUGA, y))
+    };
+  }
+
   function decideHeroi(h, inimigos, dt) {
     if (!h.ia) h.ia = { t: 0, estado: 'perseguir', alvo: null, destino: null };
     var ia = h.ia;
@@ -131,7 +142,7 @@ var IA = (function () {
     if (estado === 'recuar') {
       var cx = perto ? sx / perto : dxAlvo, cy = perto ? sy / perto : dyAlvo;
       var cd = Math.sqrt(cx * cx + cy * cy) || 1;
-      ia.destino = { x: h.x - (cx / cd) * 90, y: h.y - (cy / cd) * 90 };
+      ia.destino = clampFuga(h.x - (cx / cd) * 90, h.y - (cy / cd) * 90);
     } else if (estado === 'kite') {
       // recua até a faixa segura: ponto ~24px para longe do mais perto
       var mi = 0, d2m = Infinity;
@@ -142,7 +153,7 @@ var IA = (function () {
       }
       var nx = h.x - inimigos[mi].x, ny = h.y - inimigos[mi].y;
       var nd = Math.sqrt(nx * nx + ny * ny) || 1;
-      ia.destino = { x: h.x + (nx / nd) * 24, y: h.y + (ny / nd) * 24 };
+      ia.destino = clampFuga(h.x + (nx / nd) * 24, h.y + (ny / nd) * 24);
     } else {
       ia.destino = ia.alvo;             // segue vivo, atualizado no frame
     }
