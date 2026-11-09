@@ -139,6 +139,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   tooltip (`'Valor atual'`).
 - **Medição de ouro em teste = batalha PAUSADA** — kills e penalidade
   de morte mexiam no saldo (60→29) e quebravam asserts exatos.
+- **Curvas de velocidade (destreza)** — decisão do usuário: recarga
+  SEM piso (`35/vel` puro — teto natural = loop de frames ~60 g/s) e
+  movimento mantém `46+DES×3` com sub-passos ≤4px no `mover()`. Medição
+  que motivou: DES 100/300/500 davam todos 6,67 g/s (piso 0,15 desde
+  DES 62). **Sub-passos precisam de teste de sensibilidade**: a seção 34
+  tem caso SINTÉTICO (salto de 28px pelo miolo acusa) + rodada real —
+  revertendo o `mover()` antigo ela detectou 8 violações (prova que o
+  conf tem dentes). Propriedade geométrica: reta corta o miolo
+  (dist < r−2) E os dois extremos longes da borda (> r+2) = atravessou
+  (escorregão legítimo na borda não acusa). `info().obst` expõe
+  `cx/cy/r` (o y exposto NÃO é o centro de colisão — offset da âncora).
 - **Mosquetão de eventos: desligar no FIM de cada seção** — o Gatuno
   ficava religado após a 29 e corria nas 30+ (flake latente achado ao
   revisar o harness).

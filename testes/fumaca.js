@@ -866,7 +866,13 @@ console.log('16) skills automáticas (procs por classe)');
   }
   conf(desbloqueou, 'subir de nível anuncia a skill desbloqueada');
 
-  // --- nuke periódico do mago dispara sozinho (Bola de Fogo)
+  // --- nuke periódico do mago dispara sozinho (Bola de Fogo).
+  // Fixture determinística: o nuke SÓ conjura com alvo em campo — for=1
+  // (inimigo da onda 3 vive a janela toda) e con alto (herói não cai
+  // e pausa o update); antes, sem garantias, dependia do ciclo de spawn
+  p.atributos.for = 1;
+  p.atributos.con = 60;
+  Batalha.restaurarOnda(3);
   jogoCanvas._textos = [];
   Batalha.limparEfeitos();
   let lancou = false;
@@ -2782,6 +2788,96 @@ console.log('33) gestão: fixar slot, auto-aprimorar e stats base→total');
     det.dano.total + ')');
   conf(ts.some(t => t.indexOf('FOR 50→') >= 0),
     'atributos com seta investido→efetivo (bônus de classe)');
+}
+
+console.log('34) velocidade: recarga sem piso e sub-passos (não atravessa)');
+{
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // --- 1) recarga SEM piso: 35/vel puro em qualquer DES
+  p.classe = 'guerreiro';
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  p.keystoneOn = false;
+  p.atributos = { for: 8, des: 8, con: 8, int: 8, car: 8 };
+  p.pontos = 0;
+  let casos = [[8, 0.5], [100, 35 / 346], [500, 35 / 1546]];
+  for (const [des, esp] of casos) {
+    p.atributos.des = des;
+    const s = Personagem.status(p);
+    conf(Math.abs(s.recarga - esp) < 1e-9 && s.recarga === 35 / s.vel,
+      'recarga sem piso: DES ' + des + ' → ' + s.recarga.toFixed(4) +
+      's (' + (1 / s.recarga).toFixed(1) + ' g/s), fórmula 35/vel exata');
+  }
+  conf(Personagem.status(p).recarga < 0.15,
+    'DES 500 passa do antigo piso de 0,15s (6,67 g/s)');
+  p.atributos.des = 8;
+
+  // --- 2) a checagem de atravessamento ACUSA um salto sintético
+  // (prova que a propriedade abaixo tem dentes)
+  const obst = Batalha.info().obst;
+  conf(obst.length > 0 && obst.every(o => typeof o.r === 'number' &&
+       typeof o.cx === 'number' && typeof o.cy === 'number'),
+    'info().obst expõe centro de colisão e raio (' + obst.length + ')');
+  function cortaMiolo(p0, p1, o) {
+    const dx = p1.x - p0.x, dy = p1.y - p0.y;
+    const l2 = dx * dx + dy * dy;
+    let t = l2 > 0 ? ((o.cx - p0.x) * dx + (o.cy - p0.y) * dy) / l2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const qx = p0.x + t * dx - o.cx, qy = p0.y + t * dy - o.cy;
+    const distReta = Math.sqrt(qx * qx + qy * qy);
+    const d0 = Math.sqrt((p0.x - o.cx) ** 2 + (p0.y - o.cy) ** 2);
+    const d1 = Math.sqrt((p1.x - o.cx) ** 2 + (p1.y - o.cy) ** 2);
+    // entra e sai SEM tocar a borda = atravessou em salto
+    return distReta < o.r - 2 && d0 > o.r + 2 && d1 > o.r + 2;
+  }
+  const alvo = obst[0];
+  const salto = { p0: { x: alvo.cx - 14, y: alvo.cy },
+                  p1: { x: alvo.cx + 14, y: alvo.cy } };
+  conf(cortaMiolo(salto.p0, salto.p1, alvo) === true,
+    'sintético: salto de 28px pelo miolo é detectado como atravessamento');
+  conf(cortaMiolo({ x: alvo.cx - 14, y: alvo.cy - 20 },
+                  { x: alvo.cx + 14, y: alvo.cy - 20 }, alvo) === false,
+    'sintético: passar longe NÃO acusa (sem falso positivo)');
+
+  // --- 3) herói a 25,8px/frame correndo pelo campo: NUNCA atravessa
+  // int 8 = não usa A* (caminha reto e escorrega na colisão) — é exatamente
+  // o caminho que saltava por cima dos obstáculos antes dos sub-passos
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  p.classe = 'guerreiro';
+  p.nivel = 20;
+  p.atributos = { for: 999, con: 999, des: 500, int: 8, car: 8 };
+  p.pontos = 0;
+  p.equip = { arma: null, armadura: null };
+  Batalha.restaurarOnda(3);
+  let ev = 0;
+  while (Batalha.info().morto && ev < 900) { frame(1); ev++; }
+  const velEsperada = Personagem.status(p).vel;
+  conf(velEsperada === 1546,
+    'fixture: herói a 1546 px/s = 25,8px/frame (vel=' + velEsperada + ')');
+  let viol = 0, corridas = 0, ult = null;
+  for (let i = 0; i < 12000; i++) {
+    frame(1);
+    const f = Batalha.info();
+    const atual = { x: f.heroi.x, y: f.heroi.y };
+    if (ult) {
+      const d = Math.hypot(atual.x - ult.x, atual.y - ult.y);
+      if (d > 10) corridas++;
+      if (d > 4) {
+        for (const o of f.obst) {
+          if (cortaMiolo(ult, atual, o)) viol++;
+        }
+      }
+    }
+    ult = atual;
+  }
+  conf(corridas > 100,
+    'a fixture realmente correu pelo campo (' + corridas +
+    ' frames com corrida >10px)');
+  conf(viol === 0,
+    'em 12000 frames a 25,8px/frame: NENHUM obstáculo atravessado (' +
+    viol + ' violações)');
 }
 
 console.log('');

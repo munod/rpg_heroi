@@ -213,8 +213,9 @@ var Personagem = (function () {
       dano: dano,
       vel: vel,
       // Velocidade também acelera o ataque: recarga do golpe em segundos
-      // (vel 70 = 0,50s base; piso de 0,15s para não virar metralhadora)
-      recarga: Math.max(0.15, 35 / vel),
+      // (vel 70 = 0,50s base). SEM piso: a curva nunca estagna — em DES
+      // alta o teto natural é o loop de frames (~60 g/s com dt 16,7ms)
+      recarga: 35 / vel,
       crit: crit,
       alcance: c.alcance,
       arma: c.armaNome,

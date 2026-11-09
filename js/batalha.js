@@ -221,11 +221,29 @@ var Batalha = (function () {
     }
   }
 
+  // Um passo de deslocamento em SUB-FRAÇÕES ≤4px: em alta velocidade o
+  // salto de um frame atravessaria obstáculos (r deles 5-7, do herói 6 —
+  // 25px/frame caem do outro lado sem encostar). Cada fração reaplica
+  // resolve() → a colisão vale em QUALQUER velocidade (4 < 10, a menor
+  // sobreposição do jogo = obst 5 + morcego 5). Custo: ceil(d/4) ≈ 7
+  // iterações no pior caso de jogo real — desprezível.
   function mover(ent, ddx, ddy, raio) {
-    ent.x += ddx;
-    resolve(ent, raio);
-    ent.y += ddy;
-    resolve(ent, raio);
+    var d = Math.sqrt(ddx * ddx + ddy * ddy);
+    if (d <= 4) {
+      ent.x += ddx;
+      resolve(ent, raio);
+      ent.y += ddy;
+      resolve(ent, raio);
+      return;
+    }
+    var n = Math.ceil(d / 4);
+    var ux = ddx / n, uy = ddy / n;
+    for (var i = 0; i < n; i++) {
+      ent.x += ux;
+      resolve(ent, raio);
+      ent.y += uy;
+      resolve(ent, raio);
+    }
   }
 
   // ------------------------------------------------------------- setup
@@ -1182,7 +1200,7 @@ var Batalha = (function () {
           anima(h, 'idle', dt);
           if (h.atkCd <= 0) {
             // a animação acompanha a recarga: ciclo real = recarga em
-            // qualquer DES (piso de 0,15s intacto)
+            // qualquer DES (sem piso — curva 35/vel pura)
             h.atkDur = Math.min(0.36, h.stats.recarga);
             h.atkT = h.atkDur;
             h.atkCd = h.stats.recarga;
@@ -1666,7 +1684,10 @@ var Batalha = (function () {
       boss: boss,
       // cenário procedural (semente do mapa) e skills de posicionamento
       obst: obst.map(function (o) {
-        return { x: Math.round(o.x), y: Math.round(o.y), tipo: o.tipo };
+        return { x: Math.round(o.x), y: Math.round(o.y), tipo: o.tipo,
+                 // centro de colisão cru + raio (p/ a propriedade da
+                 // seção 34: cy difere de y pelo offset da âncora)
+                 cx: o.cx, cy: o.cy, r: o.r };
       }),
       ultimaSkill: ultimaSkill,
       medo: medo,

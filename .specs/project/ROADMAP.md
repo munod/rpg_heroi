@@ -51,11 +51,13 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    skill/keystone/linha de stat
 5. ⬜ **release v0.3.0** (push/tag/gh release com aval)
 
-## Em execução — correções de playtest (bugfixes + gestão)
+## Concluído — correções de playtest (bugfixes + gestão)
 
 1. ✅ `correcoes-ia-gestao` — 4 bugs (ranged colado, vértice de fuga,
    DES estagnada, tooltip do `−`) com causa raiz medida + checkboxes
    (fixar slot por linha, auto A+) + bloco `Base → total` na aba Stats
+2. ✅ `velocidade-curva` — recarga sem piso (`35/vel`) + sub-passos ≤4px
+   no `mover()` (colisão vale em qualquer velocidade)
 
 ## Backlog de ideias (sem compromisso)
 

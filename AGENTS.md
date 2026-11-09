@@ -165,6 +165,13 @@
   `iniciar()`, criado na preguiça p/ troca de classe em combate).
   `Batalha` e `Gestao` dependem de skills.js; `personagem.js` não
   (grade/previa carregam só ele).
+- Velocidades (spec `velocidade-curva`): `recarga = 35/vel` **sem
+  piso** (teto natural ≈ 60 g/s do loop; antes: piso 0,15 estagnava a
+  DES em 6,67 g/s desde DES 62) e `mover()` com **sub-passos ≤4px**
+  (fração aplicada com `resolve()` — sem isso, DES alta salta por cima
+  dos obstáculos de r=5-7; seção 34 prova com propriedade geométrica +
+  caso sintético). `info().obst` expõe `cx/cy/r` (centro de colisão cru
+  — `y` exposto é a âncora do sprite, não o centro).
 - Playtest/correções: **medir antes de consertar** — sondas no
   `info()` (`inimigoPerto`, `atacando`, `destino`) existem p/ fixtures
   das seções 32; cada fix de IA/combate vira conf que falhava antes.

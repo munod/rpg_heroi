@@ -10,6 +10,19 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Curvas de velocidade maiores (destreza)**: a **recarga do golpe
+  perdeu o piso de 0,15s** — agora é `35/vel` puro e a curva nunca
+  estagna (medido: antes DES 100/300/500 davam **todos 6,67 golpes/s**;
+  agora DES 100 → 9,9 g/s · DES 500 → **44,2 g/s** — o teto natural é
+  o loop de frames). E o `mover()` ganhou **sub-passos ≤4px**: com a
+  DES em 1546 px/s (25,8px/frame, raio do herói 6, obstáculos r=5-7) o
+  salto de um frame **atravessava obstáculos** (sensibilidade provada:
+  8 atravessamentos detectados sem o fix → 0 com ele) — a colisão vale
+  agora em qualquer velocidade. Curva de movimento mantida
+  (`46 + DES×3`). Spec `.specs/features/velocidade-curva/`.
+
 ### Added
 
 - **Checkboxes de gestão (aba Itens)**: um **`[x]` por slot** (arma e
