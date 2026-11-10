@@ -142,8 +142,8 @@ console.log('3) export/import JSON');
   conf(gigante.atributos.for === 999 && gigante.atributos.des === 1,
     'sem teto: atributo999 é aceito (for=' + gigante.atributos.for + ')');
   const xpAlto = Personagem.importarJSON('{"nome":"X","xp":1e15}');
-  conf(xpAlto.xp === 1e9,
-    'xp importado tem teto defensivo (1e15 -> ' + xpAlto.xp + ')');
+  conf(xpAlto.xp === Personagem.custoProximo(1) - 1,
+    'xp importado é clampado em xpProx−1 (1e15 -> ' + xpAlto.xp + ')');
   const zerado = Personagem.importarJSON('{"atributos":{"for":0}}');
   conf(zerado.atributos.for === 1,
     'import corrige atributo0 para1 (for=' + zerado.atributos.for + ')');
@@ -1324,9 +1324,10 @@ console.log('21) estatísticas do jogador (Personagem.stats)');
   const m0 = p.stats.mortes;
   p.atributos.con = 1;
   p.atributos.for = 1;
-  // ondas fortes: com o combo (Leva 1) a pressão vira insustentável só
-  // em onda alta — aqui o teste QUER a morte
-  Batalha.restaurarOnda(50);
+  // pressão de morte: com ESC_DMG 0,045 + HP/nível ×6 + ESPERA 8 o
+  // herói aguenta onda 50 — sobe para onda 120 (aqui o teste QUER a
+  // morte; lição: fixture de morte precisa de restaurarOnda de pressão)
+  Batalha.restaurarOnda(120);
   let morreu = false;
   for (let i = 0; i < 12000 && !morreu; i++) {
     frame(1);
@@ -1926,8 +1927,9 @@ console.log('26) itens lendários: raridade 4, efeitos e equilíbrio');
                                    // degrau até a faixa < 30% (limiar 73)
   p.atributos.int = 8;
   p.pontos = 0;
-  Batalha.restaurarOnda(20);       // pressão garantida: sem ela o
-                                   // regenerador segura HP > 30% (Leva 1)
+  Batalha.restaurarOnda(60);       // pressão: com ESC_DMG 0,045 + ESPERA 8
+                                   // a onda 20 não fura a regen (o herói
+                                   // limpa a onda antes de descer < 30%)
   if (Batalha.info().pausada) Batalha.alternarPausa();
   let furia = null;
   let mortos = 0, amostras = [];
@@ -2031,6 +2033,9 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
 
   // --- 2) piso: onda baixa nunca sai do mapa atual
   esperaVida(900);                 // nunca entra caído (estado herdado)
+  // vidro puro (nv1): com ESPERA 8 + regen, nv4 sobrevivia à onda 3 e
+  // até farmava (ondas 3→11) — o piso precisa de morte em onda ≤ 6
+  p.nivel = 1;
   Batalha.restaurarOnda(3);
   esperaOnda(3);
   conf(Batalha.info().onda === 3 && Batalha.info().inimigos > 0,
@@ -2073,8 +2078,8 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
     armadura: { nome: 'Véu da Fênix', slot: 'armadura', rar: 4,
                 escala: 1, up: 0, afixos: [], efeito: 'fenix',
                 bonus: { hp: 20 } } };
-  Batalha.restaurarOnda(8);
-  esperaOnda(8);
+  Batalha.restaurarOnda(14);       // pressão p/ 2 letalidades seguras
+  esperaOnda(14);
   p.ouro = 100;
   const m4 = p.stats.mortes;
   let ondaLast = Batalha.info().onda, pagou = null;
@@ -3180,7 +3185,8 @@ console.log('36) ajustes: piso da recarga, cooldown na Stats (rolagem) e teto');
   p.nivel = Personagem.NIVEL_MAX - 1;
   p.xp = 0;
   p.xpProx = Personagem.custoProximo(p.nivel);
-  Batalha.ganhaXP(1e9);
+  // com custo exponencial o lote precisa cobrir o custo REAL do nível
+  Batalha.ganhaXP(Personagem.custoProximo(p.nivel));
   conf(p.nivel === Personagem.NIVEL_MAX && p.xp === 0,
     'ganhaXP: 999 → 1000 e a sobra do último nível é descartada');
   Batalha.ganhaXP(1e9);
@@ -3394,6 +3400,93 @@ console.log('37) ranking observável: motivos, toasts e status na cena');
   conf(tx37.some(t => t.indexOf('último envio:') >= 0 &&
        t.indexOf('sem melhoria') >= 0),
     'cena mostra "último envio: ... sem melhoria"');
+}
+
+console.log('38) progressão exponencial: curva, renda harmônica e safeguards');
+{
+  const Personagem = sandbox.Personagem;
+  const Batalha = sandbox.Batalha;
+  const UI = sandbox.UI;
+  const p = Game.personagem;
+
+  // --- 1) custo EXPOENCIAL puro: razão constante em qualquer nível
+  const g1 = Personagem.custoProximo(2) / Personagem.custoProximo(1);
+  const g50 = Personagem.custoProximo(51) / Personagem.custoProximo(50);
+  const g998 = Personagem.custoProximo(1000) /
+    Personagem.custoProximo(999);
+  conf(Math.abs(g1 - g50) < 1e-9 && Math.abs(g1 - g998) < 1e-9,
+    'razão G constante do1º ao 1000º nível (exponencial pura: ' +
+    g1.toFixed(4) + ')');
+  conf(Math.abs(g1 - 1.11) < 1e-9, 'G inicial = 1,11');
+  conf(Personagem.custoProximo(1) === 146,
+    'custo do nível 1 = 146 (1º nível ~35-45s intacto)');
+  conf(isFinite(Personagem.custoProximo(1000)) &&
+       Personagem.custoProximo(1000) < 1e308,
+    'custo(1000) finito (< 1e308 — doubles seguros até o teto)');
+  let monotonio = true;
+  for (let n = 1; n < 999; n++) {
+    if (Personagem.custoProximo(n + 1) <= Personagem.custoProximo(n)) {
+      monotonio = false; break;
+    }
+  }
+  conf(monotonio, 'custo estritamente crescente em toda a curva');
+
+  // --- 2) renda harmônica: xpAbate exponencial com continuidade
+  conf(Batalha.xpAbate(0, 0) === 12,
+    'xpAbate na fronteira = XP_BASE 12 (escala inicial)');
+  conf(Batalha.xpAbate(0, 4) === 16, 'xpExtra continua somando por cima');
+  const h50 = Batalha.xpAbate(50, 0) / Batalha.xpAbate(49, 0);
+  const h200 = Batalha.xpAbate(200, 0) / Batalha.xpAbate(199, 0);
+  // tolerância 1%: o Math.round da renda mexe na 4ª casa da razão
+  conf(Math.abs(h50 - h200) < 0.01 && Math.abs(h50 - 1.09) < 0.01,
+    'renda com razão XP_H = 1,09 constante (' + h50.toFixed(4) + ')');
+  conf(Batalha.xpAbate(300, 0) > Batalha.xpAbate(100, 0) * 1000,
+    'renda cresce ≥1000× do onda 100 p/ 300 (absorve o custo G^nv)');
+
+  // --- 3) safeguards: save editado não salta nível nem transborda
+  const salv = Personagem.normalizar({
+    nivel: 50, xp: 1e18, xpProx: 1, pontos: 99999999, ouro: 1e20,
+    atributos: { for: 1e9, des: 8, con: 8, int: 8, car: 8 }
+  });
+  conf(salv.xpProx === Personagem.custoProximo(50),
+    'xpProx do save é IGNORADO (recalculado da fonte única — fecha o 83k)');
+  conf(salv.xp === Personagem.custoProximo(50) - 1,
+    'xp editado (1e18) clampado em xpProx−1');
+  conf(salv.ouro === Personagem.OURO_MAX,
+    'ouro editado (1e20) com teto OURO_MAX (1e12)');
+  conf(salv.pontos === Personagem.PONTOS_MAX,
+    'pontos editados com teto PONTOS_MAX');
+  conf(salv.atributos.for === Personagem.ATRIB_MAX,
+    'atributo editado (1e9) com teto ATRIB_MAX');
+  conf(Personagem.OURO_MAX < 2 ** 53 && Personagem.PONTOS_MAX < 2 ** 53 &&
+       Personagem.ATRIB_MAX < 2 ** 53,
+    'tetos de save < 2^53 (integer-safe; custo/XP exponencial é float ' +
+    'de comparação, seguro até 1e308)');
+
+  // --- 4) ganhaXP rejeita lixo numérico (NaN/−5/Infinity/zero)
+  p.nivel = 50;
+  p.xp = 0;
+  p.xpProx = Personagem.custoProximo(50);
+  const nvLixo = p.nivel, xpLixo = p.xp;
+  Batalha.ganhaXP(NaN);
+  Batalha.ganhaXP(-5);
+  Batalha.ganhaXP(Infinity);
+  Batalha.ganhaXP(0);
+  conf(p.nivel === nvLixo && p.xp === xpLixo,
+    'ganhaXP descarta NaN/negativo/infinito/zero sem corromper');
+
+  // --- 5) level-up com custo FLOAT (exponencial sem round)
+  // ganho é arredondado, custo é float: dá sobra — o invariante é
+  // passar de nível com a sobra LIMITADA ao custo do novo nível
+  Batalha.ganhaXP(Personagem.custoProximo(p.nivel) + 10);
+  conf(p.nivel === 51 && p.xp < Personagem.custoProximo(51),
+    'level-up com custo exponencial (50 → 51, sobra limitada)');
+
+  // --- 6) abreviação da barra (padrão de indústria)
+  conf(UI.abrev(999) === '999' && UI.abrev(1500) === '1,5K' &&
+       UI.abrev(1e6) === '1M' && UI.abrev(2.5e9) === '2,5B' &&
+       UI.abrev(1e45) === '1Qad',
+    'UI.abrev: 999 · 1,5K · 1M · 2,5B · 10^45 (pt-BR)');
 }
 
 console.log('');

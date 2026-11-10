@@ -236,8 +236,25 @@ var UI = (function () {
     text(sep + s.arma, x, 356, { color: '#6f678a' });
   }
 
+  // Abreviação de números grandes p/ barra de XP exponencial (padrão
+  // de indústria: 1,5K · 2,3M · 4,5B … até 10^60). pt-BR: vírgula.
+  var SUF = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No',
+             'Dc', 'Ud', 'Dd', 'Td', 'Qad', 'Qid', 'Sxd', 'Spd', 'Ocd',
+             'Nod'];
+  function abrev(n) {
+    n = Math.max(0, Math.floor(n || 0));
+    if (n < 1000) return String(n);
+    // +1e-9: Math.log perto de múltiplas de 3 flutua (10^45 podia cair
+    // em 14.999… → "1000Td" em vez de "1Qad")
+    var i = Math.floor(Math.log(n) / Math.LN10 / 3 + 1e-9);
+    if (i > SUF.length - 1) i = SUF.length - 1;
+    var v = n / Math.pow(10, i * 3);
+    return (Math.round(v * 10) / 10).toString().replace('.', ',') + SUF[i];
+  }
+
   return {
     setContext: setContext,
+    abrev: abrev,
     deslocar: deslocar,
     dica: dica,
     desenhaTooltip: desenhaTooltip,

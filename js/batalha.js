@@ -59,14 +59,31 @@ var Batalha = (function () {
 
   // Escala por onda — alavanca do ritmo das ondas (boss incluído).
   // Medir com testes/ritmo.js antes de mexer.
-  // Escalas reequilibradas na Leva 1 (medido com ritmo.js 50):
-  // com 3 pontos/nível, a luta na fronteira era mais longa que a
-  // sobrevivência → ~1 morte/min → −5 ondas/morte virava esteira
-  // (mapa 1 >100min, 67 mortes/50min). HP 1,30 + dano 0,10 + a
-  // regeneração abaixo devolvem progressão ~47min e morte como evento.
-  var ESC_HP = 1.30;       // vida do inimigo por onda
-  var ESC_DMG = 0.10;     // dano do inimigo por onda
-  var ESPERA_ONDA = 2.0;  // respiro depois de limpar a onda (segundos)
+  // Escala LINEAR por onda (1 + tot×ESC) — leva progressao-exponencial.
+  // Loop de calibragem com ritmo.js (~14 iterações, 4 runs/decisão):
+  // com níveis escassos (custo G^nv) e renda H^onda, a fronteira só
+  // anda se CLEAR < SOBREVIVÊNCIA — produto HP×DMG acima de ~0,09
+  // refaz o muro do mapa 3 (renda num tot parado × custo exponencial =
+  // estagnação; medido: estol em 4/4 runs). Nota: o alvo antigo de
+  // "30-40 mortes/50min" era o SINTOMA do estol (grind) — com economia
+  // funcional a morte voltou a ser evento de fronteira/boss (~10/120min).
+  var ESC_HP = 1.90;      // vida do inimigo por onda
+  var ESC_DMG = 0.045;    // dano do inimigo por onda
+  var ESPERA_ONDA = 8.0;  // respiro entre ondas (era 2,0): o respiro é
+                          // tempo de regen — desacelera o early e
+                          // empurra a sobrevivência SEM piorar o
+                          // clear/survival da fronteira
+  // Renda de XP harmônica com o custo (spec progressao-exponencial):
+  // XP = XP_BASE × XP_H^ondaTotal; em tot=0 vale 12 (escala inicial).
+  // No muro (tot≈200, nv≈180) a renda tem que cobrir custo(nv):
+  // H ≥ G^(nv/tot) ≈ 1,10 — H 1,09 estolou 4/4 runs, H 1,10 passou
+  // e sustenta os muros seguintes até o teto.
+  var XP_BASE = 12;
+  var XP_H = 1.10;
+                      // (iteração 5 do loop de calibragem)
+  function xpAbate(tot, xpExtra) {
+    return Math.round(XP_BASE * Math.pow(XP_H, tot)) + (xpExtra || 0);
+  }
 
   // ------------------------------------------------------------ cenário
   // Terreno procedural: manchas orgânicas amostradas do campo de Perlin
@@ -517,6 +534,10 @@ var Batalha = (function () {
     // teto de nível (NIVEL_MAX): no cap o XP é DESCARTADO na hora —
     // nenhum acumula escondido que drenaria num futuro raise do cap
     if (p.nivel >= Personagem.NIVEL_MAX) return;
+    // safeguard: NaN/infinito/negativo/zero não mexem em nada (a renda
+    // legítima tardia chega a ~10^46 — o teto superior morre no clamp
+    // do normalizar, não aqui)
+    if (typeof qtd !== 'number' || !isFinite(qtd) || qtd <= 0) return;
     // guarda contra save corrompido (xpProx <= 0 travaria a aba em loop)
     if (!(p.xpProx > 0)) {
       p.xpProx = Personagem.custoProximo(Math.max(1, Math.floor(p.nivel) || 1));
@@ -716,7 +737,7 @@ var Batalha = (function () {
     // no primeiro kill de cada mapa novo (o nível travava no troco de
     // mapa). (+ondaTotal+1 reproduz exatamente o 4+onda×2 de sempre no
     // mapa 1.)
-    var ganho = Math.round(4 + (ondaTotal() + 1) * 2 + en.tipo.xpExtra);
+    var ganho = xpAbate(ondaTotal(), en.tipo.xpExtra);
     if (en.tipo.boss) {
       stat('bosses');
       // recompensa de chefe: XP de várias ondas de uma vez
@@ -733,7 +754,9 @@ var Batalha = (function () {
       (1 + (ondaTotal() + 1) * 0.04) *
       (en.tipo.boss ? 8 : (en.acougueiro ? Eventos.MULT_OURO_ACO : 1)));
     ouro = Math.round(ouro * Itens.multOuro(Game.personagem));  // mercador
-    Game.personagem.ouro = (Game.personagem.ouro || 0) + ouro;
+    // safeguard: teto de ouro total (spec progressao-exponencial)
+    Game.personagem.ouro = Math.min(
+      (Game.personagem.ouro || 0) + ouro, Personagem.OURO_MAX);
     stat('ouroGanho', ouro);
     numero(en.x, en.y - 24, '+' + ganho + ' XP · +' + ouro + ' ouro',
       '#ffd866', false);
@@ -1724,6 +1747,7 @@ var Batalha = (function () {
     restaurarOnda: restaurarOnda,
     passaMapa: passaMapa,     // marco do ranking (também o chefe chama)
     ganhaXP: ganhaXP,         // teto de nível testável (seção 36)
+    xpAbate: xpAbate,         // renda exponencial testável (seção 38)
     limparEfeitos: limparEfeitos,
     info: info
   };

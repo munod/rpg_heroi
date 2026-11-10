@@ -60,15 +60,22 @@ var Personagem = (function () {
   }
 
   // Custo do próximo nível — fonte única da curva de progressão.
-  // O valor antigo (20 × nível) estava repetido em quatro lugares
-  // (novo, normalizar e dois em Batalha.ganhaXP); mudava em um só.
-  // CUSTO_INICIAL puxa o começo (1º nível não cai em segundos) e
-  // CUSTO_BASE controla o ritmo sustentado (medir com testes/ritmo.js).
-  var CUSTO_INICIAL = 125;
-  var CUSTO_BASE = 21;
+  // EXPONENCIAL PURA (spec progressao-exponencial, padrão de indústria):
+  //   custo(nv) = CUSTO_BASE × CUSTO_G^(nv−1)
+  // A razão constante G casa com a renda exponencial (XP_H^onda) e
+  // mantém o tempo/nível ESTÁVEL — a curva linear antiga deixava o
+  // custo (×nível) subir mais rápido que a renda (×onda): tempo/nível
+  // crescia, o HP do herói parava de acompanhar o dano inimigo →
+  // espiral de mortes e estol (medido: 2,8 → 1,4 níveis/min, 682
+  // mortes/10h, mapa 3 estolado; e flood inicial nv47@15min).
+  // CUSTO_BASE = custo do nível 1 (1º nível ~35-45s, medido com ritmo);
+  // CUSTO_G calibrado no loop de medição (ritmo ≥4 runs por iteração).
+  var CUSTO_BASE = 146;
+  var CUSTO_G = 1.11;
   function custoProximo(nivel) {
     var nv = (typeof nivel === 'number' && nivel >= 1) ? Math.floor(nivel) : 1;
-    return CUSTO_INICIAL + CUSTO_BASE * nv;
+    // SEM round: a razão precisa ser exata p/ o teste de exponencial
+    return CUSTO_BASE * Math.pow(CUSTO_G, nv - 1);
   }
 
   // Teto de nível do personagem (fonte única — usado por Batalha.ganhaXP,
@@ -77,6 +84,17 @@ var Personagem = (function () {
   // DESCARTADO (não acumula buffer invisível — o jogador não raciocina
   // com banco escondido). Score do ranking capa em 999 por fórmula.
   var NIVEL_MAX = 1000;
+  // Tetos de salvamento (safeguards — spec progressao-exponencial): tudo
+  // bem abaixo de 2^53 (integer-safe) p/ cortar save editado/overflow.
+  // Legítimo: ouro ~1e5-1e7 em runs longos; pontos ≤ 3×1000; atributo
+  // ≤ ~3000 — os tetos ficam com folga p/ nunca alcançar o legítimo.
+  var OURO_MAX = 1e12;      // ouro total (fonte única — mataInimigo)
+  // HP concedido por nível — FONTE ÚNICA (status + statusDetalhado):
+  // era literal ×4 nos dois lugares e o espelho quebrou quando a leva
+  // progressao-exponencial subiu o slope p/ ×6
+  var HP_POR_NIVEL = 6;
+  var PONTOS_MAX = 100000;  // pontos de atributo acumulados
+  var ATRIB_MAX = 1000000;  // pontos em cada atributo
 
   function novo() {
     return {
@@ -198,7 +216,10 @@ var Personagem = (function () {
     var nv = (typeof p.nivel === 'number' && p.nivel >= 1)
       ? Math.floor(p.nivel) : 1;
     var vel = 46 + a.des * 3 + b.vel;
-    var hpMax = c.hpBase + a.con * 4 + (nv - 1) * 4 + b.hp;
+    // +6/nível (era 4): a fronteira exige que o HP do herói acompanhe
+    // o dano inimigo linear — na leva progressao-exponencial os níveis
+    // são mais escassos, então cada um puxa mais sobrevivência
+    var hpMax = c.hpBase + a.con * 4 + (nv - 1) * HP_POR_NIVEL + b.hp;
     var dano = c.danoBase + Math.floor(a[c.danoMod] / 2) + b.dano;
     var crit = 4 + Math.floor(a.des * 1.3) + b.crit;
     // keystone ativo: tradeoff aplicado antes dos clamps finais
@@ -277,7 +298,8 @@ var Personagem = (function () {
     var partesHp = [
       { v: c.hpBase, rot: 'base ' + c.nome },
       { v: a.con * 4, rot: 'CON ' + a.con + ' × 4' },
-      { v: (nv - 1) * 4, rot: 'nível ' + nv + ' × 4' },
+      { v: (nv - 1) * HP_POR_NIVEL,
+        rot: 'nível ' + nv + ' × ' + HP_POR_NIVEL },
       { v: b.hp, rot: itRot }
     ];
     var partesVel = [
@@ -296,7 +318,7 @@ var Personagem = (function () {
     if (kc) partesCrit.push(kc);
     // base = SEM itens e SEM keystone (padrão D3/D4 p/ o bloco da aba
     // Stats: '46→120' mostra o que os modificadores estão fazendo)
-    var baseHp = c.hpBase + a.con * 4 + (nv - 1) * 4;
+    var baseHp = c.hpBase + a.con * 4 + (nv - 1) * HP_POR_NIVEL;
     var baseDano = c.danoBase + Math.floor(a[c.danoMod] / 2);
     var baseVel = 46 + a.des * 3;
     var baseCrit = 4 + Math.floor(a.des * 1.3);
@@ -505,23 +527,26 @@ var Personagem = (function () {
     // intocados; XP do cap é zerado (regra do teto)
     var nivel = Math.min(num(p.nivel, 1, 1), NIVEL_MAX);
     var noTeto = nivel >= NIVEL_MAX;
+    // SAFEGUARDS (spec progressao-exponencial): xpProx SEMPRE da fonte
+    // única — o valor salvo é ignorado (editá-lo não salta mais nível,
+    // fecha o bug dos 83k) — e xp clampado em xpProx−1 (save legítimo
+    // sempre tem xp < xpProx; excesso é descartado, como no teto)
+    var xpProx = custoProximo(nivel);
     var out = {
       id: typeof p.id === 'string' && p.id ? p.id : base.id,
       nome: String(p.nome || base.nome).slice(0, 14),
       classe: CLASSES[p.classe] ? p.classe : base.classe,
       atributos: {},
-      pontos: num(p.pontos, 0, base.pontos),
+      pontos: Math.min(num(p.pontos, 0, base.pontos), PONTOS_MAX),
       nivel: nivel,
-      // teto defensivo: xp absurdo (save corrompido) travaria o loop de níveis
-      xp: noTeto ? 0 : Math.min(num(p.xp, 0, 0), 1e9),
-      xpProx: noTeto ? custoProximo(NIVEL_MAX)
-        : num(p.xpProx, 1, custoProximo(nivel)),
+      xp: noTeto ? 0 : Math.min(num(p.xp, 0, 0), xpProx - 1),
+      xpProx: xpProx,
       equip: {
         arma: normalizaItem(p.equip && p.equip.arma, 'arma'),
         armadura: normalizaItem(p.equip && p.equip.armadura, 'armadura')
       },
       bolsa: normalizaBolsa(p.bolsa),
-      ouro: num(p.ouro, 0, 0),
+      ouro: Math.min(num(p.ouro, 0, 0), OURO_MAX),
       loadout: normalizaLoadout(p.loadout),
       trava: {
         arma: !!(p.trava && p.trava.arma),
@@ -541,7 +566,7 @@ var Personagem = (function () {
     ATRIBUTOS.forEach(function (at) {
       var v = p.atributos ? p.atributos[at.id] : null;
       out.atributos[at.id] = (typeof v === 'number' && isFinite(v))
-        ? Math.max(1, Math.round(v))
+        ? Math.min(Math.max(1, Math.round(v)), ATRIB_MAX)
         : 8;
     });
     if (!ESTILOS.some(function (e) { return e.id === out.look.estilo; })) out.look.estilo = 'curto';
@@ -575,6 +600,9 @@ var Personagem = (function () {
     KEY_CUSTO: KEY_CUSTO,
     KEY_RESPEC: KEY_RESPEC,
     NIVEL_MAX: NIVEL_MAX,
+    OURO_MAX: OURO_MAX,
+    PONTOS_MAX: PONTOS_MAX,
+    ATRIB_MAX: ATRIB_MAX,
     keystoneDe: keystoneDe,
     comprarKeystone: comprarKeystone,
     alternarKeystone: alternarKeystone,

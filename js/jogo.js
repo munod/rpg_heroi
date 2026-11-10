@@ -151,7 +151,9 @@ var Jogo = (function () {
     var cx = Math.round(W / 2);
     var noTeto = p.nivel >= Personagem.NIVEL_MAX;   // barra cheia + MÁXIMO
     UI.bar(cx - 168, 10, 168, 14, noTeto ? 1 : p.xp / p.xpProx, '#e8c86a');
-    UI.text(noTeto ? 'MÁXIMO' : (p.xp + '/' + p.xpProx), cx + 12, 16,
+    // XP exponencial: sem abreviação a barra viraria 46 dígitos
+    UI.text(noTeto ? 'MÁXIMO'
+      : (UI.abrev(p.xp) + '/' + UI.abrev(p.xpProx)), cx + 12, 16,
       { color: noTeto ? '#e8c86a' : '#c9c2dd' });
     UI.text('Pontos: ' + p.pontos, W - 12, 16, {
       align: 'right',

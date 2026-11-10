@@ -76,6 +76,15 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    observável (motivos/toasts/status + detecção `file://`; sonda REST
    das regras = 200) — seções 36/37
 
+## Concluído — progressão exponencial
+
+1. ✅ `progressao-exponencial` — custo `146×1,11^(nv−1)` + renda
+   `12×1,10^onda` (tempo/nível estável) · combate reequilibrado (ESC
+   1,90/0,045, ESPERA 8s, HP/nível ×6) · safeguards de save (fecha o
+   83k) · `UI.abrev` na barra de XP · calibragem ~14 iterações (4
+   runs/decisão, cliff HP×DMG mapeado) · sim 1500min: **nv1000 ≤25h** —
+   seção 38 (19 confs)
+
 ## Backlog de ideias (sem compromisso)
 
 - Mais mapas/temas no ciclo infinito com mecânicas próprias.

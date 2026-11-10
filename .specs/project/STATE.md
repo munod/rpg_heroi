@@ -46,6 +46,8 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   seguro; mexer em afixo positivo é aposta (pode virar neg): custo
   escala com tentativas p/ conter spam.
 - **Combo de balanço medido (ESC_HP 1,30 · ESC_DMG 0,10 · regen 4%/s)** —
+  *(SUPERADO pela leva `progressao-exponencial`: ESC 1,90/0,045 +
+  ESPERA8 + HP/nível×6 — a economia exponencial mudou o regime.)*
   com 3 pontos/nível a luta na fronteira era mais longa que a
   sobrevivência (~1 morte/min) e o −5/morte virou esteira (67 mortes/
   50min, mapa 1 >100min). Experimentos isolados não bastavam (só dano:
@@ -178,6 +180,22 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   **ranking NUNCA silencioso** (sonda REST provou regras OK — escrita
   válida 200 / inválida 403; o bug era observabilidade: `ultimoEnvio`
   com motivo + toasts + status na cena, e detecção de `file://`).
+- **Progressão exponencial (spec `progressao-exponencial`)** — decisão
+  do usuário ("padrão da indústria"): custo `146 × 1,11^(nv−1)` +
+  renda `12 × 1,10^onda` (harmônicos → tempo/nível estável), combate
+  ESC 1,90/0,045 + ESPERA 8s + HP/nível 6, e safeguards de save (fecha
+  o 83k: xpProx recalculado, xp ≤ xpProx−1, tetos de ouro/pontos/
+  atributo). Lições da calibragem (~14 iterações): **renda fixa × custo
+  exponencial = estol estrutural** (só escapa quem nunca trava na onda);
+  **cliff do produto HP×DMG** (≤0,086 passa / ≥0,095 estola em 4/4 — a
+  morte −5 amplifica); **o alvo antigo de 30-40 mortes/50min era o
+  SINTOMA do estol** (grind), não meta — com economia funcional a morte
+  virou evento de fronteira/boss (~10-19/120min); **run único não decide
+  curva** (uma "validação" rodou constantes erradas por âncora de
+  texto — 4 runs salvaram); ESPERA_ONDA é alavanca de ritmo que NÃO
+  toca no clear/survival. **Correção**: HP/dano são lineares
+  (1+tot×ESC) — a "parede exponencial" do diagnóstico inicial era a
+  espiral econômica.
 - **Mosquetão de eventos: desligar no FIM de cada seção** — o Gatuno
   ficava religado após a 29 e corria nas 30+ (flake latente achado ao
   revisar o harness).
@@ -230,6 +248,15 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   harness): mudar layout exige atualizar `fumaca.js`/`cena.js` juntos.
 - Âncoras de texto em scripts de edição de docs quebram por quebra de
   linha — conferir com `grep` antes de substituir em lote.
+- **Espelho de fórmula quebra na hora** — o HP por nível estava literal
+  `×4` em `status` E `statusDetalhado`; subir o slope p/ ×6 em um lugar
+  só derrubou o teste Σpartes. Constantes de balanço viram fonte única
+  (`HP_POR_NIVEL`) — mesmo caso dos `APR`/`MAX_UP` espelhados.
+- **Run único não decide curva de progressão** — no loop da leva
+  `progressao-exponencial`, uma "validação 4 runs" na verdade rodou
+  constantes erradas (âncora de texto falhou e o script anterior não
+  gravou) e outra config passou 1× de200min e estolou 4/4 depois. Só
+  média de ≥4 runs (e conferir `grep` das constantes ANTES de rodar).
 - **`file://` não serve p/ serviços web (CORS)** — o README manda abrir
   `index.html` direto (o jogo funciona), mas a origem `null` é recusada
   pelo Firestore: foi a causa provável do "ranking não salvando" no

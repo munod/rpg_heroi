@@ -64,8 +64,10 @@ while (p.nivel < 2 && total < 60 * 60 * 1000 / FPS_MS) run(1);
 console.log('1º nível: ' + (total * FPS_MS / 1000).toFixed(1) + 's');
 gastar();
 
-const marcos = [...new Set([1, 5, 15, 30, 45, 60, 90, 120, minutos])]
+const marcos = [...new Set([1, 5, 15, 30, 45, 60, 90, 120, 180, 240,
+  minutos])]
   .filter(m => m <= minutos).sort((a, b) => a - b);
+let nvAnt = null, minAnt = null;
 let onda100 = null, mapa2 = null, onda10m2 = null;
 
 for (const m of marcos) {
@@ -86,11 +88,17 @@ for (const m of marcos) {
   }
   gastar();
   const inf = Batalha.info();
+  // tendência de níveis/min — com a curva exponencial deve ficar PLANA
+  // (a linear decaía 2,8 → 1,4 e terminava em estol no mapa 3)
+  const dnv = nvAnt === null ? null : (p.nivel - nvAnt) / (m - minAnt);
   console.log(m + 'min: mapa ' + inf.mapa + ', onda ' + inf.onda +
-    ', nv ' + p.nivel + ', xp ' + p.xp + '/' + p.xpProx +
+    ', nv ' + p.nivel + ', xp ' + h.sandbox.UI.abrev(p.xp) + '/' +
+    h.sandbox.UI.abrev(p.xpProx) +
     ' | mortes ' + (p.stats.mortes || 0) +
     ' | ouro ' + Math.round(p.ouro || 0) +
+    (dnv === null ? '' : ' | +' + dnv.toFixed(1) + ' nv/min') +
     (inf.morto ? ' (caído)' : ''));
+  nvAnt = p.nivel; minAnt = m;
 }
 console.log(onda100 !== null
   ? 'chefe do mapa 1 em ' + (onda100 / 60).toFixed(1) + 'min'

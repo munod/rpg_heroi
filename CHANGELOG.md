@@ -12,6 +12,14 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Safeguards de save/progressão** (fecha o bug dos níveis 83k):
+  `normalizar` **recalcula `xpProx`** da fonte única (o valor salvo é
+  ignorado — editá-lo não salta mais nível), **`xp ≤ xpProx−1`**
+  (excesso descartado, como no teto) e tetos `OURO_MAX 1e12` /
+  `PONTOS_MAX 100k` / `ATRIB_MAX 1e6` (tudo < 2⁵³); `ganhaXP` rejeita
+  NaN/negativo/infinito/zero; ouro clampado no abate. E **`UI.abrev`**
+  (K/M/B/T/Qa… até 10⁶⁰, pt-BR) na barra de XP — com custo exponencial
+  a barra passaria de 46 dígitos. Testes: seção 38.
 - **Ranking global (Firebase/Firestore)**: nova tela **Ranking** (botão
   na seleção) com **top 10** (mapa·onda·nível, classe, data), bloco
   **meu melhor** destacado e apelido editável na própria cena (1-20
@@ -68,6 +76,23 @@ vive em `.specs/features/`.
 
 ### Changed
 
+- **Progressão exponencial + combate reequilibrado (spec
+  `progressao-exponencial`)**: custo de nível virou **`146 × 1,11^(nv−1)`**
+  (razão constante; o linear `125+21×nv` subia mais rápido que a renda
+  ×onda → tempo/nível crescia → espiral de mortes e estol no mapa 3) e a
+  renda virou **`12 × 1,10^ondaTotal`** (`xpAbate`, harmônica com o
+  custo → tempo/nível estável). Combate: **ESC_HP 1,30→1,90 · ESC_DMG
+  0,10→0,045 · ESPERA_ONDA 2→8s** (o respiro é tempo de regen — controla
+  o early sem piorar clear/survival) e **HP/nível 4→6** (`HP_POR_NIVEL`,
+  fonte única — o espelho ×4 do `statusDetalhado` quebrou e virou
+  constante). Calibragem: ~14 iterações com `ritmo.js` (**4 runs por
+  decisão** — run único iludiu uma "validação"); cliff mapeado: produto
+  `ESC_HP×ESC_DMG ≤0,086` passa / `≥0,095` estola em 4/4 (renda fixa num
+  tot parado × custo exponencial = estagnação estrutural). Alvos:
+  1º nível ~47s · nv33-38@15min · mapa1 ~32min · **sem estol (4/4)** ·
+  **nv1000 ≤ 25h** (sim 1500min: nv503@3h, 693@4h). Correção de
+  diagnóstico: HP/dano do jogo são LINEARES (1+tot×ESC) — a "parede
+  exponencial" era a espiral econômica.
 - **Curvas de velocidade maiores (destreza) — emendadas no playtest**:
   a recarga do golpe virou **`max(0,08; 35/vel)`** — piso **0,08s =
   teto 12,5 golpes/s** (pedido: "maiores, bem maiores"; o playtest

@@ -54,18 +54,28 @@
   constante + **4%/s sem apanhar** (inv=0). Pontos **+3/nível**. O Véu da
   Fênix (fenix) escapa da penalidade. Leva 2: eventos em `js/eventos.js`
   (Açougueiro chamará `penalizaMorte(2)`). Escalas reequilibradas na
-  Leva 1 (medido): **ESC_HP 1,30 · ESC_DMG 0,10**.
+  Leva 1 (medido): ESC_HP 1,30 · ESC_DMG 0,10; hoje (leva
+  `progressao-exponencial`): **ESC_HP 1,90 · ESC_DMG 0,045**.
 - Curva de progressão com fonte única em `Personagem.custoProximo`
-  (`CUSTO_INICIAL` + `CUSTO_BASE × nível`); ritmo das ondas em constantes
-  de `Batalha` (`ESC_HP`, `ESPERA_ONDA`). Mudou algum? Meça com
-  `node testes/ritmo.js [min]` (fica fora do `todos.js`) antes de achar
-  que está bom. **O `ritmo.js` gasta ouro** (keystone no nv 30 +
-  aprimoramento do slot mais barato a cada 10s — o baseline é o do
-  jogador que GERENCIA; sem gestão a penalidade de morte cria esteira na
-  fronteira: morre −5 / re-limpa +1). Alvos medidos hoje (sistema
-  punitivo): 1º nível ~35-45s · 15min = nv 40-48 / onda 40-55 · mapa 1
-  fechado em 40-55min (média ~45; variância de RNG ±7min entre runs —
-  decidir pela média de ≥4 runs) · mortes ~30-40 aos 50min.
+  (**exponencial**: `146 × 1,11^(nv−1)` — leva `progressao-exponencial`;
+  o linear antigo estolava) e renda em `Batalha.xpAbate`
+  (**`12 × 1,10^ondaTotal`**, harmônica com o custo → tempo/nível
+  estável). Combate em `Batalha`: `ESC_HP 1,90 · ESC_DMG 0,045 ·
+  ESPERA_ONDA 8` (respiro = regen: alavanca de ritmo que NÃO piora
+  clear/survival) + `HP_POR_NIVEL 6` em `personagem.js` (fonte única —
+  NÃO espelhe fórmula em `statusDetalhado`). Mudou algum? Meça com
+  `node testes/ritmo.js [min]` (marcos até 240min + coluna nv/min;
+  fica fora do `todos.js`) — **≥4 runs por decisão** (run único iludiu
+  uma "validação"). **Cliff mapeado**: produto `ESC_HP×ESC_DMG ≤0,086`
+  passa / `≥0,095` estola o mapa 3 em 4/4 (renda fixa num tot parado ×
+  custo exponencial = estol estrutural; a morte −5 amplifica). **O
+  `ritmo.js` gasta ouro** (keystone no nv 30 + aprimoramento do slot
+  mais barato a cada 10s — o baseline é o do jogador que GERENCIA). Alvos
+  medidos hoje (progressão exponencial, média de 4 runs): 1º nível ~47s ·
+  15min = nv 33-38 / onda 45-51 · mapa 1 fechado ~32min · **sem estol**
+  (120min ≥ mapa 3 mid-wave) · **nv1000 ≤ 25h** (sim 1500min: nv503@3h,
+  693@4h) · mortes raras no early (eventos de fronteira/boss). Variância
+  de RNG: decidir pela média de ≥4 runs.
 - Canvas **768×432 de base com largura adaptativa**: altura fixa,
   `W = clamp(432 × aspecto, 768, 1728)` recalculado em `main.js
   resize()` (também no `orientationchange`); `Game.W` expõe a largura
