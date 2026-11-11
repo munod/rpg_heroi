@@ -10,12 +10,16 @@ var UI = (function () {
   // só o que estiver sob o ponteiro).
   var dicaCand = null;      // {gx, gy, w, h, linhas, desde, chave}
   var dicaFixa = null;      // caixa retida (long-press) — fecha no clique
+  // Overlay de vitória (spec mundos): enquanto ligado, botões/dicas da
+  // UI de baixo desenham normal mas NÃO respondem (sem atravessar).
+  var bloqueado = false;
   var DICA_DELAY = 250;     // ms de hover p/ abrir (sem flicker)
   var DICA_PRENSA = 500;    // ms segurando p/ abrir no toque
 
   function setContext(c) { ctx = c; }
 
   function dica(ret, linhas, cor) {
+    if (bloqueado) return;    // overlay de vitória: sem tooltip de baixo
     if (!linhas || !linhas.length) return;
     var m = Input.mouse;
     var gx = ret.x + deslocX, gy = ret.y;
@@ -121,7 +125,7 @@ var UI = (function () {
     o = o || {};
     var m = Input.mouse;
     var mx = m.x - deslocX;   // botão desenhado deslocado: testa na origem
-    var hover = !o.disabled &&
+    var hover = !bloqueado && !o.disabled &&
       mx >= x && mx < x + w && m.y >= y && m.y < y + h;
 
     var ativo = !!o.ativo;
@@ -247,15 +251,27 @@ var UI = (function () {
     // +1e-9: Math.log perto de múltiplas de 3 flutua (10^45 podia cair
     // em 14.999… → "1000Td" em vez de "1Qad")
     var i = Math.floor(Math.log(n) / Math.LN10 / 3 + 1e-9);
-    if (i > SUF.length - 1) i = SUF.length - 1;
+    if (i > SUF.length - 1) {
+      // além do último sufixo ("Nod" = 10^60, logo 10^63 — o XP/custo
+      // do late game chega a ~10^281 com o teto 9500): notação
+      // científica pt-BR ("1,5e281")
+      var e = Math.floor(Math.log(n) / Math.LN10 + 1e-9);
+      var m = Math.round((n / Math.pow(10, e)) * 10) / 10;
+      if (m >= 10) { m = 1; e++; }          // 9,96e280 arredonda p/ 1e281
+      return m.toString().replace('.', ',') + 'e' + e;
+    }
     var v = n / Math.pow(10, i * 3);
     return (Math.round(v * 10) / 10).toString().replace('.', ',') + SUF[i];
   }
+
+  // Liga/desliga o bloqueio de input da UI (overlay de vitória)
+  function bloqueia(v) { bloqueado = !!v; }
 
   return {
     setContext: setContext,
     abrev: abrev,
     deslocar: deslocar,
+    bloqueia: bloqueia,
     dica: dica,
     desenhaTooltip: desenhaTooltip,
     text: text,

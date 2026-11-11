@@ -85,6 +85,28 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    runs/decisão, cliff HP×DMG mapeado) · sim 1500min: **nv1000 ≤25h** —
    seção 38 (19 confs)
 
+## Série 2026-11 — em curso (ordem aprovada pelo mantenedor)
+
+1. ✅ **`mundos`** *(esta leva)* — campanha **10 mundos × 10 mapas ×
+   100 ondas**, **sim completa: vitória em 222,5h** (alvo 200h ±20%),
+   nv final 9.167, 65 mortes (eventos), **sem estol**; 10 temas
+   autorais (fix do chão travado no tema 3 do mapa 4+), **vitória no
+   mundo 10 + modo infinito** (overlay `p.vitoria`), **re-base do
+   teto** (G 1,07 · H 1,064 · NIVEL_MAX 9500), respiro escalado
+   `esperaOnda()` e escala de monstros (forma `'mundo'` no A/B;
+   **k=0,5** — k=1 estolou o mundo 3 em 2/2 runs, k=0 saudável 3/3) —
+   spec `.specs/features/mundos/`, seções 36-39 (516 confs).
+2. ⬜ **Monstros novos** com skills próprias + ataques à distância +
+   mais eventos (aproveita a escala de contagem da leva 1).
+3. ⬜ **Cutscenes entre mundos** — mapa do universo com os 10 mundos +
+   cutscene de eventos.
+4. ⬜ **Árvore de skills maior** — o jogador escolhe quais usar
+   (amplia o loadout de 3).
+5. ⬜ **IA monstros** (leva 1 de 2) — Flocking + influence map
+   (matilha que cerca; resolve as ondas ince fáceis).
+6. ⬜ **IA herói** (leva 2 de 2) — Behavior Tree por camadas de
+   prioridade (INT controla a profundidade da árvore).
+
 ## Backlog de ideias (sem compromisso)
 
 - Mais mapas/temas no ciclo infinito com mecânicas próprias.

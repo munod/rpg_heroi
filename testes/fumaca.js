@@ -331,12 +331,36 @@ console.log('6) morte, revivescimento e troca de tela');
   const Batalha = sandbox.Batalha;
 
   // --- herói fraco cai em combate
+  // Duas armadilhas de timing já medidas aqui (flakiness pré-existente):
+  //  (a) o herói é MAGO (escala em INT, não FOR) e com agudeza alta ele
+  //      RECUA/KITE em vez de morrer → int=1 (fica e apanha);
+  //  (b) a onda HERDADA podia ser fraca/limpa: ele farmava até zerar e
+  //      "nunca morria" (diag: inim=0 no fim) → pressão garantida com
+  //      restaurarOnda(30), como a seção 27.
   p.atributos.con = 1;
   p.atributos.for = 1;
+  p.atributos.int = 1;
+  p.nivel = 3;                  // HP mínimo (sem subir no meio do teste)
+  Batalha.restaurarOnda(30);
   let caiu = false;
+  let inimFrames = 0, pausFrames = 0, mortoFrames = 0;
   for (let i = 0; i < 6000 && !caiu; i++) {
     frame(1);
-    if (Batalha.info().morto) caiu = true;
+    // congelada: sem level-up/drop fortalecendo no meio (lição seção 27)
+    p.equip = { arma: null, armadura: null };
+    p.xp = 0;
+    const inf6 = Batalha.info();
+    if (inf6.morto) { caiu = true; mortoFrames++; }
+    if (inf6.inimigos > 0) inimFrames++;
+    if (inf6.pausada) pausFrames++;
+  }
+  if (!caiu) {
+    const f6 = Batalha.info();
+    console.log('    [diag6] nv=' + f6.nivel + ' hp=' + f6.hp + ' mapa=' +
+      f6.mapa + ' onda=' + f6.onda + ' inim=' + f6.inimigos +
+      ' inimFrames=' + inimFrames + '/6000 pausFrames=' + pausFrames +
+      ' classe=' + Game.personagem.classe + ' con=' +
+      Game.personagem.atributos.con + ' for=' + Game.personagem.atributos.for);
   }
   conf(caiu, 'herói pode cair em combate (vida baixa)');
 
@@ -523,9 +547,19 @@ console.log('12) chefe do fim de mapa e avanço de mapa');
   p.atributos.for = 999;
   p.atributos.con = 999;
   conf(Batalha.info().mapa === 1, 'jogo no mapa 1');
-  conf(sandbox.Mapas.info(99) === sandbox.Mapas.info(3) &&
-       sandbox.Mapas.forca(99) > sandbox.Mapas.forca(1),
-    'mapa além da lista reutiliza o tema e segue escalando (modo infinito)');
+  // spec mundos: tema por MUNDO com ciclo (mundo 11 = tema do mundo 1)
+  conf(sandbox.Mapas.mundo(1) === 1 && sandbox.Mapas.mundo(10) === 1 &&
+       sandbox.Mapas.mundo(11) === 2 && sandbox.Mapas.mundo(101) === 11,
+    'mundo() = ceil(mapa/10) (campanha 10×10)');
+  conf(sandbox.Mapas.noMundo(7) === 7 && sandbox.Mapas.noMundo(13) === 3,
+    'noMundo() = posição do mapa dentro do mundo (1-10)');
+  conf(sandbox.Mapas.info(31) !== sandbox.Mapas.info(21),
+    'mundo 4 tem tema PRÓPRIO (fix do chão travado no tema 3)');
+  conf(sandbox.Mapas.info(101) === sandbox.Mapas.info(1) &&
+       sandbox.Mapas.info(99) === sandbox.Mapas.info(91),
+    'modo infinito: mundos ciclam (mundo 11 = tema do mundo 1)');
+  conf(sandbox.Mapas.forca(99) > sandbox.Mapas.forca(1),
+    'forca segue escalando no modo infinito');
 
   // estado explícito: sem herói vivo/rodando o tOnda não corre e a
   // onda 100 nunca nasce (seções anteriores deixam estado variável)
@@ -873,18 +907,43 @@ console.log('16) skills automáticas (procs por classe)');
   conf(desbloqueou, 'subir de nível anuncia a skill desbloqueada');
 
   // --- nuke periódico do mago dispara sozinho (Bola de Fogo).
-  // Fixture determinística: o nuke SÓ conjura com alvo em campo — for=1
-  // (inimigo da onda 3 vive a janela toda) e con alto (herói não cai
-  // e pausa o update); antes, sem garantias, dependia do ciclo de spawn
+  // Fixture determinística: o nuke SÓ conjura com alvo em campo — e o
+  // timer dele só corre quando o herói está vivo. Duas armadilhas de
+  // timing medidas (flakiness pré-existente no HEAD):
+  //  (a) a fixture zerava o FOR, mas MAGO escala em INT (ficou 50) → a
+  //      onda morria em ~6s e o timer expirava nos 8s de respiro SEM
+  //      alvo (o tiro é desperdiçado: st.t = intervalo roda ANTES do
+  //      check !alvo) → dois expiries seguidos no respiro = nenhum tiro;
+  //  (b) com HP baixo o herói podia cair no meio da janela (a morte
+  //      congela o timer em atualizaHeroi).
+  // Correções: int mínimo (a onda 3 vive a janela toda — é o MAGO que
+  // precisa ser fraco) e con alto (regen > dano de entrada: não cai),
+  // exatamente o que o comentário original já prometia.
   p.atributos.for = 1;
-  p.atributos.con = 60;
+  p.atributos.int = 1;
+  p.atributos.con = 200;
   Batalha.restaurarOnda(3);
   jogoCanvas._textos = [];
   Batalha.limparEfeitos();
   let lancou = false;
+  const linha = [];
   for (let i = 0; i < 900 && !lancou; i++) {
     frame(1);
     lancou = (jogoCanvas._textos || []).some(t => t === 'Bola de Fogo');
+    if (i % 30 === 0) {
+      const f = Batalha.info();
+      linha.push((i / 60).toFixed(1) + 's:on' + f.onda + '/' + f.inimigos +
+        (f.morto ? '/MORTO' : '') + '/hp' + f.hp);
+    }
+  }
+  if (!lancou) {
+    console.log('    [linha] ' + linha.join(' '));
+    const inf = Batalha.info();
+    console.log('    [diag] mapa=' + inf.mapa + ' onda=' + inf.onda +
+      ' morto=' + inf.morto + ' hp=' + inf.hp + ' inimigos=' + inf.inimigos +
+      ' nv=' + p.nivel + ' classe=' + p.classe + ' loadout=' +
+      JSON.stringify(p.loadout) + ' skills=' +
+      JSON.stringify((sandbox.Skills.carregadas(p) || []).map(x => x.id)));
   }
   conf(lancou, 'mago dispara a skill automática (Bola de Fogo)');
   conf(Efeitos.qtd() > 0,
@@ -1815,18 +1874,18 @@ console.log('26) itens lendários: raridade 4, efeitos e equilíbrio');
   conf(basesT1.some(n => legNome.nome.indexOf(n) >= 0),
     'nome lendário monta sobre a base autorada');
 
-  // --- pool por tema (o clamp espelha Mapas.info: mapa 4+ = tema 3,
-  // o mesmo cenário do cenário/procedural)
+  // --- pool por MUNDO (espelha Mapas.info: 3 pools ciclam a cada 3
+  // mundos — mundos 1/4/7/10, 2/5/8, 3/6/9; spec mundos R-MUN-8)
   const t1 = ['vampiro', 'fenix'], t2 = ['furia', 'mercador'],
         t3 = ['tempestade', 'santificado'];
   let temaOk = true;
   for (let i = 0; i < 25; i++) {
-    if (t1.indexOf(Itens.geraItem(4, 1, 'guerreiro').efeito) < 0) temaOk = false;
-    if (t2.indexOf(Itens.geraItem(4, 2, 'guerreiro').efeito) < 0) temaOk = false;
-    if (t3.indexOf(Itens.geraItem(4, 3, 'guerreiro').efeito) < 0) temaOk = false;
-    if (t3.indexOf(Itens.geraItem(4, 4, 'guerreiro').efeito) < 0) temaOk = false;
+    if (t1.indexOf(Itens.geraItem(4, 1, 'guerreiro').efeito) < 0) temaOk = false;   // mundo 1
+    if (t1.indexOf(Itens.geraItem(4, 31, 'guerreiro').efeito) < 0) temaOk = false;  // mundo 4 cicla p/ 1
+    if (t2.indexOf(Itens.geraItem(4, 11, 'guerreiro').efeito) < 0) temaOk = false;  // mundo 2
+    if (t3.indexOf(Itens.geraItem(4, 21, 'guerreiro').efeito) < 0) temaOk = false;  // mundo 3
   }
-  conf(temaOk, 'pool por tema (mapa 4+ clampa no tema 3, como Mapas.info)');
+  conf(temaOk, 'pool por mundo (3 pools ciclam: mundos 1/4/7, 2/5/8, 3/6/9)');
 
   // --- chefe com 15% de elevar (stub 0 prova) e rar 1-3 intactos
   const rnd0 = Math.random;
@@ -2034,8 +2093,16 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
   // --- 2) piso: onda baixa nunca sai do mapa atual
   esperaVida(900);                 // nunca entra caído (estado herdado)
   // vidro puro (nv1): com ESPERA 8 + regen, nv4 sobrevivia à onda 3 e
-  // até farmava (ondas 3→11) — o piso precisa de morte em onda ≤ 6
+  // até farmava (ondas 3→11) — o piso precisa de morte em onda ≤ 6.
+  // Reafirmado aqui: o teste 1) anterior deixa o herói matando ondas e
+  // o auto-equip pode entregar arma (dano > 5) — sem isso ele limpa
+  // ondas 3→10 na janela e "nunca morre".
   p.nivel = 1;
+  p.atributos.for = 1;
+  p.atributos.con = 1;
+  p.atributos.int = 8;
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
   Batalha.restaurarOnda(3);
   esperaOnda(3);
   conf(Batalha.info().onda === 3 && Batalha.info().inimigos > 0,
@@ -2046,7 +2113,32 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
     oAntes = p.ouro;                 // estado do frame ANTES da morte
     oOn2 = Batalha.info().onda;
     frame(1);
+    // fixture congelada (medido: ele farmava até a onda 10 com arma +4
+    // e nunca morria): drops são auto-equipados e o XP sobe de nível no
+    // meio do teste — ambos fortalecem o herói. Zera depois de cada
+    // frame (dentro dele o combate já usou o estado correto)
+    p.equip = { arma: null, armadura: null };
+    p.xp = 0;
     morte2 = Batalha.info().morto;
+  }
+  if (!morte2) {
+    const f27 = Batalha.info();
+    const tem = sandbox.Mapas.info(f27.mapa);
+    console.log('    [diag27] mapa=' + f27.mapa + ' tema=' + tem.nome +
+      ' onda=' + f27.onda + ' inim=' + f27.inimigos + ' hp=' + f27.hp +
+      ' nv=' + p.nivel + ' comum=' + tem.inimigos.comum.tipo +
+      '(' + tem.inimigos.comum.cor + ')' + ' for=' + p.atributos.for +
+      ' con=' + p.atributos.con);
+  }
+  if (!morte2) {
+    const f = Batalha.info();
+    console.log('    [diag27b] onda=' + f.onda + ' inim=' + f.inimigos +
+      ' hp=' + f.hp + '/' + Personagem.status(p).hpMax +
+      ' nv=' + p.nivel + ' dano=' + f.dano +
+      ' arma=' + (p.equip.arma ? p.equip.arma.nome + ' +' +
+        (p.equip.arma.bonus && p.equip.arma.bonus.dano || 0) : 'null') +
+      ' for=' + p.atributos.for + ' int=' + p.atributos.int +
+      ' morto=' + f.morto + ' estado=' + f.heroi.estado);
   }
   conf(morte2, 'morre de novo (onda 3)');
   conf(Batalha.info().onda === Math.max(1, oOn2 - 5),
@@ -2618,18 +2710,28 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
     for (let i = 0; i < 3000 && Batalha.info().inimigoPerto > 55; i++) {
       frame(1);
     }
-    let n = 0, antes = false;
+    let n = 0, antes = false, semInim = 0, arma = 0;
     for (let i = 0; i < 900; i++) {
       frame(1);
       const f = Batalha.info();
+      if (f.inimigos === 0) semInim++;
+      if (p.equip.arma) arma++;
       const emRange = f.inimigoPerto >= 0 && f.inimigoPerto <= 60;
       if (emRange && f.atacando && !antes) n++;
       antes = f.atacando;
     }
-    return n;
+    return { n, semInim, arma, inim: Batalha.info().inimigos,
+             onda: Batalha.info().onda };
   }
-  const g8 = golpesComDes(8);      // recarga 0,50s → ~30 frames/golpe
-  const g62 = golpesComDes(62);    // recarga 0,15s (piso) → ~9 frames
+  const r8 = golpesComDes(8);      // recarga 0,50s → ~30 frames/golpe
+  const r62 = golpesComDes(62);    // recarga 0,15s (piso) → ~9 frames
+  const g8 = r8.n, g62 = r62.n;
+  if (!(g8 > 4 && g62 >= Math.round(g8 * 1.8))) {
+    console.log('    [diagDES] des8: semInim=' + r8.semInim +
+      ' arma=' + r8.arma + ' fim inim=' + r8.inim + ' onda=' + r8.onda +
+      ' || des62: semInim=' + r62.semInim + ' arma=' + r62.arma +
+      ' fim inim=' + r62.inim + ' onda=' + r62.onda);
+  }
   conf(g8 > 4 && g62 >= Math.round(g8 * 1.8),
     'DES acelera o ataque até o piso (des8=' + g8 +
     ' golpes/10s, des62=' + g62 + ', razão ' +
@@ -2979,6 +3081,13 @@ console.log('35) ranking: score, apelido, degradação, cena e gatilhos');
     frame(1);
     if (Batalha.info().morto) caiu = true;
   }
+  if (!(caiu && chamadas >= 2)) {
+    const fz = Batalha.info();
+    console.log('    [diagRank] caiu=' + caiu + ' chamadas=' + chamadas +
+      ' nv=' + p.nivel + ' hp=' + fz.hp + ' onda=' + fz.onda +
+      ' inim=' + fz.inimigos + ' estado=' + fz.heroi.estado +
+      ' arma=' + (p.equip.arma ? p.equip.arma.nome : 'null'));
+  }
   conf(caiu && chamadas >= 2,
     'gatilho 2: a morte chama Ranking.submete (' + chamadas +
     ' chamadas no total)');
@@ -3170,14 +3279,14 @@ console.log('36) ajustes: piso da recarga, cooldown na Stats (rolagem) e teto');
     'piso 0,08s vivo no status (DES 500 = 12,5 g/s)');
   p.atributos.des = 8;
 
-  // --- 2) teto de nível 1000
-  conf(Personagem.NIVEL_MAX === 1000, 'NIVEL_MAX = 1000 (fonte única)');
+  // --- 2) teto de nível 9500 (spec mundos: campanha 10k ondas → nv ~9150)
+  conf(Personagem.NIVEL_MAX === 9500, 'NIVEL_MAX = 9500 (fonte única)');
   const salv = Personagem.normalizar({ nivel: 36000, xp: 999999,
     xpProx: 756125,
     atributos: { for: 500, des: 8, con: 8, int: 8, car: 8 } });
-  conf(salv.nivel === 1000 && salv.xp === 0 &&
-       salv.xpProx === Personagem.custoProximo(1000),
-    'normalizar clampa save nv 36.000 → 1000 (xp zerado, xpProx refaz)');
+  conf(salv.nivel === 9500 && salv.xp === 0 &&
+       salv.xpProx === Personagem.custoProximo(9500),
+    'normalizar clampa save nv 36.000 → 9500 (xp zerado, xpProx refaz)');
   conf(salv.atributos.for === 500,
     'atributos investidos preservados no clamp');
 
@@ -3188,7 +3297,7 @@ console.log('36) ajustes: piso da recarga, cooldown na Stats (rolagem) e teto');
   // com custo exponencial o lote precisa cobrir o custo REAL do nível
   Batalha.ganhaXP(Personagem.custoProximo(p.nivel));
   conf(p.nivel === Personagem.NIVEL_MAX && p.xp === 0,
-    'ganhaXP: 999 → 1000 e a sobra do último nível é descartada');
+    'ganhaXP: 9499 → 9500 e a sobra do último nível é descartada');
   Batalha.ganhaXP(1e9);
   conf(p.nivel === Personagem.NIVEL_MAX && p.xp === 0,
     'no teto o XP é DESCARTADO (não acumula buffer escondido)');
@@ -3412,19 +3521,20 @@ console.log('38) progressão exponencial: curva, renda harmônica e safeguards')
   // --- 1) custo EXPOENCIAL puro: razão constante em qualquer nível
   const g1 = Personagem.custoProximo(2) / Personagem.custoProximo(1);
   const g50 = Personagem.custoProximo(51) / Personagem.custoProximo(50);
-  const g998 = Personagem.custoProximo(1000) /
-    Personagem.custoProximo(999);
-  conf(Math.abs(g1 - g50) < 1e-9 && Math.abs(g1 - g998) < 1e-9,
-    'razão G constante do1º ao 1000º nível (exponencial pura: ' +
+  const gTopo = Personagem.custoProximo(Personagem.NIVEL_MAX) /
+    Personagem.custoProximo(Personagem.NIVEL_MAX - 1);
+  conf(Math.abs(g1 - g50) < 1e-9 && Math.abs(g1 - gTopo) < 1e-9,
+    'razão G constante do1º ao 9500º nível (exponencial pura: ' +
     g1.toFixed(4) + ')');
-  conf(Math.abs(g1 - 1.11) < 1e-9, 'G inicial = 1,11');
+  // re-base spec mundos: G 1,11 → 1,07 (custo(9500) ≈ 10^281 < 1e308)
+  conf(Math.abs(g1 - 1.07) < 1e-9, 'G inicial = 1,07 (re-base mundos)');
   conf(Personagem.custoProximo(1) === 146,
     'custo do nível 1 = 146 (1º nível ~35-45s intacto)');
-  conf(isFinite(Personagem.custoProximo(1000)) &&
-       Personagem.custoProximo(1000) < 1e308,
-    'custo(1000) finito (< 1e308 — doubles seguros até o teto)');
+  conf(isFinite(Personagem.custoProximo(Personagem.NIVEL_MAX)) &&
+       Personagem.custoProximo(Personagem.NIVEL_MAX) < 1e308,
+    'custo(9500) finito (< 1e308 — doubles seguros até o teto)');
   let monotonio = true;
-  for (let n = 1; n < 999; n++) {
+  for (let n = 1; n < Personagem.NIVEL_MAX - 1; n++) {
     if (Personagem.custoProximo(n + 1) <= Personagem.custoProximo(n)) {
       monotonio = false; break;
     }
@@ -3438,10 +3548,13 @@ console.log('38) progressão exponencial: curva, renda harmônica e safeguards')
   const h50 = Batalha.xpAbate(50, 0) / Batalha.xpAbate(49, 0);
   const h200 = Batalha.xpAbate(200, 0) / Batalha.xpAbate(199, 0);
   // tolerância 1%: o Math.round da renda mexe na 4ª casa da razão
-  conf(Math.abs(h50 - h200) < 0.01 && Math.abs(h50 - 1.09) < 0.01,
-    'renda com razão XP_H = 1,09 constante (' + h50.toFixed(4) + ')');
+  // re-base spec mundos: H 1,10 → 1,064 (renda(9999) ≈ 10^270 < 1e308)
+  conf(Math.abs(h50 - h200) < 0.01 && Math.abs(h50 - 1.064) < 0.01,
+    'renda com razão XP_H = 1,064 constante (' + h50.toFixed(4) + ')');
   conf(Batalha.xpAbate(300, 0) > Batalha.xpAbate(100, 0) * 1000,
     'renda cresce ≥1000× do onda 100 p/ 300 (absorve o custo G^nv)');
+  conf(isFinite(Batalha.xpAbate(9999, 0)) && Batalha.xpAbate(9999, 0) < 1e308,
+    'renda(9999) finita (< 1e308 — cobre a campanha de 100 mapas)');
 
   // --- 3) safeguards: save editado não salta nível nem transborda
   const salv = Personagem.normalizar({
@@ -3487,6 +3600,137 @@ console.log('38) progressão exponencial: curva, renda harmônica e safeguards')
        UI.abrev(1e6) === '1M' && UI.abrev(2.5e9) === '2,5B' &&
        UI.abrev(1e45) === '1Qad',
     'UI.abrev: 999 · 1,5K · 1M · 2,5B · 10^45 (pt-BR)');
+  // além do último sufixo ("Nod" = 10^60 → limiar 10^63): notação
+  // científica — sem isso a barra de XP do late game mostraria
+  // "1e+281Nod" (o sufixo engolindo a mantissa)
+  conf(UI.abrev(1e61) === '10Nod' && UI.abrev(1e63) === '1e63' &&
+       UI.abrev(1.5e281) === '1,5e281' && UI.abrev(9.96e280) === '1e281' &&
+       UI.abrev(1.79e308) === '1,8e308',
+    'UI.abrev: notação científica pt-BR após o último sufixo ' +
+    '(10^61 = 10Nod · 10^63 = 1e63 · 1,5e281 · rollover 1e281)');
+}
+
+console.log('39) mundos: escala de monstros, A/B e vitória da campanha');
+{
+  const Batalha = sandbox.Batalha;
+  const Mapas = sandbox.Mapas;
+  const Personagem = sandbox.Personagem;
+  const p = Game.personagem;
+
+  // --- cena de jogo com estado limpo (a 37 terminou na cena ranking)
+  p.atributos.for = 1e6;    // dano absurdo p/ derrubar o chefe do mundo 10
+  p.atributos.int = 1e6;    // (mago usa INT como mod de dano)
+  p.atributos.con = 1e6;    // HP ~4M: tanque o dano do fim de campanha
+  p.atributos.des = 100;    // velocidade moderada (sem explodir sub-passos)
+  p.atributos.car = 8;
+  // ts fresco: sem crédito de ausência ao reabrir a cena
+  Salvar.salvarEstado(p.id, 1, Date.now(), false, 1);
+  Game.setScene('jogo');
+  frame(2);
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- 1) escala de monstros: early intacto, teto cresce por mundo.
+  // k EXPLÍCITO aqui = propriedade geométrica (imune a mudança de
+  // balanço); o valor shipado é checado à parte no 1b.
+  Batalha.escalaMonstros('mundo', 2);
+  Batalha.restaurarMapa(1);
+  Batalha.restaurarOnda(2);                    // onda 1 (tot 0)
+  conf(Batalha.qtdMonstros() === 3,
+    'mundo 1, onda 1: 3 monstros (ramp intacto)');
+  Batalha.restaurarOnda(6);                    // onda 5 (tot 4)
+  conf(Batalha.qtdMonstros() === 5,
+    'mundo 1 completa o teto de 5 na onda 5 (igual ao antigo)');
+  Batalha.restaurarMapa(50);                   // mundo 5
+  conf(Batalha.qtdMonstros() === 13,
+    'mundo 5: teto 13 (5 + 4 mundos × k=2)');
+  Batalha.restaurarMapa(100);                  // mundo 10 (fim da campanha)
+  conf(Batalha.qtdMonstros() === 23,
+    'mundo 10: teto 23 (5 + 9 mundos × k=2)');
+  Batalha.restaurarMapa(150);                  // mundo 15 — modo infinito
+  conf(Batalha.qtdMonstros() === 23,
+    'modo infinito: teto trava no fim da campanha (não cresce p/ sempre)');
+
+  // --- 1b) valor SHIPADO (k=0,5 — medição: k=1 estolou o mundo 3 em
+  // 2 de 2 runs, k=0 saudável em 3/3 → escalamos suave)
+  Batalha.escalaMonstros('mundo', 0.5);
+  Batalha.restaurarMapa(1);
+  Batalha.restaurarOnda(6);
+  conf(Batalha.qtdMonstros() === 5,
+    'shipado (k=0,5): teto 5 no mundo 1 (early intacto)');
+  Batalha.restaurarMapa(24);                  // mundo 3 — a zona medida
+  conf(Batalha.qtdMonstros() === 6,
+    'shipado (k=0,5): teto 6 no mundo 3 (zona do estol)');
+  Batalha.restaurarMapa(100);
+  conf(Batalha.qtdMonstros() === 9,
+    'shipado (k=0,5): teto 9 no fim da campanha (escala 5→9)');
+
+  // --- 2) A/B: variante 'mapa' chega no MESMO ponto, mais suave no meio
+  Batalha.escalaMonstros('mapa', 2);
+  Batalha.restaurarMapa(100);
+  conf(Batalha.qtdMonstros() === 23,
+    'variante mapa: mesmo ponto final (23) no mapa 100');
+  Batalha.restaurarMapa(11);                   // primeira fronteira de mundo
+  const nMapa = Batalha.qtdMonstros();
+  Batalha.escalaMonstros('mundo', 2);
+  const nMundo = Batalha.qtdMonstros();
+  conf(nMundo === 7 && nMapa === 6,
+    'mapa 11: mundo dá 7 (degrau na fronteira), mapa dá 6 (mais suave)');
+  Batalha.escalaMonstros('mundo', 0.5);        // restaura o valor shipado
+
+  // --- 3) vitória: chefe do mapa 100 → overlay → continuar
+  Batalha.restaurarMapa(100);
+  Batalha.restaurarOnda(100);                  // onda 99 + tOnda 0 → nasce a 100
+  let nasceu = false;
+  for (let i = 0; i < 600 && !nasceu; i++) {
+    frame(1);
+    nasceu = Batalha.info().boss;
+  }
+  conf(nasceu, 'chefe do mundo 10 em campo (mapa 100, onda 100)');
+
+  let passou = false;
+  for (let i = 0; i < 6000 && !passou; i++) {
+    frame(1);
+    if (Batalha.info().mapa >= 101) passou = true;
+  }
+  conf(passou, 'derrotar o chefe do mundo 10 avança ao mapa 101 (fim da campanha)');
+
+  // overlay aparece no render seguinte
+  jogoCanvas._textos = [];
+  frame(1);
+  conf(jogoCanvas._textos.some(t => t.indexOf('CAMPANHA CONCLUÍDA') >= 0),
+    'overlay de vitória aparece ao cruzar o mundo 10');
+  conf(!p.vitoria, 'flag vitoria ainda false (só no clique de Continuar)');
+
+  // --- 4) bloqueio: com o overlay no ar, os botões de baixo não respondem
+  clique(236, 388);                           // Trocar herói (rodapé)
+  frame(1);
+  conf(Game.cena === 'jogo',
+    'overlay bloqueia os botões de baixo (Trocar herói não responde)');
+
+  // --- 5) Continuar: grava a flag e some com o overlay
+  clique(384, 276);                           // centro do botão Continuar
+  frame(1);
+  conf(p.vitoria === true, 'clique em Continuar grava p.vitoria');
+  jogoCanvas._textos = [];
+  frame(1);
+  conf(!jogoCanvas._textos.some(t => t.indexOf('CAMPANHA CONCLUÍDA') >= 0),
+    'overlay some depois de Continuar');
+
+  // --- 6) persistência: normalizar mantém a flag; reabrir não re-mostra
+  conf(Personagem.normalizar(JSON.parse(JSON.stringify(p))).vitoria === true,
+    'normalizar preserva vitoria no save (round-trip)');
+  conf(Personagem.normalizar({}).vitoria === false,
+    'save novo nasce com vitoria false');
+  Salvar.salvarEstado(p.id, Batalha.info().onda || 1, Date.now(), false,
+                      Batalha.info().mapa);
+  Game.setScene('jogo');                      // reabre a cena
+  frame(2);
+  jogoCanvas._textos = [];
+  frame(1);
+  conf(!jogoCanvas._textos.some(t => t.indexOf('CAMPANHA CONCLUÍDA') >= 0),
+    'reabrir a cena não re-mostra o overlay (vitoria persiste)');
+  conf(Batalha.info().mapa >= 101,
+    'modo infinito segue após reabrir (mapa ' + Batalha.info().mapa + ')');
 }
 
 console.log('');

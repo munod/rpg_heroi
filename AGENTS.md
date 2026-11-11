@@ -57,24 +57,31 @@
   Leva 1 (medido): ESC_HP 1,30 · ESC_DMG 0,10; hoje (leva
   `progressao-exponencial`): **ESC_HP 1,90 · ESC_DMG 0,045**.
 - Curva de progressão com fonte única em `Personagem.custoProximo`
-  (**exponencial**: `146 × 1,11^(nv−1)` — leva `progressao-exponencial`;
-  o linear antigo estolava) e renda em `Batalha.xpAbate`
-  (**`12 × 1,10^ondaTotal`**, harmônica com o custo → tempo/nível
+  (**exponencial**: `146 × 1,07^(nv−1)` — leva `progressao-exponencial`
+  calibrava 1,11; a leva `mundos` RE-BASEOU p/ `1,07` junto com H
+  `1,10→1,064`, mantendo o ratio `ln(H)/ln(G)` ≈ 0,916 — o linear
+  antigo estolava) e renda em `Batalha.xpAbate`
+  (**`12 × 1,064^ondaTotal`**, harmônica com o custo → tempo/nível
   estável). Combate em `Batalha`: `ESC_HP 1,90 · ESC_DMG 0,045 ·
-  ESPERA_ONDA 8` (respiro = regen: alavanca de ritmo que NÃO piora
-  clear/survival) + `HP_POR_NIVEL 6` em `personagem.js` (fonte única —
-  NÃO espelhe fórmula em `statusDetalhado`). Mudou algum? Meça com
-  `node testes/ritmo.js [min]` (marcos até 240min + coluna nv/min;
-  fica fora do `todos.js`) — **≥4 runs por decisão** (run único iludiu
-  uma "validação"). **Cliff mapeado**: produto `ESC_HP×ESC_DMG ≤0,086`
+  esperaOnda()` (respiro = regen: alavanca de ritmo que NÃO piora
+  clear/survival — ver a linha de Mapas abaixo) + `HP_POR_NIVEL 6` em
+  `personagem.js` (fonte única — NÃO espelhe fórmula em
+  `statusDetalhado`). Mudou algum? Meça com
+  `node testes/ritmo.js [min] [mundo|mapa] [k]` (marcos até 13.500min
+  p/ a campanha inteira +
+  coluna nv/min; argv 2/3 = variante da escala de monstros; fica fora
+  do `todos.js`) — **≥4 runs por decisão** (run único iludiu uma
+  "validação"). **Cliff mapeado**: produto `ESC_HP×ESC_DMG ≤0,086`
   passa / `≥0,095` estola o mapa 3 em 4/4 (renda fixa num tot parado ×
   custo exponencial = estol estrutural; a morte −5 amplifica). **O
   `ritmo.js` gasta ouro** (keystone no nv 30 + aprimoramento do slot
   mais barato a cada 10s — o baseline é o do jogador que GERENCIA). Alvos
-  medidos hoje (progressão exponencial, média de 4 runs): 1º nível ~47s ·
-  15min = nv 33-38 / onda 45-51 · mapa 1 fechado ~32min · **sem estol**
-  (120min ≥ mapa 3 mid-wave) · **nv1000 ≤ 25h** (sim 1500min: nv503@3h,
-  693@4h) · mortes raras no early (eventos de fronteira/boss). Variância
+  medidos hoje (média de 4 runs, pós-re-base): 1º nível ~47s ·
+  15min = nv 29-33 / onda 43-47 (a banda 33-38 era do G 1,11) ·
+  mapa 1 fechado ~31-33min · **SIM COMPLETA: vitória em 222,5h**
+  (alvo 200h ±20%), nv final 9.167 (modelo 9.150), 65 mortes/222h
+  (eventos), sem estol até o mapa 101 (nv9500 ≤ fim de campanha).
+  Variância
   de RNG: decidir pela média de ≥4 runs.
 - Canvas **768×432 de base com largura adaptativa**: altura fixa,
   `W = clamp(432 × aspecto, 768, 1728)` recalculado em `main.js
@@ -102,12 +109,29 @@
   ritmo); renascimento em `posicaoAleatoriaSegura()` e inimigos miram
   no local da morte. `info()` expõe `janela`/`mundo`/`cam`/`heroi`
   para os testes (seções 17-18).
-- Mapas: ciclo de `FIM_MAPA` (100) ondas — a onda 100 é o chefe; vencido,
-  `passaMapa()` faz `mapa++` e volta a onda 1. Dados em `js/mapas.js`
-  (`Mapas.info(n)` p/ tema; dificuldade/XP de combate = escala contínua
-  `ondaTotal()` em `batalha.js` — onda 1 do mapa 2 = patamar da onda 100
-  do mapa 1 — e `Mapas.forca(n)` só nos drops de item); cenário
-  reconstruído por `garanteCenario()`. O estado salvo guarda `mapa` e
+- **Mundos (spec `mundos`)**: campanha **10 mundos × 10 mapas × 100
+  ondas** (`FIM_MAPA` intacto — a onda 100 é o chefe; vencido,
+  `passaMapa()` faz `mapa++` e volta a onda 1). `Mapas.mundo(n)` =
+  `ceil(n/10)` e `noMundo(n)` (fonte única, exportados); **tema é do
+  MUNDO** (`info(n)` → `LISTA[(mundo−1)%10]`, **10 temas autorais**,
+  ciclando no infinito — fix do chão que travava no tema 3 do mapa 4 em
+  diante). Dados em `js/mapas.js` (`Mapas.forca(n)` só nos drops de
+  item; dificuldade/XP de combate = escala contínua `ondaTotal()` em
+  `batalha.js` — onda 1 do mapa 2 = patamar da onda 100 do mapa 1);
+  cenário reconstruído por `garanteCenario()`. **Respiro entre ondas =
+  `esperaOnda()`** (`8 + (min(mapa,100)−1) × 1,1`s — a **alavanca de
+  duração** da campanha: mundo 1 intacto = 8s / mapa 1 ≈ 33min, fim da
+  campanha = 117s; no infinito trava no patamar do mundo 10; pós-chefe
+  usa `ESPERA_TRANSICAO` fixo 8s). **Escala de monstros**:
+  `qtdMonstros()` = `min(3+tot/2, teto)` com teto **5→9** shipado
+  (`ESC_MONSTROS_K 0,5` — medido: k=1 estolou o mundo 3 em 2 de 2
+  runs; k=0 saudável em 3/3) até o fim da campanha — variantes
+  `'mundo'` (degraus por fronteira) e `'mapa'` (suave),
+  `escalaMonstros(modo, k)` exposta p/ o A/B; `k=0` = teto fixo 5. **Medido: o nº
+  de monstros NÃO muda a duração** (só o perigo — XP extra fortalece);
+  quem controla tempo é o `esperaOnda()`. Vitória: chefe do mapa 100 →
+  overlay em `jogo.js` (`UI.bloqueia` + `p.vitoria`, normalizar com
+  default `false`) → Continuar = modo infinito. O estado salvo guarda `mapa` e
   `Salvar.lerEstado` migra saves legados (onda >100 → mapa/onda equivalentes)
   — a migração é na leitura, sem rewrite.
 - Mapas procedurais em `js/perlin.js` (Perlin melhorado + mulberry32):
@@ -201,11 +225,18 @@
   `ranking` registrada em `main.js`, botão na seleção (260,306,108,26).
   Seção 35: SDK fake é **thenable síncrono** (sem microtasks no
   harness); fake de gravação registra `['set', id, doc]` p/ asserções.
-- Ajustes playtest 2 (spec `ajustes-playtest-2`): **teto de nível
-  1000** — `Personagem.NIVEL_MAX` (fonte única); `Batalha.ganhaXP`
-  (exportado p/ teste) DESCARTA o XP no cap e zera a sobra; `normalizar`
-  clampa `nivel ≤ 1000` na leitura (save nv 36k → 1000, atributos
-  intactos, sem bump de chave); cabeçalho mostra **"MÁXIMO"**. Aba Stats:
+- Ajustes playtest 2 (spec `ajustes-playtest-2`) + leva `mundos`:
+  **teto de nível 9500** (era 1000) — `Personagem.NIVEL_MAX` (fonte
+  única); `Batalha.ganhaXP` (exportado p/ teste) DESCARTA o XP no cap e
+  zera a sobra; `normalizar` clampa `nivel ≤ 9500` na leitura (save nv
+  36k → 9500, atributos intactos, sem bump de chave); cabeçalho mostra
+  **"MÁXIMO"**. **9500 = p/ níveis durarem os 200h da campanha**: a
+  trajetória é `nv ≈ 0,9166 × ondas` (ratio ln H/ln G) → fim de
+  campanha (T=9.999) ≈ nv 9.150 < teto, e as curvas re-baseadas só
+  estouram `1e308` muito acima (renda em T≈11.433, custo em nv≈10.441)
+  — com as curvas antigas (1,11/1,10) qualquer teto ≤ 6.800 morria ANTES
+  do fim. **`UI.abrev`** cobre >10⁶⁰ com notação científica pt-BR
+  (`1,5e281`). Aba Stats:
   **bloco de cooldowns efetivos** (`IA.skillEfeito` com a agudeza da
   INT — espelho do `aguHeroi`; área ≈ `aCada × recarga atual`) +
   **rolagem** (wheel via `Input.roda()`, zerado no `endFrame` como o

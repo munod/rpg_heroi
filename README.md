@@ -30,9 +30,14 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   no mesmo patamar da onda 100 anterior (escala contínua de ondas), sem o
   "reset" que deixava as primeiras ondas dos mapas seguintes fáceis demais
   (a recompensa de XP segue a mesma curva).
-  São **3 mapas** (Planície Verdejante, Cripta Congelada e Ninho Rubro);
-  depois do último entra o **modo infinito** (o tema repete com a dificuldade
-  crescente). Saves de antes dos mapas migram sozinhos (onda 250 → mapa 3,
+  A campanha tem **10 mundos × 10 mapas × 100 ondas** (Planície Verdejante,
+  Cripta Congelada, Ninho Rubro, Deserto Escaldante, Pântano Venenoso,
+  Floresta Noturna, Forja Abissal, Ruínas Celestiais, Vazio Abissal e
+  Trono do Caos — **cada mundo tem chão, obstáculos, monstros e chefe
+  próprios**), alvo de **~200h de jogo**. Derrubar o chefe do **mundo 10**
+  abre a tela de **CAMPANHA CONCLUÍDA** e libera o **modo infinito**
+  (os mundos voltam ao início em loop, com a dificuldade seguindo a
+  escala). Saves de antes dos mapas migram sozinhos (onda 250 → mapa 3,
   onda 50).
 - **Mapas procedurais** — o chão (manchas orgânicas e cachos de flores) e
   a **posição dos obstáculos** de cada mapa saem de um **Perlin Noise com
@@ -137,7 +142,8 @@ js/
   personagem.js     classes, atributos, status derivados, validação, níveis
   salvar.js         localStorage + export/import JSON
   gravacao.js       toast, autosave e save do personagem (compartilhado)
-  mapas.js          cada mapa: tema do chão, obstáculos, monstros e chefe
+  mapas.js          cada mundo: tema do chão, obstáculos, monstros e chefe
+                    (mundo()/noMundo() — 10×10, ciclo no infinito)
   perlin.js         Perlin Noise com semente do mapa (cenários procedurais)
   itens.js          drops: armas/armaduras, bolsa e auto-equip
   skills.js         skills automáticas por classe (procs, sem botão)
@@ -202,16 +208,16 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 475 asserções: sprites, status, UI, idle, toque, ranking
+node testes/fumaca.js     # 500 asserções: sprites, status, UI, idle, toque, ranking, mundos
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
 node testes/mapa.js X.png # converte screenshot em mapa ASCII (layout)
 node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
-node testes/ritmo.js [min] # mede o ritmo de progressão (tuning; padrão 15)
+node testes/ritmo.js [min] [mundo|mapa] [k] # mede o ritmo (tuning; padrão 15)
 ```
 
-São **489 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **513 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.
@@ -245,9 +251,10 @@ com paginação, novo herói e exclusão em duas etapas, o **ranking
 global** (tela própria com top 10 e "meu melhor" por apelido — funciona
 com o Firebase configurado; sem config/rede mostra o estado
 "não configurado" e nada trava, e cada envio tem toast/status com o
-motivo), o **teto de nível 1000** (barra "MÁXIMO", XP descartado no
-cap), os **cooldowns efetivos das skills na aba Stats** (com barra de
-rolagem), a **progressão exponencial** (custo `146×1,11^nv`, renda
-`12×1,10^onda`, teto em ~25h de jogo gerenciado) com **safeguards de
-save** (xpProx recalculado, tetos de ouro/pontos/atributo — fecha o bug
-dos níveis 83k) e a barra de XP com **abreviação** (K/M/B/T/Qa…).
+motivo), o **teto de nível 9500** (barra "MÁXIMO", XP descartado no
+cap — os níveis duram a campanha inteira), os **cooldowns efetivos das
+skills na aba Stats** (com barra de rolagem), a **progressão
+exponencial** (custo `146×1,07^nv`, renda `12×1,064^onda`) com
+**safeguards de save** (xpProx recalculado, tetos de ouro/pontos/
+atributo — fecha o bug dos níveis 83k) e a barra de XP com
+**abreviação** (K/M/B/T/Qa… até 10⁶⁰, depois notação científica).

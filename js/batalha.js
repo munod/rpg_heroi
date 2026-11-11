@@ -48,6 +48,58 @@ var Batalha = (function () {
 
   var FIM_MAPA = 100;        // ondas por mapa; a100 é o chefe
 
+  // Escala de monstros por onda (spec mundos R-MUN-4): o teto antigo
+  // era fixo em 5 — batia já na onda 4 do mapa 1 e NUNCA mais mudava
+  // (constante no jogo inteiro). Agora cresce até o fim da campanha,
+  // em DUAS variantes para o A/B medido com ritmo (≥4 runs cada):
+  //   'mundo': degraus a cada mundo (identidade de mundo: cada mundo
+  //            entra mais povoado) — 5 → 5+9k no mundo 10;
+  //   'mapa': progressão suave a cada mapa — 5 → 5+9k no mapa 100
+  //            (mesmo ponto final, sem degraus).
+  // O ramp inicial 3+tot/2 continua valendo (early intacto: nasce 3,
+  // completa 5 na onda 4 como sempre). k = monstros extras por mundo
+  // (calibrado em T8 p/ ~200h de campanha).
+  var ESC_MONSTROS = 'mundo';
+  // k = 0,5 (medição: k=1 estolou o mundo 3 em 2 de 2 runs — teto 7
+  // = +40% de dano na fronteira; k=0 saudável em 3/3). Com 0,5 o
+  // mundo 3 fica em teto 6 e o fim da campanha em 9 (escala visível,
+  // impacto suave). k=0 reproduz o teto fixo antigo (floor já garante
+  // teto inteiro para k fracionário).
+  var ESC_MONSTROS_K = 0.5;
+
+  // Teto no FIM da campanha (mundo 10 = mapa 100): no modo infinito
+  // não segue crescendo (anel de spawn e custo de IA) — a dificuldade
+  // lá em cima continua pela escala de HP/dano. As duas variantes têm
+  // o MESMO ponto final (5 + 9K) e só mudam o FORMATO do crescimento:
+  // 'mundo' = degraus de K a cada fronteira de mundo (identidade);
+  // 'mapa' = degraus menores, ~a cada 11 mapas (progressão suave).
+  function tetoMonstros() {
+    var FIM_M = Mapas.LISTA.length;
+    var FIM_P = FIM_M * Mapas.MAPAS_POR_MUNDO;
+    var extra = ESC_MONSTROS === 'mundo'
+      ? (Math.min(Mapas.mundo(mapa), FIM_M) - 1) * ESC_MONSTROS_K
+      : Math.floor((Math.min(mapa, FIM_P) - 1) * ESC_MONSTROS_K *
+                   (FIM_M - 1) / (FIM_P - 1));
+    // floor: k fracionário (ex 0,5) não pode virar teto 9,5 — o laço
+    // de spawn faria k < 9,5 = 10 iterações
+    return 5 + Math.floor(extra);
+  }
+
+  // Variante/k da escala (A/B medido em T8; exportado p/ teste) — sem
+  // argumentos devolve o vigente. k = 0 é LEGÍTIMO (reproduz o teto
+  // fixo antigo de 5), então o teste é >= 0 e não > 0.
+  function escalaMonstros(modo, k) {
+    if (modo === 'mundo' || modo === 'mapa') ESC_MONSTROS = modo;
+    if (typeof k === 'number' && k >= 0) ESC_MONSTROS_K = k;
+    return { modo: ESC_MONSTROS, k: ESC_MONSTROS_K };
+  }
+
+  // Monstros da próxima onda (exportado p/ teste — seção mundos)
+  function qtdMonstros() {
+    var tot = ondaTotal();
+    return Math.min(3 + Math.floor(tot / 2), tetoMonstros());
+  }
+
   // Onda como se o jogo fosse um só: total de ondas vencidas desde o
   // mapa 1 (0 na primeira onda). É a base da escala CONTÍNUA de
   // dificuldade/XP — sem ela a onda 1 de cada mapa novo recomeçava do
@@ -69,18 +121,41 @@ var Batalha = (function () {
   // funcional a morte voltou a ser evento de fronteira/boss (~10/120min).
   var ESC_HP = 1.90;      // vida do inimigo por onda
   var ESC_DMG = 0.045;    // dano do inimigo por onda
-  var ESPERA_ONDA = 8.0;  // respiro entre ondas (era 2,0): o respiro é
-                          // tempo de regen — desacelera o early e
-                          // empurra a sobrevivência SEM piorar o
-                          // clear/survival da fronteira
+  // Respiro entre ondas — ALAVANCA DE DURAÇÃO da campanha (spec mundos
+  // R-MUN-7). Medido (ritmo, 4 configs): o nº de monstros NÃO muda a
+  // duração (k=1/3/5 → todos ~21 mapas/600min; só o perigo muda — k=10
+  // → 195 mortes), porque o XP extra fortalece o herói e compensa. O
+  // ESPERA é linear e seguro (tempo de regen, sem tocar no cliff
+  // HP×DMG): 8s → 21 mapas/600min, 40s → 8, 70s → 5.
+  // Por isso ele ESCALA COM A PROFUNDIDADE: o mundo 1 mantém os 8s
+  // medidos (mapa 1 ≈ 33min intacto — alvo aprovado) e cada mapa
+  // seguinte respira +1,1s, até 117s no fim da campanha. Calibração:
+  // 100 mapas × 100 ondas × (clear ~15s + espera média ~62s) ≈ 201h
+  // (R-MUN-7 — o fator é 100 ONDAS por mapa, não 100 mapas).
+  // No modo infinito (mapa > 100) o respiro trava no patamar do mundo
+  // 10 — senão cresceria sem limite (mapa 1000 = 18min/onda).
+  var ESPERA_BASE = 8.0;      // respiro do mundo 1 (intacto)
+  var ESPERA_PASSO = 1.1;     // + por mapa de profundidade
+  var ESPERA_TRANSICAO = 8.0; // pós-chefe: a troca de mapa é o seu
+                              // próprio tempo (não espera o respiro
+                              // escalado — senão a vitória atrasaria
+                              // 117s após o último chefe)
+  var MAPA_FIM_CAMPANHA =
+    Mapas.MAPAS_POR_MUNDO * Mapas.LISTA.length;   // 10 × 10 = 100
+
+  function esperaOnda() {
+    var m = Math.min(mapa, MAPA_FIM_CAMPANHA);
+    return ESPERA_BASE + (m - 1) * ESPERA_PASSO;
+  }
+
   // Renda de XP harmônica com o custo (spec progressao-exponencial):
   // XP = XP_BASE × XP_H^ondaTotal; em tot=0 vale 12 (escala inicial).
-  // No muro (tot≈200, nv≈180) a renda tem que cobrir custo(nv):
-  // H ≥ G^(nv/tot) ≈ 1,10 — H 1,09 estolou 4/4 runs, H 1,10 passou
-  // e sustenta os muros seguintes até o teto.
+  // RE-BASE (spec mundos): H 1,10 → 1,064 com G 1,07 em personagem.js —
+  // ratio ln(H)/ln(G) = 0,9166 ≈ 0,9133 (a trajetória nv/onda não
+  // muda), mas a renda só estoura 1e308 na onda 11.433 (a antiga, na
+  // 7.411 = mapa ~75, cortava a progressão antes do fim da campanha).
   var XP_BASE = 12;
-  var XP_H = 1.10;
-                      // (iteração 5 do loop de calibragem)
+  var XP_H = 1.064;
   function xpAbate(tot, xpExtra) {
     return Math.round(XP_BASE * Math.pow(XP_H, tot)) + (xpExtra || 0);
   }
@@ -376,9 +451,11 @@ var Batalha = (function () {
     mapa++;
     onda = 0;
     garanteCenario();
-    tOnda = ESPERA_ONDA;
     aviso('MAPA ' + mapa + ' — ' + Mapas.info(mapa).nome.toUpperCase(),
       '#8ce08c');
+    tOnda = ESPERA_TRANSICAO;   // onda 1 do mapa novo não espera o
+                                // respiro escalado (e a vitória do
+                                // mundo 10 aparece já na transição)
     Ranking.submete();   // marco do ranking: fim de mapa (seção 35)
   }
 
@@ -422,10 +499,10 @@ var Batalha = (function () {
       spawn(tem.inimigos.raro);
       aviso('BOSS! ' + tem.boss.nome, '#ff6b6b');
     } else {
-      // nº de inimigos e raro também seguem o total: o mapa 2 já nasce
-      // cheio (5 por onda) em vez de recomeçar com 3
+      // nº de inimigos: ramp 3+tot/2 até o teto do mundo (spec mundos —
+      // era fixo 5 para sempre); raro entra pelo total como sempre
       var tot = ondaTotal();
-      var n = Math.min(3 + Math.floor(tot / 2), 5);
+      var n = qtdMonstros();
       for (var k = 0; k < n; k++) {
         spawn((tot >= 2 && k % 3 === 2) ? tem.inimigos.raro : tem.inimigos.comum);
       }
@@ -771,7 +848,9 @@ var Batalha = (function () {
     } else {
       soltaItens(en);
     }
-    tOnda = ESPERA_ONDA;
+    // dentro do mapa o respiro escala com a profundidade; na onda 100
+    // (chefe) ele é fixo — a troca de mapa tem seu próprio tempo
+    tOnda = ehBoss(onda) ? ESPERA_TRANSICAO : esperaOnda();
   }
 
   // Drop do abate: equipa automaticamente se for melhor que o equipado;
@@ -1748,6 +1827,9 @@ var Batalha = (function () {
     passaMapa: passaMapa,     // marco do ranking (também o chefe chama)
     ganhaXP: ganhaXP,         // teto de nível testável (seção 36)
     xpAbate: xpAbate,         // renda exponencial testável (seção 38)
+    qtdMonstros: qtdMonstros, // escala de monstros testável (seção 39)
+    escalaMonstros: escalaMonstros, // A/B mundo vs mapa (seção 39)
+    fimCampanha: function () { return MAPA_FIM_CAMPANHA; },
     limparEfeitos: limparEfeitos,
     info: info
   };

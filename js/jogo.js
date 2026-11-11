@@ -123,17 +123,65 @@ var Jogo = (function () {
     // o progresso nunca depende do Enter: toast + autosave
     Gravacao.update(dt, Game.personagem, salvarTudo);
 
-    // painel: clique/segurar nos +/− de atributos
-    Gestao.update(dt, Game.personagem);
+    // painel: clique/segurar nos +/− de atributos. Com o overlay de
+    // vitória no ar, o painel de baixo NÃO recebe clique (spec mundos)
+    if (!vitPendente()) Gestao.update(dt, Game.personagem);
 
     if (Input.pressed('Enter')) Gravacao.salvarPersonagem(Game.personagem, true);
   }
 
+  // ------------------------------------------------------- vitória
+  // Vencer o chefe do mapa 100 (mundo 10) → overlay "CAMPANHA
+  // CONCLUÍDA" por cima de tudo até o jogador clicar Continuar (aí
+  // p.vitoria = true, normalizar mantém, e o overlay não reabre — nem
+  // ao reentrar na cena). Enquanto pendente: UI de baixo bloqueada
+  // (UI.bloqueia — botões desenham sem responder) e sem Gestao.update.
+  // O modo infinito já começou por baixo (mapa 101+, mundos em loop).
+  function vitPendente() {
+    var p = Game.personagem;
+    // mapa > fim da campanha (fonte única: Batalha.fimCampanha())
+    return !!p && !p.vitoria &&
+      Batalha.info().mapa > Batalha.fimCampanha();
+  }
+
+  function desenhaVitoria(ctx) {
+    var p = Game.personagem;
+    var W = Game.W;
+    var pw = 420, ph = 210;
+    var px = Math.round((W - pw) / 2), py = 100;
+    // véu por cima do jogo inteiro (só fillRect — primitiva do rasterizador)
+    ctx.fillStyle = 'rgba(8, 6, 16, 0.84)';
+    ctx.fillRect(0, 0, W, 432);
+    UI.panel(px, py, pw, ph, 'CAMPANHA CONCLUÍDA');
+    UI.text('Você venceu os 10 mundos!', px + pw / 2, py + 54, {
+      align: 'center', color: '#e8c86a', font: 'bold 18px monospace'
+    });
+    UI.text('O Caos recua — e os mundos voltam a girar.',
+      px + pw / 2, py + 82, { align: 'center', color: '#c9c2dd' });
+    UI.text('Modo infinito: dificuldade e drops seguem a escala.',
+      px + pw / 2, py + 104, { align: 'center', color: '#9a90b8' });
+    var s = p.stats;
+    UI.text('Nv ' + p.nivel + ' · ' + s.abates + ' abates · ' +
+      s.mortes + ' mortes · ' + s.bosses + ' chefes',
+      px + pw / 2, py + 134, { align: 'center', color: '#8ce08c' });
+    // botão desbloqueia o resto: some com o overlay e grava a flag
+    if (UI.button(px + 90, py + ph - 52, 240, 36,
+                  'Continuar — modo infinito')) {
+      p.vitoria = true;
+      salvarTudo();
+      Gravacao.msg('Modo infinito liberado — os mundos seguem em loop!');
+    }
+  }
+
   // -------------------------------------------------------------- render
   function render(ctx) {
+    var vit = vitPendente();
+    UI.bloqueia(vit);           // botões de baixo desenham sem responder
     desenhaFundo(ctx);
     Gravacao.desenharAviso(ctx,
       'Combate 100% automático — gerencie seus atributos');
+    UI.bloqueia(false);
+    if (vit) desenhaVitoria(ctx);   // por cima de tudo, incl. o aviso
   }
 
   function desenhaFundo(ctx) {

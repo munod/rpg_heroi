@@ -1,12 +1,18 @@
 // Mede o ritmo de progressão — ferramenta manual para ajustar a curva
 // (Personagem.custoProximo / CUSTO_BASE) e o tempo de fechar o mapa 1.
 // Fica fora do todos.js.
-// Uso: node testes/ritmo.js [minutos]   (padrão 15; use 60 p/ ver o boss)
+// Uso: node testes/ritmo.js [minutos] [mundo|mapa] [k]
+//   minutos = duração da sim (padrão 15; 60 p/ ver o boss; 12000 p/ a
+//             campanha inteira de 100 mapas ≈ 200h)
+//   modo/k  = variante da escala de monstros (A/B da spec mundos, T8);
+//             sem args mantém o default do jogo
 // Investe os pontos em Força a cada 10s de jogo para referência estável.
 'use strict';
 const { carregar } = require('./carga');
 
 const minutos = parseFloat(process.argv[2] || '15');
+const modoArg = process.argv[3];   // 'mundo' | 'mapa' (A/B da escala)
+const kArg = process.argv[4];      // monstros extras por mundo
 const FPS_MS = 16.7;               // o harness avança 16,7ms por frame
 
 const h = carregar();
@@ -18,6 +24,12 @@ const Personagem = h.sandbox.Personagem;
 const Itens = h.sandbox.Itens;
 Game.setScene('jogo');
 const p = Game.personagem;
+// A/B da escala de monstros (spec mundos T8) — sem args, default
+if (modoArg || kArg) {
+  const cfg = Batalha.escalaMonstros(modoArg,
+    kArg !== undefined ? parseFloat(kArg) : undefined);
+  console.log('escala de monstros: modo=' + cfg.modo + ' k=' + cfg.k);
+}
 
 let total = 0;
 function gastar() {
@@ -65,14 +77,15 @@ console.log('1º nível: ' + (total * FPS_MS / 1000).toFixed(1) + 's');
 gastar();
 
 const marcos = [...new Set([1, 5, 15, 30, 45, 60, 90, 120, 180, 240,
-  minutos])]
+  360, 480, 600, 900, 1200, 1500, 1800, 2400, 3000, 3600, 4200, 4800,
+  5400, 6000, 7200, 8400, 9600, 10800, 12000, 13500, minutos])]
   .filter(m => m <= minutos).sort((a, b) => a - b);
 let nvAnt = null, minAnt = null;
-let onda100 = null, mapa2 = null, onda10m2 = null;
+let onda100 = null, mapa2 = null, onda10m2 = null, vitoria = null;
 
 for (const m of marcos) {
   const alvo = Math.round(m * 60 * 1000 / FPS_MS);
-  while (total < alvo) {
+  while (total < alvo && vitoria === null) {
     run(1);
     const f = Batalha.info();
     if (onda100 === null && f.onda >= 100) {
@@ -84,6 +97,9 @@ for (const m of marcos) {
     if (mapa2 !== null && onda10m2 === null &&
         f.mapa >= 2 && f.onda >= 10) {
       onda10m2 = total * FPS_MS / 1000 - mapa2;   // ritmo do 2º mapa
+    }
+    if (vitoria === null && f.mapa > Batalha.fimCampanha()) {
+      vitoria = total * FPS_MS / 1000;   // chefe do mundo 10 = fim de jogo
     }
   }
   gastar();
@@ -99,7 +115,15 @@ for (const m of marcos) {
     (dnv === null ? '' : ' | +' + dnv.toFixed(1) + ' nv/min') +
     (inf.morto ? ' (caído)' : ''));
   nvAnt = p.nivel; minAnt = m;
+  if (vitoria !== null) break;      // campanha concluída: não segue
 }
+console.log(vitoria !== null
+  ? 'VITÓRIA (mundo 10 vencido) em ' + (vitoria / 60).toFixed(1) + 'min = ' +
+    (vitoria / 3600).toFixed(1) + 'h de jogo | mortes ' +
+    (p.stats.mortes || 0) + ' | nv final ' + p.nivel +
+    ' | onda ' + Batalha.info().onda + ' mapa ' + Batalha.info().mapa
+  : 'vitória não alcançada em ' + minutos + 'min (mortes ' +
+    (p.stats.mortes || 0) + ', nv ' + p.nivel + ')');
 console.log(onda100 !== null
   ? 'chefe do mapa 1 em ' + (onda100 / 60).toFixed(1) + 'min'
   : 'chefe do mapa 1 não alcançado em ' + minutos + 'min');

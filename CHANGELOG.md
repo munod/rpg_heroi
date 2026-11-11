@@ -12,6 +12,21 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Mundos: campanha 10 × 10 × 100 (spec `mundos`)** — a campanha
+  virou **10 mundos × 10 mapas × 100 ondas** (10.000 ondas, alvo de
+  **~200h**). `Mapas.mundo(n)`/`noMundo(n)` (fonte única) e
+  `Mapas.info(n)` resolve o **tema pelo mundo**, **ciclando no modo
+  infinito** (mundo 11 = tema do mundo 1). **10 temas autorais** com
+  chão/obstáculos/inimigos/chefe próprios — nomes próprios por mundo
+  (Slime Dourado → Devorador de Mundos) e recolorização das 4 espécies
+  existentes (novos monstros = leva à parte). **Vitória**: derrubar o
+  chefe do **mapa 100** abre o overlay **"CAMPANHA CONCLUÍDA"**
+  (`jogo.js`, com `UI.bloqueia` — a UI de baixo desenha sem responder)
+  e grava `p.vitoria` (normalizar com default `false`, sem bump de
+  chave); **Continuar** libera o **modo infinito** (mapa 101+, mundos em
+  loop, escala segue) e o overlay não reabre. Lendários passam a
+  ciclar os 3 pools por mundo (`itens.temaDe`). Testes: **seção 39**
+  (18 confs: estrutura/ciclo, contagem, vitória, persistência).
 - **Safeguards de save/progressão** (fecha o bug dos níveis 83k):
   `normalizar` **recalcula `xpProx`** da fonte única (o valor salvo é
   ignorado — editá-lo não salta mais nível), **`xp ≤ xpProx−1`**
@@ -76,6 +91,44 @@ vive em `.specs/features/`.
 
 ### Changed
 
+- **Re-base do teto de nível p/ a campanha de 100 mapas (R-MUN-6)**:
+  `CUSTO_G` **1,11 → 1,07** + `XP_H` **1,10 → 1,064** (ratio
+  `ln(H)/ln(G)` = 0,9166 ≈ 0,9133 → a trajetória nv/onda não muda) e
+  **`NIVEL_MAX` 1000 → 9500**. Motivo medido: com `G 1,11` o custo
+  estourava `1e308` no nv 6.775 e a renda na onda 7.411 (mapa ~75) —
+  **qualquer teto ≤ 6.800 morria antes do fim da campanha** (teto 5.000
+  = níveis param no mapa ~55). Agora `custo(9500) ≈ 10²⁸¹` e
+  `renda(9999) ≈ 10²⁷⁰` (30+ ordens de folga) e a campanha termina em
+  **nv ≈ 9.150 < 9.500** — níveis vivos os 200h inteiros. `UI.abrev`
+  ganhou **notação científica pt-BR** (`1,5e281`) além de 10⁶⁰ (os
+  sufixos terminavam em "Nod"). Alvos de early re-medidos (média de 4
+  runs: 1º nível 46,5s · mapa 1 ~31min · nv 29-33 @15min — a banda
+  33-38 era do G 1,11, a re-base desloca ~3 níveis no mesmo T).
+  **Sim completa de campanha (T9): VITÓRIA em 222,5h** (alvo 200h
+  ±20%), nv final 9.167, 65 mortes (0,29/h = eventos), sem estol.
+  Testes: seções 36/38/39.
+- **Respiro entre ondas escalado por profundidade (`esperaOnda()`)** —
+  a **alavanca de duração** da campanha: a medição refutou a premissa
+  da spec (**nº de monstros NÃO muda a duração**: k=1/3/5 → todos ~21
+  mapas/600min; só o perigo muda — k=10 → 195 mortes, porque o XP
+  extra fortalece o herói), enquanto o respiro é linear e seguro
+  (tempo de regen, sem tocar no cliff `HP×DMG`): 8s → 21 mapas/600min,
+  40s → 8, 70s → 5. Agora **`8s + (mapa−1) × 1,1s`** — o mundo 1
+  mantém os 8s medidos (**mapa 1 ≈ 33min intacto**) e o fim da campanha
+  respira **117s**; no infinito trava no patamar do mundo 10 (senão
+  cresceria sem limite). Pós-chefe usa `ESPERA_TRANSICAO` fixo de 8s
+  (a troca de mapa é o seu próprio tempo — e a vitória não atrasa 117s
+  após o último chefe).
+- **Escala de monstros por mundo (`qtdMonstros`/`escalaMonstros`)** — o
+  teto antigo era **fixo em 5** (batia na onda 4 do mapa 1 e nunca mais
+  mudava: constante no jogo inteiro). Agora **cresce de 5 até 9**
+  (k=0,5 — medido: k=1 estolou o mundo 3 em 2 de 2 runs, k=0 saudável
+  em 3/3) até o fim da campanha, com duas variantes para o A/B medido
+  (`'mundo'` =
+  degraus na fronteira de cada mundo — identidade; `'mapa'` =
+  progressão suave ~a cada 11 mapas), **travado no infinito** (a
+  dificuldade lá segue pela escala de HP/dano, não por contagem). O
+  ramp inicial `3+tot/2` continua (early intacto: nasce 3, completa 5).
 - **Progressão exponencial + combate reequilibrado (spec
   `progressao-exponencial`)**: custo de nível virou **`146 × 1,11^(nv−1)`**
   (razão constante; o linear `125+21×nv` subia mais rápido que a renda
@@ -109,6 +162,12 @@ vive em `.specs/features/`.
 
 ### Fixed
 
+- **Chão do mundo 4 em diante nunca mudava (bug da série)** —
+  `Mapas.LISTA` tinha **3 temas** e `info(n)` clampa em
+  `Math.min(m, 3)`: do mapa 4 em diante o cenário era sempre "Ninho
+  Rubro" (e `itens.temaDe` espelhava o mesmo clamp). Agora são **10
+  temas** resolvidos por mundo (fix direto do pedido) e o clamp virou
+  ciclo no infinito.
 - **Correções de IA/combate com causa raiz medida** (skill
   `systematic-debugging`, reprodução no harness antes de cada fix):
   - **Heróis à distância não atacavam com o alvo colado** — o estado

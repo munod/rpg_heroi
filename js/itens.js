@@ -53,8 +53,10 @@ var Itens = (function () {
   var SIGLAS = { dano: 'D', hp: 'HP', vel: 'V', crit: 'C' };
   var CORES = { 1: '#c9c2dd', 2: '#8ce08c', 3: '#e8c86a', 4: '#ff9d4d' };
 
-  // Lendários: 2 por tema de mapa (o clamp do tema espelha Mapas.info,
-  // que para em 3). Efeito > número (filosofia Last Epoch) — cada um
+  // Lendários: 2 por tema de mundo (o tema espelha Mapas.info — 10
+  // mundos; os 3 pools existentes CICLAM: mundos 1/4/7/10, 2/5/8,
+  // 3/6/9 — spec mundos, sem novos efeitos nesta leva). Efeito > número
+  // (filosofia Last Epoch) — cada um
   // muda uma mecânica com identidade própria; a matemática dos efeitos
   // é `temEfeito/multDano/multOuro/pctVamp` lá embaixo, e os gatilhos
   // comportamentais (2ª vida, ondas renovam, cura fere) moram em
@@ -164,11 +166,13 @@ var Itens = (function () {
     return 4;
   }
 
-  // tema do mapa: mesmo clamp de Mapas.info (LISTA com 3 temas)
+  // tema do mundo: espelha Mapas.info (fonte única do ciclo — usa
+  // Mapas.mundo(), sem espelhar MAPAS_POR_MUNDO) e cicla os 3 pools
+  // de lendários existentes — mesmo ciclo de Mapas no modo infinito
   function temaDe(mapa) {
     var m = (typeof mapa === 'number' && mapa >= 1 && isFinite(mapa))
       ? Math.floor(mapa) : 1;
-    return m > 3 ? 3 : m;
+    return ((Mapas.mundo(m) - 1) % 3) + 1;
   }
 
   function sorteiaLendario(mapa) {

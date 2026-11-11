@@ -70,8 +70,15 @@ var Personagem = (function () {
   // mortes/10h, mapa 3 estolado; e flood inicial nv47@15min).
   // CUSTO_BASE = custo do nível 1 (1º nível ~35-45s, medido com ritmo);
   // CUSTO_G calibrado no loop de medição (ritmo ≥4 runs por iteração).
+  // RE-BASE (spec mundos): G 1,11 → 1,07 com H 1,064 em batalha.js —
+  // o ratio ln(H)/ln(G) = 0,9166 ≈ 0,9133 antigo (trajetória de nível
+  // praticamente idêntica), mas os números absolutos ficam menores:
+  // com G 1,11 o CUSTO estourava 1e308 no nv 6.775 e a renda estourava
+  // na onda 7.411 (mapa ~75) — qualquer teto ≤ 6.800 morria ANTES do
+  // fim da campanha de 100 mapas. Com 1,07: custo(9500) ≈ 10^281 e
+  // renda(9999) ≈ 10^270, ambos finitos com 30+ ordens de folga.
   var CUSTO_BASE = 146;
-  var CUSTO_G = 1.11;
+  var CUSTO_G = 1.07;
   function custoProximo(nivel) {
     var nv = (typeof nivel === 'number' && nivel >= 1) ? Math.floor(nivel) : 1;
     // SEM round: a razão precisa ser exata p/ o teste de exponencial
@@ -79,15 +86,19 @@ var Personagem = (function () {
   }
 
   // Teto de nível do personagem (fonte única — usado por Batalha.ganhaXP,
-  // normalizar e o cabeçalho da jogatina). Pesquisa de gênero: 1000 é um
-  // cap reconhecido (Idle Heroes Saga, Fangclash); no teto o XP é
-  // DESCARTADO (não acumula buffer invisível — o jogador não raciocina
-  // com banco escondido). Score do ranking capa em 999 por fórmula.
-  var NIVEL_MAX = 1000;
+  // normalizar e o cabeçalho da jogatina). No teto o XP é DESCARTADO
+  // (não acumula buffer invisível). 9500 = spec mundos: a campanha de
+  // 100 mapas (10.000 ondas) termina em nv ≈ 9.150 (nv ≈ 0,9166 ×
+  // ondas), então o teto fica ACIMA do fim de jogo — níveis vivos os
+  // 200h inteiros — e ainda é o primeiro a ser atingido antes de
+  // qualquer overflow de float (renda/custo estouram em onda 11.433 /
+  // nv 10.441). Score do ranking capa em 999 por fórmula.
+  var NIVEL_MAX = 9500;
   // Tetos de salvamento (safeguards — spec progressao-exponencial): tudo
   // bem abaixo de 2^53 (integer-safe) p/ cortar save editado/overflow.
-  // Legítimo: ouro ~1e5-1e7 em runs longos; pontos ≤ 3×1000; atributo
-  // ≤ ~3000 — os tetos ficam com folga p/ nunca alcançar o legítimo.
+  // Legítimo: ouro ~1e5-1e7 em runs longos; pontos ≤ 3×9500 = 28.500;
+  // atributo ≤ ~28.500 — os tetos ficam com folga p/ nunca alcançar o
+  // legítimo (e continuam < 2^53).
   var OURO_MAX = 1e12;      // ouro total (fonte única — mataInimigo)
   // HP concedido por nível — FONTE ÚNICA (status + statusDetalhado):
   // era literal ×4 nos dois lugares e o espelho quebrou quando a leva
@@ -114,6 +125,7 @@ var Personagem = (function () {
       autoApr: false,       // auto-aprimorar (A+) itens equipados
       keystoneLib: false,   // keystone desbloqueado (compra única)
       keystoneOn: false,    // keystone ativo (aplica o tradeoff)
+      vitoria: false,       // venceu a campanha (mundo 10) — spec mundos
       look: {
         skin: CORES_PELE[1],
         hair: CORES_CABELO[0],
@@ -553,6 +565,10 @@ var Personagem = (function () {
         armadura: !!(p.trava && p.trava.armadura)
       },
       autoApr: p.autoApr === true,
+      // venceu a campanha (mundo 10) — o overlay de vitória só aparece
+      // a primeira vez (spec mundos R-MUN-5); default false em saves
+      // antigos, sem bump de chave
+      vitoria: p.vitoria === true,
       keystoneLib: p.keystoneLib === true,
       keystoneOn: p.keystoneOn === true,
       look: {

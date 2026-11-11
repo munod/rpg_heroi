@@ -174,15 +174,18 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   real de combate `intervalo×(1,3−0,45×agu)` — o tooltip mostrava o
   base; e a aba precisou de wheel+thumb porque o conteúdo passou do
   painel — sem `clip` no rasterizador: pula linha fora da faixa) ·
-  **teto de nível 1000** (pesquisa: Idle Heroes Saga/Fangclash capam em
-  1000; XP no cap é DESCARTADO — banco escondido confunde o jogador;
-  save de nv 36 mil clamped na leitura, atributos preservados) ·
+  **teto de nível 1000** *(SUPERADO pela leva `mundos`: teto 9500 p/
+  níveis durarem a campanha de 100 mapas — a pesquisa de caps de 1000
+  não sobreviveu ao escopo de 200h; XP no cap continua DESCARTADO e o
+  save de nv 36 mil segue clamped na leitura)* ·
   **ranking NUNCA silencioso** (sonda REST provou regras OK — escrita
   válida 200 / inválida 403; o bug era observabilidade: `ultimoEnvio`
   com motivo + toasts + status na cena, e detecção de `file://`).
 - **Progressão exponencial (spec `progressao-exponencial`)** — decisão
   do usuário ("padrão da indústria"): custo `146 × 1,11^(nv−1)` +
-  renda `12 × 1,10^onda` (harmônicos → tempo/nível estável), combate
+  renda `12 × 1,10^onda` (harmônicos → tempo/nível estável) — *valores
+  RE-BASEADOS pela leva `mundos` para 1,07/1,064 (ratio idêntico,
+  números cabem na campanha inteira)*; combate
   ESC 1,90/0,045 + ESPERA 8s + HP/nível 6, e safeguards de save (fecha
   o 83k: xpProx recalculado, xp ≤ xpProx−1, tetos de ouro/pontos/
   atributo). Lições da calibragem (~14 iterações): **renda fixa × custo
@@ -209,6 +212,28 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   antigo de graça). Contar `ouroGanho` em TODO ganho (inclui resgate e
   auto-sucata) e `ouroGasto` em TODO gasto (inclui keystone/respec).
 
+
+- **Campanha 10 mundos × 10 mapas × 100 ondas (~200h)** — decisão do
+  mantenedor (série de levas): a estrutura 10×10 é a ESPELINHA de
+  cutscenes, monstros novos e árvore de skills da série. **Vencer o
+  mundo 10 = overlay de vitória + modo infinito em loop** (não fim
+  definitivo).
+- **Teto de nível ~9.500 com RE-BASE das curvas** — a recomendação
+  inicial de "3-5 mil" estava ERRADA (recalculado): a progressão segue
+  `nv ≈ 0,9166 × ondas` (ratio `ln H/ln G`), então a onda 10.000 chega
+  em nv ≈ 9.150; e com `G 1,11` o custo estourava `1e308` no nv 6.775 /
+  a renda na onda 7.411 (mapa ~75) — **teto ≤ 6.800 morre antes do fim
+  da campanha**. Re-base `G 1,11→1,07` + `H 1,10→1,064` mantém o ratio
+  (0,9166 vs 0,9133 → mesma trajetória) com 30+ ordens de folga.
+- **ESPERA entre ondas é a alavanca de DURAÇÃO; nº de monstros é de
+  PERIGO** (medido, refuta a premissa da spec) — k=1/3/5 em `ritmo.js`
+  → todos ~21 mapas/600min (XP extra fortalece o herói e compensa);
+  k=10 → mesmo ritmo com 195 mortes. Já o respiro é linear e não
+  toca no cliff `HP×DMG`: 8s→21 mapas, 40s→8, 70s→5 (600min). Por
+  isso a duração escala com `esperaOnda()` = `8 + (mapa−1)×1,1`s
+  (mundo 1 intacto, fim da campanha = 117s) e a contagem de monstros
+  ficou sendo decisão de IDENTIDADE/perigo (degraus por mundo vs
+  progressão suave por mapa).
 
 ## Bloqueios
 
@@ -257,6 +282,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   constantes erradas (âncora de texto falhou e o script anterior não
   gravou) e outra config passou 1× de200min e estolou 4/4 depois. Só
   média de ≥4 runs (e conferir `grep` das constantes ANTES de rodar).
+- **Fixture de luta precisa ZERAR o equip e o XP durante o loop**
+  (lição da seção 27, medida com `[diag]`): o teste de "herói de vidro
+  morre" deixava drops serem **auto-equipados** no meio (arma +4 → dano
+  5→13) e o XP subir de nível — ele fazia farm até a onda 10 e "nunca
+  morria" (`hpMin=22`, quase morreu). Congelar `p.equip`/`p.xp` a cada
+  frame resolve; a mesma classe de risco vale para qualquer fixture que
+  dependa de o herói NÃO fortalecer (matar rápido / cair). Correlato:
+  **fixtures de mago precisam zerar INT, não FOR** (o dano escala em
+  `danoMod` — zerar FOR não enfraquece o mago; as seções 6 e 16 tinham
+  esse bug herdado e flakavam ~1 em 6; o baseline do HEAD flakou o
+  mesmo teste, provando que não era regressão).
 - **`file://` não serve p/ serviços web (CORS)** — o README manda abrir
   `index.html` direto (o jogo funciona), mas a origem `null` é recusada
   pelo Firestore: foi a causa provável do "ranking não salvando" no
