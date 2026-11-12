@@ -219,10 +219,9 @@ var UI = (function () {
         'DPS básico (sem skills)'],
       ['Vel ' + s.vel, 'vel', 'Velocidade'],
       ['Crít ' + s.crit + '%', 'crit', 'Chance de crítico (×2)'],
-      ['Alc ' + s.alcance, 'alcance', 'Alcance do golpe'],
-      ['XP×' + s.xpMult.toFixed(2), 'xp', 'Multiplicador de XP']
+      ['Alc ' + s.alcance, 'alcance', 'Alcance do golpe']
     ];
-    var sep = ' · ';     // 16px mono: 7 segmentos + arma cabem em 768
+    var sep = ' · ';     // 16px mono: 6 segmentos + arma cabem em 768
     var larg = sep.length * CHAR * segs.length +
       (sep.length + s.arma.length) * CHAR;
     var i;

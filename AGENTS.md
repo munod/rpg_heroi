@@ -56,6 +56,26 @@
   (Açougueiro chamará `penalizaMorte(2)`). Escalas reequilibradas na
   Leva 1 (medido): ESC_HP 1,30 · ESC_DMG 0,10; hoje (leva
   `progressao-exponencial`): **ESC_HP 1,90 · ESC_DMG 0,045**.
+- **Curvas de status com teto (spec `gestao-atributos`)** — auditoria
+  revelou "teto onde pensaram, sem teto onde não pensaram" (crítico 45
+  e recarga 0,08 têm; vel/XP/HP não tinham). Hoje: **velocidade =
+  `46 + 24×(DES/8)^0,35`** (potência saturante — parte de 70 em DES 8,
+  ~241 no fim mono-stat) **+ clamp final 250 px/s** aplicado DEPOIS de
+  item+keystone (`VEL_MAX`, sem ele o afixo daria +1.968 no mapa 100 e
+  contornaria); **afixo `vel` com escala limitada em 5×** (`escalaVel`
+  — o dano mantém escala cheia); **regen com teto 500 hp/s**
+  (`REGEN_MAX` — sem ele, HP late 70k regenerava 2.800/s = invencível;
+  o HP em si não mexe, sustenta a frente); **Carisma → ouro**
+  (`Personagem.multOuroCar`, logarítmico) e **clérigo `danoMod:'car'`**.
+  **`xpMult` eliminado** — a renda é exatamente a calibrada.
+  **Ritmo de pontos: 1 a cada 3 níveis** (`Personagem.PONTOS_CADA/
+  NIVEL` — era 3/nível = 6 decisões/min) **+ compensação 9×**
+  (`Personagem.ganhoAtributo`): 1 ponto/3nível = 9× menos pontos, então
+  **cada ponto vale 9× mais** (a progressão de poder fica idêntica à
+  medida — sem a compensação a medição estolou: 223 mortes/1200min).
+  Regra: até a **base** (8+bônus de classe) vale o linear antigo
+  (atributo baixo paga penalidade); acima dela, 9×. Metas de sanidade
+  na seção 40 (vel ≤250, sub-passos, afixo, regen, cadência).
 - Curva de progressão com fonte única em `Personagem.custoProximo`
   (**exponencial**: `146 × 1,07^(nv−1)` — leva `progressao-exponencial`
   calibrava 1,11; a leva `mundos` RE-BASEOU p/ `1,07` junto com H

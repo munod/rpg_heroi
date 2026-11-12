@@ -95,6 +95,18 @@ var Itens = (function () {
   // bloat: pool grande demais transforma item em planilha). `tipo` pre/suf
   // vira prefixo/sufixo do nome; neg não muda o nome (aparece nos status
   // e nos deltas da UI).
+  // Escala do afixo por chave (spec gestao-atributos): a velocidade
+  // NÃO acompanha forca(mapa) como as demais — a base vai de 70 a 250
+  // (3,6×) enquanto o dano vai a milhares. Sem este limite o afixo
+  // "Veloz" daria +1.968 no mapa 100 e o clamp de 250 desperdiçaria o
+  // item inteiro. Limitado em 5× (mapa 5+): +15..30 por afixo — o item
+  // importa enquanto o atributo está abaixo do teto (mono-stat
+  // desperdiça = incentivo natural a distribuir os pontos).
+  var VEL_ESC_MAX = 5;
+  function escalaVel(chave, escala) {
+    return chave === 'vel' ? Math.min(escala, VEL_ESC_MAX) : escala;
+  }
+
   var AFIXOS = [
     { nome: 'Poderoso', tipo: 'pre', chave: 'dano', faixa: [2, 4] },
     { nome: 'Robusto', tipo: 'pre', chave: 'hp', faixa: [3, 6] },
@@ -233,7 +245,8 @@ var Itens = (function () {
       if (!neg) tipos[af.tipo] = true;
       else negs++;
       var v = af.faixa[0] + Math.random() * (af.faixa[1] - af.faixa[0]);
-      var valor = Math.max(1, Math.round(v * mult * (neg ? MULT_NEG : 1)));
+      var valor = Math.max(1, Math.round(v * escalaVel(af.chave, mult) *
+        (neg ? MULT_NEG : 1)));
       out.push({
         nome: af.nome, tipo: neg ? 'neg' : af.tipo,
         chave: af.chave, neg: neg, valor: valor
@@ -422,7 +435,7 @@ var Itens = (function () {
     var v = novo.faixa[0] + Math.random() * (novo.faixa[1] - novo.faixa[0]);
     var escala = item.escala || 1;
     var valorNovo = Math.max(1,
-      Math.round(v * escala * (ehNeg ? MULT_NEG : 1)));
+      Math.round(v * escalaVel(novo.chave, escala) * (ehNeg ? MULT_NEG : 1)));
     // sai a contribuição antiga, entra a nova
     item.bonus[velho.chave] =
       (item.bonus[velho.chave] || 0) - (velho.neg ? -velho.valor : velho.valor);

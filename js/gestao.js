@@ -97,7 +97,7 @@ var Gestao = (function () {
       des: 'DES: velocidade (×3), recarga (÷ vel) e crítico (×1,3)',
       con: 'CON: vida máxima (+4 por ponto)',
       int: 'INT: agudeza da IA — 4 = burro, 20 = gênio (skills/IA)',
-      car: 'CAR: XP (+3% por ponto acima de 8)'
+      car: 'CAR: ouro de abate (log, satura ~2,8×) — no clérigo vira dano'
     };
     var out = [
       [(textos[linha.at] || linha.nome), '#e8c86a'],
@@ -234,7 +234,9 @@ var Gestao = (function () {
     linhas.forEach(function (linha, i) {
       UI.text(linha, 416, 268 + i * 24, { color: '#9a90b8' });
     });
-    UI.text('Cada nível: +3 pontos', 416, 268 + linhas.length * 24 + 12,
+    UI.text('A cada ' + Personagem.PONTOS_CADA + ' níveis: +' +
+      Personagem.PONTOS_NIVEL + ' ponto',
+      416, 268 + linhas.length * 24 + 12,
       { color: '#6f678a' });
   }
 

@@ -235,6 +235,34 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   ficou sendo decisão de IDENTIDADE/perigo (degraus por mundo vs
   progressão suave por mapa).
 
+- **Curvas com teto + pontos escassos (spec `gestao-atributos`)** —
+  a raiz do relato *"jogadores não ligam onde colocam os pontos"* era
+  dupla: (1) **3 pontos/nível = 6 decisões por minuto** valendo ~1%
+  cada (decisão vira ruído → distribuição no automático); (2) **stats
+  lineares sem teto** (vel/XP/HP) — mono-stat virava "Flash" no nv 30
+  e o `xpMult` do Carisma chegava a **855×**, fazendo a progressão real
+  divergir da calibrada. O `ritmo.js` nunca pegou nada disso porque
+  investe **tudo em FORÇA**. Escolhas do mantenedor: 1 ponto/3 níveis ·
+  soft caps (sim) · teto da vel 250 (delegado) · Carisma → dano do
+  clérigo (opção a) · **teto de nível mantido em 9500** (a alternativa
+  "101" foi calculada: exigiria rebalancear XP/itens/dificuldade e
+  perderia os 222h validados — e com a curva atual os 101 níveis
+  durariam 4-7 minutos).
+- **O "Flash" e o bug de FPS previstos eram reais** — `46+DES×3` sem
+  teto dava 85.561 px/s no teto (357 sub-passos/frame); a literatura
+  (Game Mechanics Hoard) chama exatamente isso de *"linear stacking
+  breaks games at the extremes — without caps, optimal play is always
+  maximal specialization"*.
+- **Medir ANTES de consertar pagou de novo**: a compensação 9× nasceu
+  da medição (sem ela: 1200min no mapa 3 com 223 mortes = estol). E a
+  primeira fórmula de compensação errou a base (usei o literal 8 em vez
+  de `8 + bônus de classe`) e IGNORAVA atributo abaixo da base (fixture
+  de vidro virou tanque: con 1 dava 58 de HP em vez de 30) — a
+  `ganhoAtributo` com três estados resolveu os dois.
+- **Itens também eram fonte de problema**: o afixo `Veloz` escala com
+  `forca(mapa)` e daria +1.968 no mapa 100 — qualquer teto de
+  atributo seria contornado sem limitar o afixo.
+
 ## Bloqueios
 
 - Nenhum.

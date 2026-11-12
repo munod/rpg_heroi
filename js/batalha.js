@@ -134,6 +134,11 @@ var Batalha = (function () {
   // (R-MUN-7 — o fator é 100 ONDAS por mapa, não 100 mapas).
   // No modo infinito (mapa > 100) o respiro trava no patamar do mundo
   // 10 — senão cresceria sem limite (mapa 1000 = 18min/onda).
+  // Teto da regen (spec gestao-atributos): 500 hp/s. Early intocado
+  // (4-20 hp/s); no late corta 2.800 → 500. Critério: manter mortes
+  // como eventos na medição comparativa (T9: 6 mortes em 2400min).
+  // Se a sim estolar, SOBE este número.
+  var REGEN_MAX = 500;
   var ESPERA_BASE = 8.0;      // respiro do mundo 1 (intacto)
   var ESPERA_PASSO = 1.1;     // + por mapa de profundidade
   var ESPERA_TRANSICAO = 8.0; // pós-chefe: a troca de mapa é o seu
@@ -619,13 +624,18 @@ var Batalha = (function () {
     if (!(p.xpProx > 0)) {
       p.xpProx = Personagem.custoProximo(Math.max(1, Math.floor(p.nivel) || 1));
     }
-    // Carisma aumenta o XP ganho ("sorte nas recompensas")
-    var mult = Personagem.status(p).xpMult || 1;
-    p.xp += Math.max(1, Math.round(qtd * mult));
+    // SEM multiplicador de build: a renda é exatamente a calibrada
+    // (12×1,064^onda — spec gestao-atributos; o xpMult do Carisma era
+    // a "progressão errada" relatada: 3,6× no nv30, 855× no teto)
+    p.xp += Math.max(1, Math.round(qtd));
     while (p.nivel < Personagem.NIVEL_MAX && p.xp >= p.xpProx) {
       p.xp -= p.xpProx;
       p.nivel++;
-      p.pontos += 3;           // era 5: pontos escassos = gestão importa
+      // 1 ponto a cada 3 níveis (spec gestao-atributos — fonte única
+      // em Personagem.PONTOS_CADA/NIVEL): decisão esparso e pesada
+      if (p.nivel % Personagem.PONTOS_CADA === 0) {
+        p.pontos += Personagem.PONTOS_NIVEL;
+      }
       p.xpProx = Personagem.custoProximo(p.nivel);
       tFlash = 1.6;
       nivelFlash = p.nivel;
@@ -831,6 +841,10 @@ var Batalha = (function () {
       (1 + (ondaTotal() + 1) * 0.04) *
       (en.tipo.boss ? 8 : (en.acougueiro ? Eventos.MULT_OURO_ACO : 1)));
     ouro = Math.round(ouro * Itens.multOuro(Game.personagem));  // mercador
+    // Carisma → ouro (spec gestao-atributos): logarítmico, saturante
+    // — fonte única em Personagem.multOuroCar (testável, seção 7)
+    ouro = Math.round(ouro * Personagem.multOuroCar(
+      Game.personagem.atributos.car));
     // safeguard: teto de ouro total (spec progressao-exponencial)
     Game.personagem.ouro = Math.min(
       (Game.personagem.ouro || 0) + ouro, Personagem.OURO_MAX);
@@ -1227,9 +1241,15 @@ var Batalha = (function () {
     if (h.atkCd > 0) h.atkCd -= dt;
     if (h.inv > 0) h.inv -= dt;
     // sustento do herói: 4%/s quando não apanha há 0,5s (inv zerado) —
-    // segura a fronteira p/ a morte voltar a ser evento (Leva 1)
+    // segura a fronteira p/ a morte voltar a ser evento (Leva 1).
+    // COM TETO em hp/s (spec gestao-atributos): sem ele o HP late-game
+    // (70k com CON mono) regenerava 2.800/s = invencível contra 1-2
+    // inimigos. Corte no early = ZERO (regen early ≈ 4-20 hp/s).
+    // HP em si NÃO mexe: ele sustenta a frente contra a dificuldade
+    // linear (1+tot×ESC). Ajustar só com medição (tasks T9).
     if (h.inv <= 0 && h.hp < h.hpMax) {
-      h.hp = Math.min(h.hpMax, h.hp + h.hpMax * 0.04 * dt);
+      var regen = Math.min(REGEN_MAX, h.hpMax * 0.04);
+      h.hp = Math.min(h.hpMax, h.hp + regen * dt);
     }
     if (h.escapa) {
       h.escapa.t -= dt;
@@ -1827,6 +1847,7 @@ var Batalha = (function () {
     passaMapa: passaMapa,     // marco do ranking (também o chefe chama)
     ganhaXP: ganhaXP,         // teto de nível testável (seção 36)
     xpAbate: xpAbate,         // renda exponencial testável (seção 38)
+    REGEN_MAX: REGEN_MAX,     // teto da regen (spec gestao-atributos)
     qtdMonstros: qtdMonstros, // escala de monstros testável (seção 39)
     escalaMonstros: escalaMonstros, // A/B mundo vs mapa (seção 39)
     fimCampanha: function () { return MAPA_FIM_CAMPANHA; },

@@ -12,6 +12,20 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Gestão de atributos: pontos escassos, soft caps e Carisma
+  redefinido (spec `gestao-atributos`)** — resposta ao relato de
+  jogadores que *"nem ligam pra quantidade de pontos"*: a auditoria das
+  5 curvas achou o padrão **"teto onde pensaram, sem teto onde não
+  pensaram"**. Mudanças: **1 ponto a cada 3 níveis** (era 3/nível = 6
+  decisões/min valendo ~1% → agora 0,7/min valendo ~6%) **+ a
+  compensação 9×** (`ganhoAtributo`: com 9× menos pontos cada um vale
+  9× mais — até a base do atributo o linear antigo, acima dela 9×;
+  sem isso a medição estolou com 223 mortes em 1200min); **Carisma sai
+  do XP** (o `xpMult` linear chegava a **855×** e quebrava a curva
+  calibrada — era a "progressão errada" relatada) e vira **+ouro
+  logarítmico** (`multOuroCar`: 1× em car 8 · 2× em ~100 · 2,77× no
+  fim, nunca explode); **clérigo escala em CAR** (`danoMod: 'car'` — fé
+  vira dano sagrado, FOR sai dele). Testes: seção 40.
 - **Mundos: campanha 10 × 10 × 100 (spec `mundos`)** — a campanha
   virou **10 mundos × 10 mapas × 100 ondas** (10.000 ondas, alvo de
   **~200h**). `Mapas.mundo(n)`/`noMundo(n)` (fonte única) e

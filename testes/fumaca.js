@@ -98,7 +98,8 @@ console.log('2) status por classe');
     guerreiro: { hp: 18 + 10 * 4, dano: 5 + Math.floor(11 / 2) },
     mago: { hp: 8 + 7 * 4, dano: 4 + Math.floor(12 / 2) },
     ladino: { hp: 12 + 8 * 4, dano: 4 + Math.floor(12 / 2) },
-    clerigo: { hp: 16 + 11 * 4, dano: 4 + Math.floor(9 / 2) }
+    // clérigo: danoMod 'car' (spec gestao-atributos) — car 8+4=12
+    clerigo: { hp: 16 + 11 * 4, dano: 4 + Math.floor(12 / 2) }
   };
   for (const cl of Object.keys(esperado)) {
     const p = Personagem.novo();
@@ -279,8 +280,12 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     'batalha automática limpou a onda 1 (onda=' + info.onda +
     ', xp=' + info.xp + ', hp=' + info.hp + ')');
 
-  // --- progressão: próximo abate dá nível e +3 pontos
+  // --- progressão: 1 ponto A CADA 3 NÍVEIS (spec gestao-atributos)
+  // posiciona no nv 2 para o próximo nível (3) creditar o ponto — o nv
+  // 1->2 não dá mais nada (era +3 por nível = 6 decisões/min)
   const p1 = Game.personagem;
+  p1.nivel = 2;
+  p1.xpProx = Personagem.custoProximo(2);
   p1.xp = p1.xpProx - 1;
   const nivel0 = p1.nivel, pts1 = p1.pontos;
   let subiu = false;
@@ -288,8 +293,8 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     frame(1);
     if (p1.nivel > nivel0) subiu = true;
   }
-  conf(p1.nivel === nivel0 + 1 && p1.pontos === pts1 + 3,
-    'abate dá nível e +3 pontos (nv ' + nivel0 + '->' + p1.nivel +
+  conf(p1.nivel === nivel0 + 1 && p1.pontos === pts1 + 1,
+    'abate dá nível e +1 ponto a cada 3 (nv ' + nivel0 + '->' + p1.nivel +
     ', pts ' + pts1 + '->' + p1.pontos + ')');
 
   // --- abas de gestão
@@ -426,12 +431,23 @@ console.log('7) autosave, nome do arquivo e carisma');
   conf(clicados.length === antes + 1 && clicados[clicados.length - 1] === 'Jose.json',
     'arquivo exportado sem acento (' + clicados[clicados.length - 1] + ')');
 
-  // --- carisma agora dá XP de verdade
+  // --- Carisma: dá OURO (log) e NÃO mexe mais em XP
+  // (spec gestao-atributos: o xpMult linear chegava a 855× e quebrava
+  // a curva calibrada — era a "progressão errada" relatada)
   const pCar = Personagem.novo();
-  pCar.atributos.car = 18;                 // efetivo 18 -> x1.30
-  conf(Math.abs(Personagem.status(pCar).xpMult - 1.3) < 1e-9,
-    'carisma multiplica o XP (x' +
-    Personagem.status(pCar).xpMult.toFixed(2) + ')');
+  pCar.atributos.car = 18;
+  conf(!('xpMult' in Personagem.status(pCar)),
+    'xpMult eliminado (renda = a calibrada, sem multiplicador de build)');
+  const mc18 = Personagem.multOuroCar(18);
+  conf(Math.abs(mc18 - (1 + 0.22 * Math.log(11))) < 1e-9,
+    'carisma multiplica o OURO logaritmico (car 18 -> x' + mc18.toFixed(2) + ')');
+  conf(Math.abs(Personagem.multOuroCar(8) - 1) < 1e-9,
+    'car 8 = x1,00 (base intacta)');
+  conf(Math.abs(Personagem.multOuroCar(100) - 2) < 0.02,
+    'car 100 ~ x2,00');
+  conf(Personagem.multOuroCar(3174) < 3,
+    'satura antes de 3x no fim da campanha (x' +
+    Personagem.multOuroCar(3174).toFixed(2) + ' — log, não linear)');
 }
 
 console.log('8) seleção: novo herói, exclusão em duas etapas e paginação');
@@ -1784,7 +1800,11 @@ console.log('25) gestão de skills: loadout e keystone');
   p.classe = 'mago';
   p.nivel = 45;
   p.atributos.for = 50;
-  p.atributos.int = 50;
+  // int 8 (não 50): com a compensação 9× da spec gestao-atributos o
+  // int 50 dava dano 210 e o clear instantâneo deixava o timer do nuke
+  // expirar SEM alvo (mesmo bug medido da Bola de Fogo) — dano
+  // controlado = a onda vive a janela e o Meteoro conjura
+  p.atributos.int = 8;
   p.pontos = 0;
   p.loadout = ['meteoro'];
   jogoCanvas._textos = [];
@@ -1793,6 +1813,12 @@ console.log('25) gestão de skills: loadout e keystone');
   for (let i = 0; i < 2400 && !lancou; i++) {
     frame(1);
     lancou = (jogoCanvas._textos || []).some(t => t === 'Meteoro');
+  }
+  if (!lancou) {
+    const fm = Batalha.info();
+    console.log('    [diagMeteoro] dano=' + Personagem.status(p).dano +
+      ' hp=' + fm.hp + ' onda=' + fm.onda + ' inim=' + fm.inimigos +
+      ' morto=' + fm.morto + ' nv=' + p.nivel);
   }
   conf(lancou, 'skill do loadout dispara na arena (Meteoro)');
   conf(!(jogoCanvas._textos || []).some(t => t === 'Bola de Fogo'),
@@ -1982,8 +2008,10 @@ console.log('26) itens lendários: raridade 4, efeitos e equilíbrio');
   p.classe = 'mago';
   p.nivel = 10;
   p.atributos.for = 1;             // dano controlado (só o bônus da arma)
-  p.atributos.con = 50;            // hp 244: o herói DESCE degrau a
-                                   // degrau até a faixa < 30% (limiar 73)
+  p.atributos.con = 13;           // hp ~270 (CON investido vale 9× —
+                                   // spec gestao-atributos): o herói
+                                   // DESCE degrau a degrau até < 30%
+                                   // (limiar ~81)
   p.atributos.int = 8;
   p.pontos = 0;
   Batalha.restaurarOnda(60);       // pressão: com ESC_DMG 0,045 + ESPERA 8
@@ -2031,9 +2059,11 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
   jogoCanvas._textos = [];
   clique(445, 50);                 // aba Atributos (1ª coluna)
   frame(2);
+  // literal de propósito: mudança de cadência é decisão de design e
+  // deve estourar este teste (spec gestao-atributos: 1 a cada 3)
   conf((jogoCanvas._textos || [])
-       .some(t => t.indexOf('Cada nível: +3 pontos') >= 0),
-    'rodapé da aba Atributos anuncia +3 pontos por nível');
+       .some(t => t.indexOf('A cada 3 níveis: +1 ponto') >= 0),
+    'rodapé da aba Atributos anuncia 1 ponto a cada 3 níveis');
 
   // fixture: guerreiro de vidro, sem cura e sem fuga — o teste QUER
   // mortes determinísticas (mesma lição das seções 17/21/22)
@@ -2462,8 +2492,10 @@ console.log('30) tooltips: breakdown do rodapé, atributos e item');
     'HP detalhado: Σpartes × keystone = status');
   conf(soma(det.vel) === sD.vel && soma(det.crit) === sD.crit,
     'velocidade e crítico: Σpartes = status (keystone não mexe neles)');
-  conf(Math.abs(soma(det.xp) - sD.xpMult) < 1e-9,
-    'XP: Σpartes = status');
+  // XP saiu dos status derivados (spec gestao-atributos): a renda é a
+  // calibrada, sem multiplicador de build
+  conf(!('xp' in det) && !('xpMult' in sD),
+    'XP não é mais status derivado (sem xpMult)');
   conf(det.dps.total ===
        Math.round(sD.dano * (1 + sD.crit / 100) / sD.recarga),
     'DPS = dano × (1 + crít/100) ÷ recarga');
@@ -2723,18 +2755,21 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
     return { n, semInim, arma, inim: Batalha.info().inimigos,
              onda: Batalha.info().onda };
   }
-  const r8 = golpesComDes(8);      // recarga 0,50s → ~30 frames/golpe
-  const r62 = golpesComDes(62);    // recarga 0,15s (piso) → ~9 frames
-  const g8 = r8.n, g62 = r62.n;
-  if (!(g8 > 4 && g62 >= Math.round(g8 * 1.8))) {
+  // spec gestao-atributos: a curva da vel é SATURANTE — a aceleração
+  // existe mas é menor que a antiga linear (DES 300 = 132 px/s, não
+  // 946). Ponto distante o suficiente p/ a diferença ser visível.
+  const r8 = golpesComDes(8);      // vel 70  → recarga 0,50s
+  const r300 = golpesComDes(300);  // vel 132 → recarga 0,27s
+  const g8 = r8.n, g62 = r300.n;
+  if (!(g8 > 4 && g62 >= Math.round(g8 * 1.5))) {
     console.log('    [diagDES] des8: semInim=' + r8.semInim +
       ' arma=' + r8.arma + ' fim inim=' + r8.inim + ' onda=' + r8.onda +
-      ' || des62: semInim=' + r62.semInim + ' arma=' + r62.arma +
-      ' fim inim=' + r62.inim + ' onda=' + r62.onda);
+      ' || des300: semInim=' + r300.semInim + ' arma=' + r300.arma +
+      ' fim inim=' + r300.inim + ' onda=' + r300.onda);
   }
-  conf(g8 > 4 && g62 >= Math.round(g8 * 1.8),
-    'DES acelera o ataque até o piso (des8=' + g8 +
-    ' golpes/10s, des62=' + g62 + ', razão ' +
+  conf(g8 > 4 && g62 >= Math.round(g8 * 1.5),
+    'DES acelera o ataque (curva saturante: des8=' + g8 +
+    ' golpes/10s, des300=' + g62 + ', razão ' +
     (g62 / Math.max(1, g8)).toFixed(1) + '×)');
 
   // --- 4) tooltip da linha de atributo NÃO abre pelo botão −
@@ -2869,7 +2904,9 @@ console.log('33) gestão: fixar slot, auto-aprimorar e stats base→total');
   p.nivel = 30;
   p.atributos.for = 50;
   p.atributos.con = 40;
-  p.atributos.des = 20;
+  // des 9: com a compensação 9× (1,3 → 11,7/ponto) o des 20 estourava
+  // o clamp 45% em base E total (45 < 45 falhava) — 9 dá 26 < 34
+  p.atributos.des = 9;
   p.atributos.int = 8;
   p.atributos.car = 8;
   p.pontos = 0;
@@ -2915,18 +2952,27 @@ console.log('34) velocidade: recarga com piso 0,08 e sub-passos (não atravessa)
   p.keystoneOn = false;
   p.atributos = { for: 8, des: 8, con: 8, int: 8, car: 8 };
   p.pontos = 0;
-  let casos = [[8, 0.5], [100, 35 / 346], [500, 0.08]];
-  for (const [des, esp] of casos) {
+  // spec gestao-atributos: a DES usa curva saturante, então a recarga
+  // NÃO chega mais no piso por atributo — ela é limitada pelo TETO da
+  // velocidade (250 px/s = 7,1 g/s). A fórmula continua a mesma.
+  let casos = [[8, 70], [100, 104.1], [500, 148.1]];
+  for (const [des, velEsp] of casos) {
     p.atributos.des = des;
     const s = Personagem.status(p);
-    conf(Math.abs(s.recarga - esp) < 1e-9 &&
+    conf(Math.abs(s.vel - velEsp) < 0.5 &&
          s.recarga === Math.max(0.08, 35 / s.vel),
-      'recarga com piso 0,08: DES ' + des + ' → ' + s.recarga.toFixed(4) +
-      's (' + (1 / s.recarga).toFixed(1) + ' g/s), fórmula max(0,08; 35/vel)');
+      'curva saturante + recarga: DES ' + des + ' → vel ' +
+      s.vel.toFixed(1) + ' (≈' + velEsp + '), recarga ' +
+      s.recarga.toFixed(4) + 's (' + (1 / s.recarga).toFixed(1) + ' g/s)');
   }
-  conf(Math.abs(Personagem.status(p).recarga - 0.08) < 1e-9 &&
-       Math.abs(1 / Personagem.status(p).recarga - 12.5) < 1e-9,
-    'DES 500 teto em 12,5 g/s (piso 0,08s — antes: sem piso, 44 g/s)');
+  // teto REAL do jogo: 250 px/s → 7,1 g/s (o piso de 0,08s / 12,5 g/s
+  // continua no código mas é inalcançável — a velocidade é limitada)
+  p.atributos.des = 99999;
+  const sTeto = Personagem.status(p);
+  conf(Math.abs(sTeto.vel - Personagem.VEL_MAX) < 1e-9 &&
+       Math.abs(sTeto.recarga - 35 / Personagem.VEL_MAX) < 1e-9,
+    'teto da velocidade limita a recarga (' + sTeto.vel + ' px/s = ' +
+    (1 / sTeto.recarga).toFixed(1) + ' g/s — nunca 12,5)');
   p.atributos.des = 8;
 
   // --- 2) a checagem de atravessamento ACUSA um salto sintético
@@ -2962,15 +3008,21 @@ console.log('34) velocidade: recarga com piso 0,08 e sub-passos (não atravessa)
   if (Batalha.info().pausada) Batalha.alternarPausa();
   p.classe = 'guerreiro';
   p.nivel = 20;
-  p.atributos = { for: 999, con: 999, des: 500, int: 8, car: 8 };
+  // spec gestao-atributos: o clamp de 250 tornou os cenários extremos
+  // (25,8px/frame) INALCANÇÁVEIS — o teste roda na velocidade máxima
+  // real da build mono-DES no fim da campanha (240,8 px/s = 4,0px/frame
+  // = 2 sub-passos), que é o pior caso possível hoje.
+  p.atributos = { for: 999, con: 999, des: 3174, int: 8, car: 8 };
   p.pontos = 0;
   p.equip = { arma: null, armadura: null };
   Batalha.restaurarOnda(3);
   let ev = 0;
   while (Batalha.info().morto && ev < 900) { frame(1); ev++; }
   const velEsperada = Personagem.status(p).vel;
-  conf(velEsperada === 1546,
-    'fixture: herói a 1546 px/s = 25,8px/frame (vel=' + velEsperada + ')');
+  conf(velEsperada > 4 * 60 && velEsperada <= Personagem.VEL_MAX,
+    'fixture: vel máxima da build (' + velEsperada.toFixed(1) +
+    ' px/s = ' + (velEsperada / 60).toFixed(1) + 'px/frame > 4px = ' +
+    'sub-passos ativos)');
   let viol = 0, corridas = 0, ult = null;
   for (let i = 0; i < 12000; i++) {
     frame(1);
@@ -2978,8 +3030,9 @@ console.log('34) velocidade: recarga com piso 0,08 e sub-passos (não atravessa)
     const atual = { x: f.heroi.x, y: f.heroi.y };
     if (ult) {
       const d = Math.hypot(atual.x - ult.x, atual.y - ult.y);
-      if (d > 10) corridas++;
-      if (d > 4) {
+      // limiares p/ a vel máxima real (~4px/frame com clamp 250)
+      if (d > 3) corridas++;
+      if (d > 2) {
         for (const o of f.obst) {
           if (cortaMiolo(ult, atual, o)) viol++;
         }
@@ -2989,10 +3042,10 @@ console.log('34) velocidade: recarga com piso 0,08 e sub-passos (não atravessa)
   }
   conf(corridas > 100,
     'a fixture realmente correu pelo campo (' + corridas +
-    ' frames com corrida >10px)');
+    ' frames com corrida >3px)');
   conf(viol === 0,
-    'em 12000 frames a 25,8px/frame: NENHUM obstáculo atravessado (' +
-    viol + ' violações)');
+    'em 12000 frames na vel máxima (4px/frame, 2 sub-passos): ' +
+    'NENHUM obstáculo atravessado (' + viol + ' violações)');
 }
 
 console.log('35) ranking: score, apelido, degradação, cena e gatilhos');
@@ -3272,11 +3325,12 @@ console.log('36) ajustes: piso da recarga, cooldown na Stats (rolagem) e teto');
   p.keystoneOn = false;
   p.atributos = { for: 8, des: 8, con: 8, int: 8, car: 8 };
   p.pontos = 0;
-  p.atributos.des = 500;
-  const s500 = Personagem.status(p);
-  conf(Math.abs(s500.recarga - 0.08) < 1e-9 &&
-       Math.abs(1 / s500.recarga - 12.5) < 1e-9,
-    'piso 0,08s vivo no status (DES 500 = 12,5 g/s)');
+  p.atributos.des = 99999;
+  const sTeto = Personagem.status(p);
+  conf(Math.abs(sTeto.vel - Personagem.VEL_MAX) < 1e-9 &&
+       Math.abs(sTeto.recarga - 35 / Personagem.VEL_MAX) < 1e-9,
+    'teto da vel limita a recarga (250 px/s = 7,1 g/s — o piso 0,08s ' +
+    '/ 12,5 g/s continua no código mas é inalcançável)');
   p.atributos.des = 8;
 
   // --- 2) teto de nível 9500 (spec mundos: campanha 10k ondas → nv ~9150)
@@ -3731,6 +3785,87 @@ console.log('39) mundos: escala de monstros, A/B e vitória da campanha');
     'reabrir a cena não re-mostra o overlay (vitoria persiste)');
   conf(Batalha.info().mapa >= 101,
     'modo infinito segue após reabrir (mapa ' + Batalha.info().mapa + ')');
+}
+
+console.log('40) gestao-atributos: teto da regen, afixo vel e clamp final');
+{
+  const Personagem = sandbox.Personagem;
+  const Batalha = sandbox.Batalha;
+  const Itens = sandbox.Itens;
+  const p = Game.personagem;
+
+  // --- 1) afixo "vel" com escala limitada (spec R-GA-3)
+  // no mapa 100 a escala é 100 — sem o limite o afixo daria +600 e o
+  // clamp de 250 desperdiçaria o item inteiro
+  let velMax = 0, danoMax = 0;
+  for (let i = 0; i < 400; i++) {
+    const it = Itens.geraItem(4, 100, 'ladino');
+    if (it.bonus.vel) velMax = Math.max(velMax, it.bonus.vel);
+    if (it.bonus.dano) danoMax = Math.max(danoMax, it.bonus.dano);
+  }
+  conf(velMax > 0 && velMax <= 30,
+    'afixo vel limitado no mapa 100 (máx ' + velMax + ' ≤ 30)');
+  conf(danoMax > 500,
+    'afixo dano mantém escala cheia no mapa 100 (' + danoMax + ')');
+
+  // --- 2) clamp final: pior caso possível nunca passa de 250
+  const antes = { at: p.atributos, eq: p.equip, nv: p.nivel };
+  p.nivel = 9500;
+  p.atributos = { for: 8, des: 3174, con: 8, int: 8, car: 8 };  // mono-DES
+  p.equip = { arma: { nome: 'V', slot: 'arma', rar: 4, escala: 100,
+                      up: 8, afixos: [], bonus: { vel: 3000 } },
+              armadura: { nome: 'V2', slot: 'armadura', rar: 4,
+                          escala: 100, up: 8, afixos: [],
+                          bonus: { vel: 3000 } } };
+  p.keystoneOn = false;
+  const sPior = Personagem.status(p);
+  conf(sPior.vel <= Personagem.VEL_MAX,
+    'pior caso (mono-DES teto + item +3.000): vel = ' + sPior.vel +
+    ' ≤ ' + Personagem.VEL_MAX);
+  conf(sPior.recarga >= 35 / Personagem.VEL_MAX - 1e-9,
+    'recarga respeita o teto da vel (' + sPior.recarga.toFixed(3) + 's ≥ ' +
+    (35 / Personagem.VEL_MAX).toFixed(3) + 's)');
+  p.atributos = antes.at; p.equip = antes.eq; p.nivel = antes.nv;
+
+  // --- 3) regen COM TETO (spec R-GA-4): a taxa observada nunca passa
+  // de REGEN_MAX por segundo (era hpMax×4%/s = 2.800/s no late = invencível)
+  // con alto p/ hpMax > 12.500 (sem isso 4%/s nunca passaria do teto),
+  // for baixo p/ os inimigos viverem e drenarem hp (senão hp fica
+  // cheio e não há o que medir), nível fixo p/ hpMax não saltar
+  p.atributos = { for: 8, con: 9999, des: 8, int: 8, car: 8 };
+  p.nivel = 1;
+  p.equip = { arma: null, armadura: null };
+  Batalha.restaurarOnda(1);
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  let esperaV = 0;
+  while (Batalha.info().morto && esperaV < 900) { frame(1); esperaV++; }
+  // folga = teto×dt + 1,5 p/ o Math.ceil do info().hp (arredonda p/
+  // cima e infla o delta em até 1/frame). SEM o teto a cura seria
+  // hpMax×4%×dt ≈ 26,7/frame — então 9,0 prova o corte (era 500).
+  const dt = 0.0167, margem = Batalha.REGEN_MAX * dt + 1.5;
+  // info() não expõe hpMax — sai do status (estável: nível congelado)
+  const hpMaxFixo = Personagem.status(p).hpMax;
+  let maiorDelta = 0, vistos = 0, hpAnt = null;
+  for (let i = 0; i < 3000; i++) {
+    frame(1);
+    p.xp = 0;                     // congela o nível (hpMax estável)
+    const f = Batalha.info();
+    if (!f.morto && f.hp > 0 && f.hp < hpMaxFixo && hpAnt !== null &&
+        f.hp > hpAnt) {
+      maiorDelta = Math.max(maiorDelta, f.hp - hpAnt);
+      vistos++;
+    }
+    hpAnt = f.hp;
+  }
+  conf(vistos > 50 && maiorDelta <= margem,
+    'regen limitada pelo teto (maior cura/frame ' + maiorDelta.toFixed(1) +
+    ' ≤ ' + margem.toFixed(1) + ' = ' + Batalha.REGEN_MAX + '×dt×1,05, ' +
+    'em ' + vistos + ' frames medidos)');
+
+  // --- 4) cadência dos pontos na fonte única (a seção 4 cobre o fluxo)
+  conf(Personagem.PONTOS_CADA === 3 && Personagem.PONTOS_NIVEL === 1,
+    'fonte única: 1 ponto a cada 3 níveis (' + Personagem.PONTOS_CADA +
+    '/' + Personagem.PONTOS_NIVEL + ')');
 }
 
 console.log('');

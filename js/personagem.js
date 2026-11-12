@@ -36,9 +36,11 @@ var Personagem = (function () {
     },
     clerigo: {
       id: 'clerigo', nome: 'Clérigo', arma: 'martelo', armaNome: 'Martelo',
-      danoMod: 'for', danoBase: 4, hpBase: 16, alcance: 52,
+      // Carisma é a fonte de dano do clérigo (spec gestao-atributos:
+      // fé converte em poder sagrado); FOR deixa de valer pra ele
+      danoMod: 'car', danoBase: 4, hpBase: 16, alcance: 52,
       distancia: true, corProj: '#ffe89a',
-      bonus: { for: 1, des: 0, con: 3, int: 1, car: 2 },
+      bonus: { for: 0, des: 0, con: 3, int: 1, car: 4 },
       desc: 'Equilibrado e resistente. Martelo sagrado à distância.',
       cor: '#b8913a'
     }
@@ -105,6 +107,39 @@ var Personagem = (function () {
   // progressao-exponencial subiu o slope p/ ×6
   var HP_POR_NIVEL = 6;
   var PONTOS_MAX = 100000;  // pontos de atributo acumulados
+  // ---- curva da velocidade (spec gestao-atributos) ------------------
+  // ANTES: 46 + DES×3 (LINEAR SEM TETO) — mono-stat virava Flash no
+  // nv 30 (331 px/s) e batia 357 sub-passos/frame no teto (bug de FPS).
+  // Agora: potência SATURANTE — parte de 70 em DES 8 (início intacto)
+  // e chega a ~241 em DES 3.174 (fim da campanha mono-stat), com
+  // CLAMP FINAL de 250 aplicado DEPOIS de item+keystone (o afixo
+  // "Veloz" daria +1.968 no mapa 100 e contornaria o teto).
+  // 250 = 3,6× o início, mundo (384px) em 1,54s, 7,1 g/s (abaixo do
+  // piso 12,5), 2 sub-passos/frame e 17% abaixo dos 331 do "Flash".
+  var VEL_BASE = 24;         // ganho sobre a base (46) em DES 8
+  var VEL_DES_REF = 8;       // onde o ganho vale VEL_BASE (início)
+  var VEL_EXP = 0.35;        // expoente saturante (<1 = achatado)
+  var VEL_MAX = 250;         // teto FINAL (atributo + item + keystone)
+  // multiplicador de ouro do Carisma — LOGARÍTMICO (cresce rápido e
+  // satura; o linear antigo do XP chegava a 855× e quebrava a curva
+  // calibrada): 1× em car 8 · 2× em ~100 · 2,77× no fim da campanha
+  var OURO_CAR_K = 0.22;
+  // ---- ritmo dos pontos (spec gestao-atributos) ----------------------
+  // ANTES: +3 por nível = 6 decisões por minuto no early valendo ~1%
+  // cada → o jogador distribuía no automático (relato: "nem ligam pra
+  // quantidade de pontos"). Agora: +1 a cada 3 níveis = 0,7
+  // decisões/min e ~6% de peso por ponto no nv 30.
+  var PONTOS_CADA = 3;      // níveis entre um ponto e outro
+  var PONTOS_NIVEL = 1;     // pontos dados nessa cadência
+  // ---- compensação do valor por ponto (9×) ----------------------------
+  // Com 1 ponto a cada 3 níveis o jogador tem 9× MENOS pontos que os
+  // 3/nível antigos (0,33 vs 3,0 por nível). Sem compensar, a medição
+  // mediu ESTOL (1200min: mapa 3, 223 mortes, +0,1 nv/min vs referência
+  // no mapa 4 em 120min com 0 mortes). Cada ponto passa a valer 9× mais
+  // — é isso que faz a decisão importar — e só o INVESTIDO escala (a
+  // base 8 é fixa, então o EARLY fica idêntico ao medido: nv1 = 9 de
+  // dano, 50 de HP em qualquer build).
+  var PONTO_MULT = 9;
   var ATRIB_MAX = 1000000;  // pontos em cada atributo
 
   function novo() {
@@ -221,19 +256,53 @@ var Personagem = (function () {
     return true;
   }
 
+  // Ganho de um atributo no status (spec gestao-atributos):
+  //  · até a BASE do personagem (8 + bônus de classe) vale o linear
+  //    antigo — atributo baixo PAGA a penalidade (fixture de "vidro"
+  //    continua de vidro: con 1 = 12 de HP, não 40);
+  //  · ACIMA da base cada ponto vale PONTO_MULT (9×) — é a
+  //    compensação dos pontos escassos (1 a cada 3 níveis = 9× menos
+  //    pontos que os 3/nível antigos), e é o que faz a decisão importar.
+  function ganhoAtributo(at, at0, porPonto) {
+    return Math.min(at, at0) * porPonto +
+      Math.max(0, at - at0) * porPonto * PONTO_MULT;
+  }
+
+  // Multiplicador de Ouro do Carisma (spec gestao-atributos) —
+  // LOGARÍTMICO: cresce rápido no início e satura. Nunca explode como
+  // o xpMult linear antigo (855× no teto = progressão calibrada quebrada).
+  // car 8 → 1,00 · car 100 → 2,00 · car 3174 (fim) → 2,77
+  function multOuroCar(car) {
+    var c = (typeof car === 'number' && isFinite(car)) ? car : 8;
+    return 1 + OURO_CAR_K * Math.log(1 + Math.max(0, c - 8));
+  }
+
   function status(p) {
     var c = CLASSES[p.classe] || CLASSES.guerreiro;
     var a = efetivos(p);
     var b = bonusEquipamento(p);
     var nv = (typeof p.nivel === 'number' && p.nivel >= 1)
       ? Math.floor(p.nivel) : 1;
-    var vel = 46 + a.des * 3 + b.vel;
+    // soft cap saturante (spec gestao-atributos — ver VEL_* acima)
+    var vel = 46 + VEL_BASE * Math.pow(a.des / VEL_DES_REF, VEL_EXP) +
+      b.vel;
     // +6/nível (era 4): a fronteira exige que o HP do herói acompanhe
     // o dano inimigo linear — na leva progressao-exponencial os níveis
     // são mais escassos, então cada um puxa mais sobrevivência
-    var hpMax = c.hpBase + a.con * 4 + (nv - 1) * HP_POR_NIVEL + b.hp;
-    var dano = c.danoBase + Math.floor(a[c.danoMod] / 2) + b.dano;
-    var crit = 4 + Math.floor(a.des * 1.3) + b.crit;
+    // HP: ganhoAtributo (CON linear até a base, 9× acima) + o HP por
+    // nível (inalterado) mantêm a frente e o early
+    var con0 = 8 + (c.bonus.con || 0);
+    var hpMax = c.hpBase + Math.floor(ganhoAtributo(a.con, con0, 4)) +
+      (nv - 1) * HP_POR_NIVEL + b.hp;
+    // dano: ganhoAtributo (base linear +9× acima dela — ver helper)
+    var at0 = 8 + (c.bonus[c.danoMod] || 0);
+    var dano = c.danoBase +
+      Math.floor(ganhoAtributo(a[c.danoMod], at0, 0.5)) + b.dano;
+    // crítico: ganhoAtributo (DES linear até a base, 9× acima) — o
+    // clamp 45 existente continua valendo por cima (o espelho desconta)
+    var des0 = 8 + (c.bonus.des || 0);
+    var critCalc = 4 + Math.floor(ganhoAtributo(a.des, des0, 1.3)) + b.crit;
+    var crit = Math.min(45, Math.max(0, critCalc));
     // keystone ativo: tradeoff aplicado antes dos clamps finais
     var k = (p.keystoneLib && p.keystoneOn) ? keystoneDe(p.classe) : null;
     if (k) {
@@ -242,8 +311,10 @@ var Personagem = (function () {
       if (k.vel) vel += k.vel;
       if (k.crit) crit += k.crit;
     }
-    // clamps finais: afixo negativo ou keystone nunca zera status
-    vel = Math.max(10, vel);
+    // clamps finais: afixo negativo/keystone nunca zera status, e o
+    // TETO da velocidade vale p/ atributo+item+keystone somados (spec
+    // gestao-atributos — sem ele o afixo contornaria os 250)
+    vel = Math.max(10, Math.min(VEL_MAX, vel));
     hpMax = Math.max(10, hpMax);
     dano = Math.max(1, dano);
     crit = Math.max(0, Math.min(45, crit));
@@ -260,7 +331,10 @@ var Personagem = (function () {
       crit: crit,
       alcance: c.alcance,
       arma: c.armaNome,
-      xpMult: 1 + (a.car - 8) * 0.03,
+      // Carisma NÃO mexe mais em XP (spec gestao-atributos: a curva
+      // calibrada 12×1,064^onda voltou a ser a real — o multiplicador
+      // de build era a "progressão errada" relatada). Agora ele dá
+      // OURO (batalha.mataInimigo), de forma saturante.
       atributos: a
     };
   }
@@ -301,39 +375,60 @@ var Personagem = (function () {
     function parteKeystone(v) {
       return (k && v) ? { v: v, rot: kd } : null;
     }
+    // espelhos das fórmulas compensadas (PONTO_MULT) — Σpartes tem que
+    // fechar com o status (seções 38/40 conferem)
+    var at0D = 8 + (c.bonus[c.danoMod] || 0);
+    var con0D = 8 + (c.bonus.con || 0);
+    var des0D = 8 + (c.bonus.des || 0);
+    // espelho da mesma partição de ganhoAtributo (Σpartes = status)
+    var danoBase = Math.min(a[c.danoMod], at0D) * 0.5;
+    var danoInv = Math.max(0, a[c.danoMod] - at0D) * 0.5 * PONTO_MULT;
+    var hpBase = Math.min(a.con, con0D) * 4;
+    var hpInv = Math.max(0, a.con - con0D) * 4 * PONTO_MULT;
     var partesDano = [
       { v: c.danoBase, rot: 'base ' + c.nome },
-      { v: Math.floor(a[c.danoMod] / 2),
-        rot: c.danoMod.toUpperCase() + ' ' + a[c.danoMod] + ' ÷ 2' },
+      { v: Math.floor(danoBase + danoInv),
+        rot: c.danoMod.toUpperCase() + ' ' + a[c.danoMod] + (danoInv > 0
+          ? ' (base linear + 9× no investido)' : '') },
       { v: b.dano, rot: itRot }
     ];
     var partesHp = [
       { v: c.hpBase, rot: 'base ' + c.nome },
-      { v: a.con * 4, rot: 'CON ' + a.con + ' × 4' },
+      { v: Math.floor(hpBase + hpInv),
+        rot: 'CON ' + a.con + (hpInv > 0 ? ' (base linear + 9×)' : '') },
       { v: (nv - 1) * HP_POR_NIVEL,
         rot: 'nível ' + nv + ' × ' + HP_POR_NIVEL },
       { v: b.hp, rot: itRot }
     ];
+    var ganhoVel = VEL_BASE * Math.pow(a.des / VEL_DES_REF, VEL_EXP);
     var partesVel = [
       { v: 46, rot: 'base' },
-      { v: a.des * 3, rot: 'DES ' + a.des + ' × 3' },
+      { v: ganhoVel, rot: 'DES ' + a.des + ' (curva saturante)' },
       { v: b.vel, rot: itRot }
     ];
     var kv = parteKeystone(k && k.vel ? k.vel : null);
     if (kv) partesVel.push(kv);
     var partesCrit = [
       { v: 4, rot: 'base' },
-      { v: Math.floor(a.des * 1.3), rot: 'DES ' + a.des + ' × 1,3' },
+      { v: Math.floor(ganhoAtributo(a.des, des0D, 1.3)),
+        rot: 'DES ' + a.des + ' (linear até a base, 9× acima)' },
       { v: b.crit, rot: itRot }
     ];
+    // desconto do clamp 45% (sem ele Σpartes não fecha com o status)
+    var critBruto = partesCrit.reduce(function (q, x) { return q + x.v; }, 0);
+    if (critBruto > 45) {
+      partesCrit.push({ v: 45 - critBruto, rot: 'limite 45%' });
+    }
     var kc = parteKeystone(k && k.crit ? k.crit : null);
     if (kc) partesCrit.push(kc);
     // base = SEM itens e SEM keystone (padrão D3/D4 p/ o bloco da aba
     // Stats: '46→120' mostra o que os modificadores estão fazendo)
-    var baseHp = c.hpBase + a.con * 4 + (nv - 1) * HP_POR_NIVEL;
-    var baseDano = c.danoBase + Math.floor(a[c.danoMod] / 2);
-    var baseVel = 46 + a.des * 3;
-    var baseCrit = 4 + Math.floor(a.des * 1.3);
+    var baseHp = c.hpBase + Math.floor(hpBase + hpInv) +
+      (nv - 1) * HP_POR_NIVEL;
+    var baseDano = c.danoBase + Math.floor(danoBase + danoInv);
+    var baseVel = 46 + VEL_BASE * Math.pow(a.des / VEL_DES_REF, VEL_EXP);
+    var baseCrit = Math.min(45, 4 +
+      Math.floor(ganhoAtributo(a.des, des0D, 1.3)));
     return {
       hp: { total: s.hpMax, base: baseHp, partes: partesHp,
             mult: multKeystone(k && k.hpMax) },
@@ -344,10 +439,6 @@ var Personagem = (function () {
       crit: { total: s.crit, base: baseCrit, partes: partesCrit },
       alcance: { total: s.alcance,
                  partes: [{ v: s.alcance, rot: 'da classe' }] },
-      xp: { total: s.xpMult,
-            partes: [{ v: 1, rot: 'base' },
-                     { v: (a.car - 8) * 0.03,
-                       rot: 'CAR ' + a.car + ' (3% por ponto acima de 8)' }] },
       dps: { total: s.recarga > 0
               ? Math.round(s.dano * (1 + s.crit / 100) / s.recarga) : 0,
              partes: [{ v: s.dano, rot: 'dano' },
@@ -616,6 +707,11 @@ var Personagem = (function () {
     KEY_CUSTO: KEY_CUSTO,
     KEY_RESPEC: KEY_RESPEC,
     NIVEL_MAX: NIVEL_MAX,
+    VEL_MAX: VEL_MAX,
+    OURO_CAR_K: OURO_CAR_K,
+    PONTOS_CADA: PONTOS_CADA,
+    PONTOS_NIVEL: PONTOS_NIVEL,
+    multOuroCar: multOuroCar,
     OURO_MAX: OURO_MAX,
     PONTOS_MAX: PONTOS_MAX,
     ATRIB_MAX: ATRIB_MAX,

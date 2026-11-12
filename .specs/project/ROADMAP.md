@@ -87,6 +87,15 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Série 2026-11 — em curso (ordem aprovada pelo mantenedor)
 
+0. ✅ **`gestao-atributos`** *(leva de correção, antes dos monstros)* —
+   pontos escassos (**1 a cada 3 níveis + compensação 9×**: cada decisão
+   vale 9× mais) + soft caps (vel saturante com **teto 250**, regen com
+   teto 500 hp/s, afixo `vel` limitado) + **Carisma vira ouro** (log) e
+   **dano do clérigo**. **Gate 3× = 526 confs** · medição comparativa:
+   **mesmo mapa (36) e nv com 1,1% da referência** — sem a compensação
+   a medição estolou (223 mortes), com ela: 20 mortes em 40h
+   (eventos) — seção 40.
+
 1. ✅ **`mundos`** *(esta leva)* — campanha **10 mundos × 10 mapas ×
    100 ondas**, **sim completa: vitória em 222,5h** (alvo 200h ±20%),
    nv final 9.167, 65 mortes (eventos), **sem estol**; 10 temas
