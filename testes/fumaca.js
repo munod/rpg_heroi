@@ -34,10 +34,18 @@ sandbox.window.innerHeight = 720;
 const Eventos = sandbox.Eventos;
 Eventos._nasceAco = Eventos.nasceAco;
 Eventos._nasceGat = Eventos.nasceGat;
+// RNGs novos da spec monstros-novos: mesmo mosquetão (Enxame derruba
+// o XP/ouro de qualquer teste que rode ondas; o Cofre mudaria stats)
+Eventos._nasceEnxame = Eventos.nasceEnxame;
+Eventos._nasceCofre = Eventos.nasceCofre;
 const SEM_ACO = function () { return false; };
 const SEM_GAT = function () { return 0; };
+const SEM_ENX = function () { return false; };
+const SEM_COF = function () { return false; };
 Eventos.nasceAco = SEM_ACO;
 Eventos.nasceGat = SEM_GAT;
+Eventos.nasceEnxame = SEM_ENX;
+Eventos.nasceCofre = SEM_COF;
 
 // ranking: o setup local do Firebase pode trazer chaves reais
 // (ativo: true em js/ranking-config.js) — o teste DESLIGA na largada
@@ -2295,8 +2303,13 @@ console.log('28) evento: o Açougueiro (raro, uma chance, recompensa gorda)');
   // Faixa, não exato: a geometria de spawn pode deixar 1 minion fora do
   // primeiro golpe. Sem ×10 o delta máximo seria 12 — ≥22 prova o 10×.
   const dOuro = (p.ouro || 0) - ouroA;
-  conf(dOuro >= 22 && dOuro <= 40,
-    'ouro ×10 na vitória (delta ' + dOuro + ', faixa 22..40)');
+  // o CARISMA também multiplica o ouro (spec gestao-atributos: ele saiu
+  // do XP e virou economia) — o esperado leva o fator em conta
+  const fCar = Personagem.multOuroCar(p.atributos.car || 8);
+  const espMin = Math.round(22 * fCar) - 4, espMax = Math.round(40 * fCar) + 4;
+  conf(dOuro >= espMin && dOuro <= espMax,
+    'ouro ×10 na vitória × carisma (delta ' + dOuro + ', faixa ' +
+    espMin + '..' + espMax + ', car ×' + fCar.toFixed(2) + ')');
   const leg = [p.equip.arma, p.equip.armadura].concat(p.bolsa)
     .some(i => i && i.rar === 4);
   conf(leg, 'lendário garantido no saque');
@@ -3866,6 +3879,199 @@ console.log('40) gestao-atributos: teto da regen, afixo vel e clamp final');
   conf(Personagem.PONTOS_CADA === 3 && Personagem.PONTOS_NIVEL === 1,
     'fonte única: 1 ponto a cada 3 níveis (' + Personagem.PONTOS_CADA +
     '/' + Personagem.PONTOS_NIVEL + ')');
+}
+
+console.log('41) monstros novos: espécies com skill, ranged, comum intacto e eventos');
+{
+  const Batalha = sandbox.Batalha;
+  const Mapas = sandbox.Mapas;
+  const Eventos = sandbox.Eventos;
+  const Efeitos = sandbox.Efeitos;
+  const Personagem = sandbox.Personagem;
+  const p = Game.personagem;
+
+  // cena de jogo com estado limpo (a 40 terminou na arena)
+  Salvar.salvarEstado(p.id, 1, Date.now(), false, 1);
+  Game.setScene('jogo');
+  frame(2);
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- 1) as 3 espécies novas, cada uma com a skill declarada
+  const T = Batalha.TIPOS;
+  conf(['atirador', 'regenerador', 'drenador'].every(k => !!T[k]),
+    '3 espécies novas em TIPOS');
+  conf(T.atirador.ranged && T.regenerador.regen && T.drenador.dreno,
+    'cada uma com a skill própria declarada (ranged/regen/dreno)');
+  conf(T.atirador.ranged.alcance === 90 &&
+       T.atirador.ranged.cd > 1.4,
+    'atirador: alcance 90 e cd 2,2s > 1,4s do CQC (janela de reação)');
+  conf(T.atirador.hp <= T.visgo.hp && T.regenerador.hp <= T.aranha.hp &&
+       T.drenador.hp <= T.aranha.hp,
+    'stats MENORES que o raro antigo (a mecânica já é a ameaça)');
+
+  // --- 2) comum intacto nos 10 + raro novo só nos mundos 5-10
+  const comuns = [];
+  const raros = [];
+  for (let m = 1; m <= 10; m++) {
+    const t = Mapas.info(m * 10).inimigos;
+    comuns.push(t.comum.tipo);
+    raros.push(t.raro.tipo);
+  }
+  conf(JSON.stringify(comuns) === JSON.stringify(
+    ['slime', 'slime', 'aranha', 'slime', 'slime',
+     'morcego', 'visgo', 'morcego', 'visgo', 'aranha']),
+    'o COMUM dos 10 mundos não mudou (progressão medida intacta): ' +
+    comuns.join(','));
+  conf(JSON.stringify(raros.slice(4)) === JSON.stringify(
+    ['regenerador', 'atirador', 'regenerador', 'atirador',
+     'drenador', 'drenador']),
+    'mundos 5-10 ganham as espécies novas como RARO: ' +
+    raros.slice(4).join(','));
+
+  // --- 3) SKILLS PURAS (função exportada = fonte única do update)
+  const reg = { regen: 0.03, regenApos: 2, hp: 50, hpMax: 100,
+                hitFlash: 0, semDano: 0 };
+  let reg1 = false;
+  for (let i = 0; i < 300 && !reg1; i++) {
+    reg1 = Batalha.regeneraEspecie(reg, 1 / 60);
+  }
+  conf(reg1 && reg.hp > 50 && reg.semDano > 2,
+    'regenerador: cura só após 2s sem apanhar (hp ' + reg.hp.toFixed(1) + ')');
+  reg.hitFlash = 0.12;            // acabou de levar golpe (sinal do jogo)
+  Batalha.regeneraEspecie(reg, 1 / 60);
+  conf(reg.semDano === 0, 'regenerador: apanhou → trava (semDano = 0)');
+  reg.veneno = { cor: '#8ac040' };
+  reg.hp = 50; reg.semDano = 99;
+  const curouVeneno = Batalha.regeneraEspecie(reg, 1 / 60);
+  conf(!curouVeneno,
+    'regenerador: envenenado NÃO regenera (o veneno do herói vale algo)');
+  const dren = { dreno: 0.3, hp: 50, hpMax: 100 };
+  conf(Batalha.drenaVida(dren, 100) && dren.hp === 80,
+    'drenador: 30% do dano vira vida (100 → 80)');
+  conf(!Batalha.drenaVida({ dreno: 0.3, hp: 100, hpMax: 100 }, 50),
+    'drenador: cheio não estoura o hpMax');
+
+  // --- 4) ATIRADOR na arena: o dano cai NA CHEGADA do projétil
+  // HP altíssimo (não morre) mas DANO MÍNIMO (não mata o atirador
+  // antes do projétil pousar — com int 999 ele limpava a arena antes
+  // do tiro e a asserção media +0)
+  p.atributos.for = 1;
+  p.atributos.con = 9999;
+  p.atributos.int = 1;
+  // des 1 = herói LENTO (vel 70): com o DES herdado (vel 250) ele
+  // alcançava o atirador em 0,5s e o matava ANTES do cd inicial dele
+  // expirar (medido: `atir=undefined` no diag) — a 70px/s a perseguição
+  // leva ~2,9s e o tiro (cd inicial ≤1,3s + alcance 90) sai primeiro
+  p.atributos.des = 1;
+  p.nivel = 50;
+  // ARENA SÓ COM O ATIRADOR — dois erros medidos e corrigidos:
+  //  (a) restaurarOnda(1) deixa onda 0 → ondaTotal −1 → escHp −0,9 →
+  //      HP NEGATIVO no spawn (inimigo inválido); restaurarOnda(2) deixa
+  //      a onda 1 (tot 0, escHp 1) e a arena limpa;
+  //  (b) a onda 1 nasceria com slimes e o dano da asserção viria DELES.
+  // A onda seguinte nasce só quando a atual limpa (guarda inimigos=0),
+  // então a janela de medição é livre por ~450 frames (7,5s ≈ 3 tiros).
+  Batalha.restaurarOnda(2);
+  conf(Batalha.info().inimigos === 0 && Batalha.info().onda === 1,
+    'arena zerada na onda 1 (tot 0 → escala de hp válida)');
+  Batalha.spawn({ tipo: 'atirador' });
+  conf(Batalha.info().bichos.some(b => b.chave === 'atirador'),
+    'atirador nasce em campo (sonda bichos)');
+  // PROVA do TIRO pelo reset do cooldown: só o ramo ranged seta
+  // atkCd = 2,2 (o corpo a corpo de todos os inimigos seta 1,4) — o cd
+  // passa de ≤1,6 para >1,6 = ele conjurou. Isolado de "quem deu o
+  // dano", então a asserção não depende da fonte do hit.
+  let atirou = false, cdAnterior = null;
+  const dano0 = p.stats.danoRecebido;
+  for (let i = 0; i < 450 && !atirou; i++) {
+    const b = Batalha.info().bichos.find(x => x.chave === 'atirador');
+    const cd = b ? b.atkCd : null;
+    if (cdAnterior !== null && cd !== null &&
+        cdAnterior <= 1.6 && cd > 1.6) atirou = true;
+    cdAnterior = cd;
+    frame(1);
+  }
+  if (!atirou) {
+    const f = Batalha.info();
+    const b = f.bichos.find(x => x.chave === 'atirador');
+    console.log('    [diagAtir] limpa=' + limpa + ' inim=' + f.inimigos +
+      ' morto=' + f.morto + ' hp=' + f.hp + ' onda=' + f.onda +
+      ' atir=' + JSON.stringify(b) + ' dano=' + (p.stats.danoRecebido - dano0));
+  }
+  conf(atirou,
+    'atirador CONJURA o tiro (reset do cd para 2,2s — só o ramo ' +
+    'ranged faz isso; o CQC de qualquer inimigo setaria 1,4s)');
+  // o projétil do tiro pousa e drena vida do herói (dano na chegada)
+  const danoDepois = p.stats.danoRecebido;
+  for (let i = 0; i < 120 && p.stats.danoRecebido === danoDepois; i++) frame(1);
+  conf(p.stats.danoRecebido > dano0,
+    'o dano do tiro cai na CHEGADA do projétil (+' +
+    (p.stats.danoRecebido - dano0) + ' de dano recebido)');
+
+  // --- 5) Enxame (R-MON-4.1): rolagem, dobra a onda, paga ×1,5, encerra
+  Eventos.nasceEnxame = Eventos._nasceEnxame;   // religa (mosquetão)
+  Eventos.nasceCofre = Eventos._nasceCofre;
+  const rnd = Math.random;
+  Math.random = function () { return 0; };      // rolagem sempre "sim"
+  conf(Eventos.nasceEnxame(20) === true &&
+       Eventos.enxameAtivo() && Eventos.multEnxame() === 1.5,
+    'enxame: rolagem forçada → ativo e XP/ouro ×1,5');
+  Eventos.encerraEnxame();
+  conf(Eventos.multEnxame() === 1 && Eventos.enxameAtivo() === false,
+    'enxame: encerra ao passar de onda (×1,5 vale só na onda dele)');
+  Math.random = function () { return 1; };      // rolagem sempre "não"
+  conf(Eventos.nasceEnxame(20) === false,
+    'enxame: sem luck não nasce (pity/carence funcionam)');
+  Math.random = rnd;
+  // na arena: com luck forçado a onda nasce DOBRADA (Eventos.limpa
+  // antes: os testes acima deixaram carência/pity ativos)
+  Eventos.limpa();
+  Math.random = function () { return 0; };
+  Batalha.restaurarOnda(20);
+  frame(1);
+  const comEnx = Batalha.info().inimigos;
+  Eventos.encerraEnxame();
+  Math.random = function () { return 1; };
+  Batalha.restaurarOnda(20);
+  frame(1);
+  const semEnx = Batalha.info().inimigos;
+  Math.random = rnd;
+  conf(comEnx === Math.ceil(semEnx * 2),
+    'enxame dobra a onda (' + comEnx + ' = 2×' + semEnx + ')');
+
+  // --- 6) Cofre Abandonado (R-MON-4.2): nasce no campo, só quem
+  //        passar coleta — e paga ouro + drop rar 2
+  Math.random = function () { return 0; };
+  Eventos.cofreColetado();
+  conf(Eventos.nasceCofre(20) === true,
+    'cofre: rolagem forçada → elegível');
+  // posição já colocada pelo nasceEventos da onda; coloca manualmente
+  const antesOuro = p.ouro || 0;
+  const antesItens = p.stats.itens;
+  // leva o herói até o cofre: ele caminha sozinho sem inimigos em campo
+  Batalha.restaurarOnda(1);
+  frame(1);
+  Math.random = rnd;
+  Eventos.cofreColetado();
+  Eventos.colocaCofre(60, 60);        // canto fixo p/ o teste
+  // teleporta o herói perto (chegada por proximidade, sem esperar andar)
+  // — o movimento até lá já é coberto pelo caminho natural no jogo
+  const cof = Batalha.info().cofre;
+  conf(cof && cof.x === 60 && cof.y === 60,
+    'cofre aparece na sonda com a posição certa');
+  // caminha: sem inimigos, o herói vai até ele (R-MON-4.2)
+  let coletou = false;
+  for (let i = 0; i < 12000 && !coletou; i++) {
+    frame(1);
+    coletou = Batalha.info().cofre === null;
+  }
+  conf(coletou,
+    'sem inimigos o herói caminha até o cofre e COLETA (soma ' +
+    ((p.ouro || 0) - antesOuro) + ' de ouro)');
+  conf((p.ouro || 0) > antesOuro && p.stats.itens > antesItens,
+    'cofre paga ouro (' + Math.round(Mapas.forca(1) * 25) + ') + drop rar 2');
+
+  Eventos.cofreColetado();
 }
 
 console.log('');

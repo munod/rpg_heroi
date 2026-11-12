@@ -12,6 +12,31 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Monstros novos: espécies com skill própria, ataques à distância e
+  2 eventos (spec `monstros-novos`)** — as 4 espécies viram **10** e
+  nenhuma é só recolor: **`atirador`** (ataque à distância — alcance
+  90px, cd 2,2s, projétil via `Efeitos.missil` com dano **na chegada**,
+  mesmíssimo padrão do herói; não atira em cadáver), **`regenerador`**
+  (cura 3%/s só após 2s sem apanhar; veneno trava) e **`drenador`**
+  (30% do dano que dá vira vida dele). Entram como **`raro` dos mundos
+  5-10** — o `comum` dos 10 mundos **não mudou** (progressão medida
+  intacta). **2 eventos novos**: **Enxame** (2× inimigos + XP/ouro
+  ×1,5 só na onda dele; **1,5% desde a 15**, calibrado em 7 runs — 10%
+  projetava 253h de campanha) e **Cofre Abandonado** (1º
+  evento "bom": nasce no campo, o herói **caminha até ele** sem
+  inimigos, paga `forca×25` de ouro + drop garantido rar 2). Skills
+  extraídas em **funções puras** (`regeneraEspecie`/`drenaVida`) p/ ser
+  testáveis sem arena. **Bug de integração achado pelo teste**: o
+  `spawn` constrói a entidade com campos explícitos e **não copiava**
+  `ranged`/`regen`/`dreno` de `TIPOS` — as 3 skills **não funcionavam**
+  no jogo (os testes de função pura passavam; pegou o teste na arena).
+  **Lições**: skill nova em `TIPOS` exige copiar no `spawn` **e**
+  teste comportamental · `restaurarOnda(1)` deixa `onda 0` →
+  `ondaTotal −1` → **HP negativo** no spawn (use `restaurarOnda(2)`) ·
+  **a variância entre runs é 1..112 mortes** — 1 run de referência não
+  discrimina (uma run com todo evento novo desligado deu 1 morte, outra
+  com cofre desligado deu 87). Teste: seção 41 (24 confs) + mosquetão
+  dos RNGs novos no topo da fumaça (regra da casa).
 - **Gestão de atributos: pontos escassos, soft caps e Carisma
   redefinido (spec `gestao-atributos`)** — resposta ao relato de
   jogadores que *"nem ligam pra quantidade de pontos"*: a auditoria das

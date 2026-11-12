@@ -43,7 +43,18 @@ var Batalha = (function () {
     acougueiro: { hp: 22, dmg: 6, vel: 40, xpExtra: 10, escala: 2.4,
                   raio: 11, forma: 'slime', cor: '#ff5a3a' },
     gatuno: { hp: 8, dmg: 1, vel: 24, xpExtra: 0, forma: 'slime',
-              cor: '#e8c86a' }
+              cor: '#e8c86a' },
+    // ---- espécies com SKILL PRÓPRIA (spec monstros-novos) ------------
+    // hp/dano MENORES que o raro atual: a mecânica já é a ameaça.
+    // atirador = ataque à distância (R-MON-2); regenerador = cura
+    // quando não apanha; drenador = 30% do dano vira vida dele.
+    atirador: { hp: 18, dmg: 4, vel: 32, xpExtra: 4, forma: 'morcego',
+                cor: '#7a9ab8', raio: 5,
+                ranged: { alcance: 90, cd: 2.2 } },
+    regenerador: { hp: 30, dmg: 5, vel: 24, xpExtra: 5, forma: 'slime',
+                   cor: '#6a9a6a', regen: 0.03, regenApos: 2 },
+    drenador: { hp: 24, dmg: 6, vel: 30, xpExtra: 5, forma: 'slime',
+                cor: '#9a5ab8', dreno: 0.3 }
   };
 
   var FIM_MAPA = 100;        // ondas por mapa; a100 é o chefe
@@ -486,6 +497,7 @@ var Batalha = (function () {
     }
     if (onda > 0) stat('ondas');           // a 1ª onda do jogo não conta
     onda++;
+    Eventos.encerraEnxame();   // o bônus ×1,5 vale só pra onda do enxame
     spawnaOnda();
   }
 
@@ -508,6 +520,12 @@ var Batalha = (function () {
       // era fixo 5 para sempre); raro entra pelo total como sempre
       var tot = ondaTotal();
       var n = qtdMonstros();
+      // ENXAME (spec monstros-novos R-MON-4.1): 2× inimigos nesta onda
+      // e (em mataInimigo) XP/ouro ×1,5 — pressão com paga boa
+      if (Eventos.nasceEnxame(onda)) {
+        n = Math.ceil(n * 2);
+        aviso('ENXAME! A PRAGA CHEGA EM BANDA', '#8ac040');
+      }
       for (var k = 0; k < n; k++) {
         spawn((tot >= 2 && k % 3 === 2) ? tem.inimigos.raro : tem.inimigos.comum);
       }
@@ -525,6 +543,13 @@ var Batalha = (function () {
       aviso('AÇOUGUEIRO — CARNE FRESCA!', '#ff5a3a');
       if (ac) numero(ac.x, ac.y - 40, 'CARNE FRESCA!', '#ff5a3a', true);
       return;
+    }
+    // COFRE ABANDONADO (R-MON-4.2): nasce no campo — só quem passar
+    // por ele coleta (o herói caminha até lá quando não há inimigos)
+    if (Eventos.nasceCofre(onda)) {
+      var pc = posicaoAleatoriaSegura();
+      Eventos.colocaCofre(pc.x, pc.y);
+      aviso('COFRE ABANDONADO NO CAMPO!', '#e8c86a');
     }
     var p = Game.personagem;
     var roubo = Eventos.nasceGat(p ? (p.ouro || 0) : 0);
@@ -578,6 +603,7 @@ var Batalha = (function () {
     var hp = Math.round(t.hp * escHp * (t.boss ? 4 : ehAc ? 3 : 1));
     var ent = {
       x: x, y: y, tipo: t,
+      chave: def.tipo || 'slime',   // p/ sonda de teste (seção 41)
       cor: def.cor || t.cor,
       escala: def.escala || t.escala || 1,
       forma: def.forma || t.forma || 'slime',
@@ -599,7 +625,14 @@ var Batalha = (function () {
       esquivaCd: 1.5 + Math.random() * 2,
       acougueiro: ehAc,
       gatuno: def.tipo === 'gatuno',
-      roubo: def.roubo || 0
+      roubo: def.roubo || 0,
+      // SKILLS DA ESPÉCIE copiadas do TIPOS (spec monstros-novos) — sem
+      // isto en.ranged/en.regen/en.dreno ficam undefined e NENHUMA skill
+      // nova funciona (bug medido: o atirador só dava golpe corpo a corpo)
+      ranged: t.ranged || null,
+      regen: t.regen,
+      regenApos: t.regenApos,
+      dreno: t.dreno
     };
     if (ent.gatuno) {
       // longe das bordas p/ dar tempo de reação (contrajogada)
@@ -763,6 +796,54 @@ var Batalha = (function () {
     aviso('O Açougueiro partiu... por enquanto.', '#ff5a3a');
   }
 
+  // ---- skills de espécie (spec monstros-novos) — FUNÇÕES PURAS ----
+  // Vira fonte única do update e é exportada p/ teste sem arena.
+
+  // REGENERADOR: cura 3%/s quando não apanha há 2s (espelho do inv do
+  // herói). hitFlash > 0 = acabou de levar golpe (setado em todos os
+  // pontos de dano); veneno trava (senão o veneno do herói seria inútil
+  // contra ele).
+  function regeneraEspecie(en, dt) {
+    if (!en.regen || en.veneno) return false;
+    if (en.hp <= 0 || en.hp >= en.hpMax) return false;
+    if (en.hitFlash > 0) en.semDano = 0;
+    else en.semDano = (en.semDano || 0) + dt;
+    if (en.semDano <= en.regenApos) return false;
+    en.hp = Math.min(en.hpMax, en.hp + en.hpMax * en.regen * dt);
+    return true;
+  }
+
+  // DRENADOR: 30% do dano que dá vira vida dele (fica tanque contra
+  // build de dano lento — castiga DPS baixo)
+  function drenaVida(en, dmg) {
+    if (!en.dreno || en.hp <= 0 || en.hp >= en.hpMax) return false;
+    en.hp = Math.min(en.hpMax, en.hp + dmg * en.dreno);
+    return true;
+  }
+
+  // Dano do inimigo no herói — guarda de invirmortalidade num lugar só
+  // (antes estava no chamador) e o roubo de vida do drenador
+  function machucaHeroi(en, dmg) {
+    if (heroi.morto || heroi.inv > 0) return;
+    danoHeroi(dmg);
+    if (drenaVida(en, dmg)) {
+      numero(en.x, en.y - 20, '+' + Math.round(dmg * en.dreno),
+        '#9a5ab8', false);
+    }
+  }
+
+  // Tiro do atirador (R-MON-2): o projétil SEGUE o herói (Efeitos.missil
+  // guarda a referência) e o dano cai NA CHEGADA — mesmo padrão do
+  // golpe à distância do herói. Não atira em cadáver e o impacto
+  // respeita o inv (mesma regra do golpe corpo a corpo).
+  function atiraInimigo(en) {
+    if (heroi.morto) return;
+    Efeitos.missil({ x: en.x, y: en.y - 10 }, heroi,
+      '#9ab8d8', 0.75, function () {
+        machucaHeroi(en, en.dmg);
+      });
+  }
+
   function danoHeroi(dmg) {
     if (heroi.morto) return;
     stat('danoRecebido', Math.round(dmg));
@@ -814,6 +895,28 @@ var Batalha = (function () {
     return { x: MW / 2, y: MH / 2 };
   }
 
+  // Recompensa do COFRE (spec monstros-novos R-MON-4.2): ouro =
+  // forca×25 + drop GARANTIDO rar ≥2 — o 1º evento "bom" do jogo
+  // (só existiam pressão e contrajogada). O item passa pelo mesmo
+  // auto-equip/bolsa de qualquer drop.
+  function coletaCofre(cof) {
+    Eventos.cofreColetado();
+    var p = Game.personagem;
+    if (!p) return;
+    var ouro = Math.round(Mapas.forca(mapa) * 25);
+    p.ouro = Math.min((p.ouro || 0) + ouro, Personagem.OURO_MAX);
+    stat('ouroGanho', ouro);
+    numero(cof.x, cof.y - 24, '+' + ouro + ' OURO!', '#e8c86a', true);
+    Efeitos.brasas(cof.x, cof.y - 8, '#e8c86a', 6, 40, 50);
+    var it = Itens.geraItem(2, mapa, p.classe);   // rar 2 garantido
+    stat('itens');
+    var equipou = Itens.equiparSeMelhor(p, it);
+    if (!equipou) Itens.guardar(p, it);
+    numero(cof.x, cof.y - 44, (equipou ? it.nome + '!' : '+' + it.nome),
+      Itens.corRar(it.rar), false);
+    aviso('COFRE: +' + ouro + ' OURO!', '#e8c86a');
+  }
+
   function mataInimigo(i, en) {
     faísca(en.x, en.y - 6, en.cor, 10);
     inimigos.splice(i, 1);
@@ -825,6 +928,8 @@ var Batalha = (function () {
     // mapa). (+ondaTotal+1 reproduz exatamente o 4+onda×2 de sempre no
     // mapa 1.)
     var ganho = xpAbate(ondaTotal(), en.tipo.xpExtra);
+    // bônus do ENXAME: só enquanto a onda dele está de pé
+    ganho = Math.round(ganho * Eventos.multEnxame());
     if (en.tipo.boss) {
       stat('bosses');
       // recompensa de chefe: XP de várias ondas de uma vez
@@ -837,7 +942,8 @@ var Batalha = (function () {
     }
     // ouro do abate: escala com o mapa e a onda (chefe paga ×8) — a
     // moeda sustenta venda/sucata/aprimoramento/re-roll da aba Itens
-    var ouro = Math.round((1 + Math.random() * 2) * Mapas.forca(mapa) *
+    var ouro = Math.round(Eventos.multEnxame() *
+      (1 + Math.random() * 2) * Mapas.forca(mapa) *
       (1 + (ondaTotal() + 1) * 0.04) *
       (en.tipo.boss ? 8 : (en.acougueiro ? Eventos.MULT_OURO_ACO : 1)));
     ouro = Math.round(ouro * Itens.multOuro(Game.personagem));  // mercador
@@ -1283,6 +1389,22 @@ var Batalha = (function () {
     }
 
     var atacando = h.atkT > 0;
+    // COFRE ABANDONADO (R-MON-4.2): sem alvo em campo, o herói caminha
+    // até ele (o estado "espera" da IA o deixaria parado pra sempre).
+    // Guard !atacando: não interrompe um golpe em curso.
+    if (!alvo && !atacando && !heroi.morto) {
+      var cof0 = Eventos.posCofre();
+      if (cof0) {
+        var cdx = cof0.x - h.x, cdy = cof0.y - h.y;
+        var cd = Math.sqrt(cdx * cdx + cdy * cdy) || 1;
+        if (cd > 6) {
+          mover(h, (cdx / cd) * h.stats.vel * dt,
+            (cdy / cd) * h.stats.vel * dt, 6);
+          if (Math.abs(cdx) > 2) h.facing = cdx > 0 ? 1 : -1;
+          anima(h, 'walk', dt);
+        }
+      }
+    }
     if (atacando) {
       h.atkT -= dt;
       // a animação acompanha a RECHARGA (bug: 0,36s fixos estagnavam a
@@ -1362,6 +1484,9 @@ var Batalha = (function () {
       if (en.frameT > 0.3) { en.frameT = 0; en.frame = en.frame ? 0 : 1; }
       if (en.hitFlash > 0) en.hitFlash -= dt;
       if (en.atkCd > 0) en.atkCd -= dt;
+      // skill do REGENERADOR (spec monstros-novos) — fonte única em
+      // regeneraEspecie (exportada p/ teste puro)
+      regeneraEspecie(en, dt);
       if (en.lunge > 0) en.lunge -= dt;
 
       // dano contínuo do veneno (skill do ladino)
@@ -1452,6 +1577,18 @@ var Batalha = (function () {
       } else if (heroi.morto) {
         if (distH > 20) mover(en, (vhx / distH) * en.vel * 0.5 * dt,
           (vhy / distH) * en.vel * 0.5 * dt, en.raio || 6);
+      } else if (en.ranged) {
+        // ATIRADOR (spec monstros-novos R-MON-2): fora do alcance fecha
+        // a distância; DENTRO dele atira (cd 2,2s = janela de reação —
+        // o golpe corpo a corpo é 1,4s). Não fica imóvel: quem quiser
+        // encarar precisa colar (o guerreiro tem alcance 26, o tiro 90)
+        if (distH > en.ranged.alcance) {
+          moverPara(en, { x: alvoX, y: alvoY }, en.raio || 6, dt,
+            (en.astucia || 0) >= 0.4);
+        } else if (en.atkCd <= 0) {
+          en.atkCd = en.ranged.cd;
+          atiraInimigo(en);
+        }
       } else if (distH > 13) {
         // se aproxima do alvo (slot do cerco/antecipação/herói) — A*
         // quando a reta está bloqueada e a astúcia >= 0,4
@@ -1460,7 +1597,7 @@ var Batalha = (function () {
       } else if (en.atkCd <= 0) {
         en.atkCd = 1.4;
         en.lunge = 0.18;
-        if (heroi.inv <= 0) danoHeroi(en.dmg);
+        machucaHeroi(en, en.dmg);
       }
     }
   }
@@ -1479,6 +1616,14 @@ var Batalha = (function () {
     // efeitos visuais (missis podem matar e reduzir a lista de inimigos
     // antes do laço de baixo — por isso rodam primeiro)
     Efeitos.atualizar(dt);
+
+    // COFRE ABANDONADO: coleta por PROXIMIDADE (o herói caminha até lá
+    // quando não há inimigos — ver atualizaHeroi)
+    var cof = Eventos.posCofre();
+    if (cof && !heroi.morto) {
+      var dxc = heroi.x - cof.x, dyc = heroi.y - cof.y;
+      if (dxc * dxc + dyc * dyc < 22 * 22) coletaCofre(cof);
+    }
 
     if (heroi.morto) {
       heroi.revT -= dt;
@@ -1552,6 +1697,21 @@ var Batalha = (function () {
   }
 
   // ----------------------------------------------------------- desenho
+  // Cofre Abandonado na cena (spec monstros-novos) — só fillRect e
+  // strokeRect: primitivas que o rasterizador de testes entende
+  function desenhaCofre(ctx, cof) {
+    var cx = Math.round(cof.x), cy = Math.round(cof.y);
+    ctx.fillStyle = '#8a6a2a';
+    ctx.fillRect(cx - 8, cy - 11, 16, 12);
+    ctx.fillStyle = '#e8c86a';
+    ctx.fillRect(cx - 8, cy - 7, 16, 3);
+    ctx.fillStyle = '#4a3a12';
+    ctx.fillRect(cx - 1, cy - 7, 2, 4);
+    ctx.strokeStyle = '#4a3a12';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 8.5, cy - 11.5, 17, 13);
+  }
+
   function desenhaObst(ctx, o) {
     if (o.tipo === 'tree') {
       var t = Anim.tree();
@@ -1668,6 +1828,8 @@ var Batalha = (function () {
     var i;
     for (i = 0; i < obst.length; i++) cena.push({ y: obst[i].y, t: 1, o: obst[i] });
     for (i = 0; i < inimigos.length; i++) cena.push({ y: inimigos[i].y, t: 2, e: inimigos[i] });
+    var cofCena = Eventos.posCofre();
+    if (cofCena) cena.push({ y: cofCena.y, t: 4, c: cofCena });
     cena.push({ y: heroi.y, t: 3 });
     cena.sort(function (a, b) { return a.y - b.y; });
 
@@ -1675,6 +1837,7 @@ var Batalha = (function () {
       var it = cena[i];
       if (it.t === 1) desenhaObst(ctx, it.o);
       else if (it.t === 2) desenhaInimigo(ctx, it.e);
+      else if (it.t === 4) desenhaCofre(ctx, it.c);
       else desenhaHeroi(ctx);
     }
 
@@ -1789,6 +1952,29 @@ var Batalha = (function () {
       janela: { w: VW, h: VH },
       mundo: { w: MW, h: MH },
       cam: { x: Math.round(cam.x), y: Math.round(cam.y) },
+      // sonda dos inimigos (spec monstros-novos — seção 41 mede
+      // skill de espécie: hp do regenerador, chave do atirador, etc)
+      bichos: (function () {
+        var out = [];
+        for (var bi = 0; bi < inimigos.length; bi++) {
+          var be = inimigos[bi];
+          out.push({ chave: be.chave, hp: Math.round(be.hp),
+                     hpMax: be.hpMax, atkCd: Math.round(be.atkCd * 100) / 100,
+                     dist: Math.round(Math.sqrt(
+                       (be.x - heroi.x) * (be.x - heroi.x) +
+                       (be.y - heroi.y) * (be.y - heroi.y))) });
+        }
+        return out;
+      })(),
+      cofre: (function () {
+        var c = Eventos.posCofre();
+        if (!c) return null;
+        return { x: Math.round(c.x), y: Math.round(c.y),
+                 dist: Math.round(Math.sqrt(
+                   (heroi.x - c.x) * (heroi.x - c.x) +
+                   (heroi.y - c.y) * (heroi.y - c.y))) };
+      })(),
+      enxame: Eventos.enxameAtivo(),
       heroi: { x: Math.round(heroi ? heroi.x : 0),
                y: Math.round(heroi ? heroi.y : 0),
                estado: (heroi && heroi.ia) ? heroi.ia.estado : null,
@@ -1848,6 +2034,10 @@ var Batalha = (function () {
     ganhaXP: ganhaXP,         // teto de nível testável (seção 36)
     xpAbate: xpAbate,         // renda exponencial testável (seção 38)
     REGEN_MAX: REGEN_MAX,     // teto da regen (spec gestao-atributos)
+    TIPOS: TIPOS,             // espécies (spec monstros-novos — seção 41)
+    spawn: spawn,             // p/ fixtures da seção 41 (skill de espécie)
+    regeneraEspecie: regeneraEspecie,  // skill pura (teste sem arena)
+    drenaVida: drenaVida,              // skill pura (teste sem arena)
     qtdMonstros: qtdMonstros, // escala de monstros testável (seção 39)
     escalaMonstros: escalaMonstros, // A/B mundo vs mapa (seção 39)
     fimCampanha: function () { return MAPA_FIM_CAMPANHA; },

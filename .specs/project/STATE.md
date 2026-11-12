@@ -263,6 +263,39 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   `forca(mapa)` e daria +1.968 no mapa 100 — qualquer teto de
   atributo seria contornado sem limitar o afixo.
 
+- **BUG DE INTEGRAÇÃO: copiar os campos de skill do TIPOS para a
+  entidade** (lição da leva `monstros-novos`) — o `spawn` constrói a
+  entidade com campos **explícitos**, então `t.ranged`/`t.regen`/
+  `t.dreno` **nunca chegam em `en.*`** e as 3 skills novas **não
+  funcionavam** no jogo (só passaram nos testes por serem funções puras
+  exportadas — o teste comportamental do atirador é que pegou: `cd`
+  parado em −0,01 = ele só dava golpe corpo a corpo). Regra: skill nova
+  em `TIPOS` **exige** copiar no `spawn` + **teste comportamental na
+  arena** (função pura sozinha não prova integração).
+- **`restaurarOnda(1)` deixa `onda = 0` → `ondaTotal = −1` → `escHp =
+  −0,9` → HP NEGATIVO no spawn** (inimigo inválido some na hora). Para
+  fixture de arena use `restaurarOnda(2)` (onda 1, tot 0) — e repare
+  que a onda 1 nasce com slimes, então isolar um bicho exige esperar a
+  limpeza (ou medir por efeito próprio, ex.: o reset do `atkCd`).
+- **A VARIÂNCIA ENTRE RUNS É 1..112 MORTES** (7 runs de 2400min
+  isolando Enxame/Cofre) — 1 run de "referência" **não discrimina**
+  nada (a minha referência tinha 20 mortes; uma run com TODO o evento
+  novo desligado deu **1** e outra com cofre desligado deu **87**).
+  Decisões de evento/pressão agora são por **progressão projetada**
+  (mapas/h) e por isolamento de variáveis, nunca por diferença de
+  mortes entre 2 runs.
+- **Mosquetão de RNG: a regra existe e eu esqueci de aplicar nos RNGs
+  novos** (lição da leva `monstros-novos`): o AGENTS já dizia "qualquer
+  RNG novo precisa desse mosquetão" — o Enxame, sem stub no topo,
+  dobrou ondas e ×1,5 o ouro **dentro do teste do Açougueiro** (delta 66
+  em vez de 22..40). Não é defeito de design do evento, é teste sem
+  mosquetão.
+- **"Distância no frame do dano" é proxy frágil p/ provar que é tiro** —
+  o critério `> 40px` falhou (o HERÓI vem até o atirador e a distância
+  cai p/ 20). A prova correta é `> 13px`: é o ramo CQC do inimigo
+  (mesmo `distH` de todos) — dano com distância maior **só** pode ter
+  vindo do missil.
+
 ## Bloqueios
 
 - Nenhum.

@@ -105,8 +105,12 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    `esperaOnda()` e escala de monstros (forma `'mundo'` no A/B;
    **k=0,5** — k=1 estolou o mundo 3 em 2/2 runs, k=0 saudável 3/3) —
    spec `.specs/features/mundos/`, seções 36-39 (516 confs).
-2. ⬜ **Monstros novos** com skills próprias + ataques à distância +
-   mais eventos (aproveita a escala de contagem da leva 1).
+2. ✅ **`monstros-novos`** — 3 espécies com skill própria (**atirador**
+   com ataque à distância · **regenerador** · **drenador**) como raro
+   dos mundos 5-10 (**comum intacto**) + **2 eventos** (Enxame com
+   pressão/paga e Cofre Abandonado, o 1º evento "bom"). **Seção 41** ·
+   gate 3× = 548 confs · sanidade medida (240/480min idênticos à
+   referência).
 3. ⬜ **Cutscenes entre mundos** — mapa do universo com os 10 mundos +
    cutscene de eventos.
 4. ⬜ **Árvore de skills maior** — o jogador escolhe quais usar

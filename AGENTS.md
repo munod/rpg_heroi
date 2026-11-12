@@ -56,6 +56,25 @@
   (Açougueiro chamará `penalizaMorte(2)`). Escalas reequilibradas na
   Leva 1 (medido): ESC_HP 1,30 · ESC_DMG 0,10; hoje (leva
   `progressao-exponencial`): **ESC_HP 1,90 · ESC_DMG 0,045**.
+- **Monstros com skill própria (spec `monstros-novos`)** — 10 espécies
+  em `Batalha.TIPOS` (eram 4): **`atirador`** (`ranged: {alcance 90,
+  cd 2,2}` — no loop de inimigos o ramo `en.ranged` fica FORA do
+  alcance e aproxima, DENTRO dele atira via `Efeitos.missil` (dano na
+  chegada, `machucaHeroi` guarda o `inv`); **não tem ramo CQC**),
+  **`regenerador`** (`regen 3%/s` só após `semDano > 2` — fonte única
+  `regeneraEspecie`, veneno trava) e **`drenador`** (`dreno 0,3` —
+  `drenaVida`, 30% do dano vira HP). Os 3 entram como **`raro` dos
+  mundos 5-10**; o **`comum` dos 10 intacto** (asserção que protege a
+  progressão medida). Eventos novos em `eventos.js` (**Enxame**
+  `nasceEnxame` → arena dobra a onda e `mataInimigo` paga ×1,5 via
+  `multEnxame`, encerrado em `proximaOnda`; **Cofre** `nasceCofre` →
+  posição no campo, herói **caminha até ele** quando não há inimigos —
+  guard `!alvo` em `atualizaHeroi` — coleta por proximidade paga
+  `forca×25` + drop rar 2). **Sondas novas em `info()`**: `bichos`
+  (`chave/hp/dist`), `cofre` (`x/y/dist`), `enxame`; `spawn`/`TIPOS`/
+  `regeneraEspecie`/`drenaVida` exportados p/ fixtures. **RNG novo
+  exige o mosquetão do topo da fumaça** (regra já documentada — o
+  Enxame sem stub derruba stats de qualquer teste que rode ondas).
 - **Curvas de status com teto (spec `gestao-atributos`)** — auditoria
   revelou "teto onde pensaram, sem teto onde não pensaram" (crítico 45
   e recarga 0,08 têm; vel/XP/HP não tinham). Hoje: **velocidade =

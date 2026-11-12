@@ -85,8 +85,8 @@ var Mapas = (function () {
       },
       obst: { tipos: ['tree', 'rock'], qtd: 5 },
       inimigos: {
-        comum: { tipo: 'slime', cor: '#5a9a4a' },
-        raro: { tipo: 'visgo', cor: '#8ac040' }
+        comum: { tipo: 'slime', cor: '#5a9a4a' },   // intacto (R-MON-3)
+        raro: { tipo: 'regenerador', cor: '#8ac040' }
       },
       boss: { tipo: 'boss', nome: 'Baba do Pântano', cor: '#6ab04a',
               escala: 3.0 }
@@ -101,8 +101,8 @@ var Mapas = (function () {
       },
       obst: { tipos: ['tree'], qtd: 6 },
       inimigos: {
-        comum: { tipo: 'morcego', cor: '#4a6a9a' },
-        raro: { tipo: 'aranha', cor: '#5a4a8a' }
+        comum: { tipo: 'morcego', cor: '#4a6a9a' },  // intacto (R-MON-3)
+        raro: { tipo: 'atirador', cor: '#5a4a8a' }
       },
       boss: { tipo: 'boss', nome: 'Príncipe das Trevas', cor: '#7a3a9a',
               escala: 2.8, forma: 'morcego' }
@@ -117,8 +117,8 @@ var Mapas = (function () {
       },
       obst: { tipos: ['rock'], qtd: 6 },
       inimigos: {
-        comum: { tipo: 'visgo', cor: '#e86a2a' },       // gota de lava
-        raro: { tipo: 'slime', cor: '#c84a3a' }
+        comum: { tipo: 'visgo', cor: '#e86a2a' },  // intacto (gota de lava)
+        raro: { tipo: 'regenerador', cor: '#c84a3a' }
       },
       boss: { tipo: 'boss', nome: 'Golem de Brasa', cor: '#ff6a2a',
               escala: 3.2 }
@@ -133,8 +133,8 @@ var Mapas = (function () {
       },
       obst: { tipos: ['rock'], qtd: 4 },
       inimigos: {
-        comum: { tipo: 'morcego', cor: '#e8d8f0' },
-        raro: { tipo: 'visgo', cor: '#c0a8e8' }
+        comum: { tipo: 'morcego', cor: '#e8d8f0' },   // intacto (R-MON-3)
+        raro: { tipo: 'atirador', cor: '#c0a8e8' }
       },
       boss: { tipo: 'boss', nome: 'Seráfico Caído', cor: '#b090e0',
               escala: 2.6, forma: 'morcego' }
@@ -149,8 +149,8 @@ var Mapas = (function () {
       },
       obst: { tipos: ['rock'], qtd: 5 },
       inimigos: {
-        comum: { tipo: 'visgo', cor: '#8a4aff' },
-        raro: { tipo: 'aranha', cor: '#b06aff' }
+        comum: { tipo: 'visgo', cor: '#8a4aff' },     // intacto (R-MON-3)
+        raro: { tipo: 'drenador', cor: '#b06aff' }
       },
       boss: { tipo: 'boss', nome: 'Leviatã do Vazio', cor: '#9a3aff',
               escala: 3.0, forma: 'aranha' }
@@ -165,8 +165,8 @@ var Mapas = (function () {
       },
       obst: { tipos: ['rock'], qtd: 6 },
       inimigos: {
-        comum: { tipo: 'aranha', cor: '#d83a5a' },
-        raro: { tipo: 'morcego', cor: '#a83a6a' }
+        comum: { tipo: 'aranha', cor: '#d83a5a' },    // intacto (R-MON-3)
+        raro: { tipo: 'drenador', cor: '#a83a6a' }
       },
       boss: { tipo: 'boss', nome: 'Devorador de Mundos', cor: '#e82a5a',
               escala: 3.2, forma: 'aranha' }
