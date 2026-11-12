@@ -464,7 +464,20 @@ var Batalha = (function () {
 
   // Chefe do mapa derrubado: avança para o próximo (onda 1 de novo).
   function passaMapa() {
+    var mAntes = Mapas.mundo(mapa);
     mapa++;
+    // cutscene de fronteira (spec cutscenes): SÓ na campanha (destino
+    // <= 10) — 100→101 (mundo 11) é da vitória, e no infinito os mundos
+    // ciclam e cutscene seria spam. restaurarMapa não passa por aqui.
+    var mDepois = Mapas.mundo(mapa);
+    if (mDepois !== mAntes && mDepois <= 10) {
+      Cutscene.mundo(mAntes, mDepois);
+    } else if (mDepois !== mAntes) {
+      // 100→101 (mundo 11): a VITÓRIA assume — corta qualquer cutscene
+      // pendente (ex.: mundo 10 aberta e não dispensada). No infinito os
+      // mundos ciclam e não há cutscene; o fecha() aqui é inofensivo.
+      Cutscene.fecha();
+    }
     onda = 0;
     garanteCenario();
     aviso('MAPA ' + mapa + ' — ' + Mapas.info(mapa).nome.toUpperCase(),
@@ -525,6 +538,7 @@ var Batalha = (function () {
       if (Eventos.nasceEnxame(onda)) {
         n = Math.ceil(n * 2);
         aviso('ENXAME! A PRAGA CHEGA EM BANDA', '#8ac040');
+        Cutscene.evento('enxame');
       }
       for (var k = 0; k < n; k++) {
         spawn((tot >= 2 && k % 3 === 2) ? tem.inimigos.raro : tem.inimigos.comum);
@@ -541,6 +555,7 @@ var Batalha = (function () {
     if (Eventos.nasceAco(onda)) {
       var ac = spawn({ tipo: 'acougueiro' });
       aviso('AÇOUGUEIRO — CARNE FRESCA!', '#ff5a3a');
+      Cutscene.evento('acougueiro');
       if (ac) numero(ac.x, ac.y - 40, 'CARNE FRESCA!', '#ff5a3a', true);
       return;
     }
@@ -550,6 +565,7 @@ var Batalha = (function () {
       var pc = posicaoAleatoriaSegura();
       Eventos.colocaCofre(pc.x, pc.y);
       aviso('COFRE ABANDONADO NO CAMPO!', '#e8c86a');
+      Cutscene.evento('cofre');
     }
     var p = Game.personagem;
     var roubo = Eventos.nasceGat(p ? (p.ouro || 0) : 0);
@@ -557,6 +573,7 @@ var Batalha = (function () {
       p.ouro = Math.max(0, p.ouro - roubo);
       var g = spawn({ tipo: 'gatuno', roubo: roubo });
       aviso('GATUNO ROUBOU ' + roubo + ' OURO!', '#e8c86a');
+      Cutscene.evento('gatuno');
       if (g) numero(g.x, g.y - 34, '-' + roubo + ' ouro', '#e8c86a', false);
     }
   }

@@ -14,6 +14,7 @@ var Jogo = (function () {
 
   function enter() {
     Batalha.iniciar();
+    Cutscene.fecha();   // reentrada não herda cutscene de sessão anterior
     ligarEventos();
     Gravacao.entrar(Game.personagem);
     var ausente = voltaAusencia(true);
@@ -86,7 +87,11 @@ var Jogo = (function () {
     var nivel0 = p.nivel;
     var simulados = Math.min(seg, AUSENCIA_MAX);
     var passos = Math.floor(simulados / PASSO);
+    // eventos NÃO viram cutscene na simulação offline (centenas de ondas
+    // disparariam em massa); a de MUNDO continua — é o resumo da ausência
+    Cutscene.silenciar(true);
     for (var i = 0; i < passos; i++) Batalha.atualizar(PASSO);
+    Cutscene.silenciar(false);
     Batalha.limparEfeitos();
 
     var mins = Math.round(simulados / 60);
@@ -123,9 +128,19 @@ var Jogo = (function () {
     // o progresso nunca depende do Enter: toast + autosave
     Gravacao.update(dt, Game.personagem, salvarTudo);
 
-    // painel: clique/segurar nos +/− de atributos. Com o overlay de
-    // vitória no ar, o painel de baixo NÃO recebe clique (spec mundos)
-    if (!vitPendente()) Gestao.update(dt, Game.personagem);
+    // cutscene: auto-dismiss dos eventos (a fronteira espera o jogador)
+    Cutscene.update(dt);
+
+    // painel: clique/segurar nos +/− de atributos. Com vitória/cutscene
+    // no ar, o painel de baixo NÃO recebe clique — os mesmos dois níveis
+    // do overlay de vitória (bloqueio no desenho + pulo do update)
+    if (!vitPendente() && !Cutscene.ativa()) {
+      Gestao.update(dt, Game.personagem);
+    }
+
+    // Enter fecha a cutscene (o botão fecha no render); sem cutscene,
+    // Enter continua salvando como sempre
+    if (Cutscene.ativa() && Input.pressed('Enter')) Cutscene.fecha();
 
     if (Input.pressed('Enter')) Gravacao.salvarPersonagem(Game.personagem, true);
   }
@@ -176,12 +191,16 @@ var Jogo = (function () {
   // -------------------------------------------------------------- render
   function render(ctx) {
     var vit = vitPendente();
-    UI.bloqueia(vit);           // botões de baixo desenham sem responder
+    var corte = Cutscene.ativa();
+    UI.bloqueia(vit || corte);  // botões de baixo desenham sem responder
     desenhaFundo(ctx);
     Gravacao.desenharAviso(ctx,
       'Combate 100% automático — gerencie seus atributos');
     UI.bloqueia(false);
+    // prioridade: vitória > cutscene (no 100→101 a cutscene já é cortada
+    // em passaMapa; a ordem do desenho deixa a regra explícita)
     if (vit) desenhaVitoria(ctx);   // por cima de tudo, incl. o aviso
+    else if (corte) Cutscene.desenhar(ctx);
   }
 
   function desenhaFundo(ctx) {

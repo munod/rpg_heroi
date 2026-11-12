@@ -31,6 +31,7 @@ var Game = (function () {
     scenes.selecao = Selecao;
     scenes.jogo = Jogo;
     scenes.ranking = Ranking.cena;   // botão Ranking (fora da jogatina)
+    scenes.universo = Cutscene.universo; // mapa do universo (spec cutscenes)
 
     window.addEventListener('resize', resize);
     // celular nem sempre dispara resize na rotação (só orientationchange)

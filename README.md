@@ -152,6 +152,7 @@ js/
   eventos.js        eventos aleatórios (Açougueiro, gatuno) — rolagens puras
   ranking-config.js config pública do Firebase (preenchida pelo mantenedor)
   ranking.js        ranking global: score, apelido, SDK lazy-load + cena
+  cutscene.js       cutscenes: mapa do universo, narração e cena "Universo"
   ui.js             botões, painéis, barras e texto no canvas
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
   gestao.js         painel de gestão (atributos/aparência/classe) compartilhado
@@ -208,7 +209,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 500 asserções: sprites, status, UI, idle, toque, ranking, mundos
+node testes/fumaca.js     # 572 asserções: sprites, status, UI, idle, toque, ranking, mundos, cutscenes
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -247,7 +248,9 @@ celular** (clique, arrasto e soltura por dedo, com bloqueio de rolagem),
 a **escala responsiva** e o **layout de largura adaptativa** (768–1728,
 ancorado nas bordas, preenchendo a tela em paisagem), a lista de
 personagens na seleção
-com paginação, novo herói e exclusão em duas etapas, o **ranking
+com paginação, novo herói e exclusão em duas etapas, o **mapa do
+universo** (botão "Universo": os 10 mundos com o progresso do save —
+também o overlay das cutscenes de fronteira), o **ranking
 global** (tela própria com top 10 e "meu melhor" por apelido — funciona
 com o Firebase configurado; sem config/rede mostra o estado
 "não configurado" e nada trava, e cada envio tem toast/status com o

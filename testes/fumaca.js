@@ -2314,6 +2314,9 @@ console.log('28) evento: o Açougueiro (raro, uma chance, recompensa gorda)');
     .some(i => i && i.rar === 4);
   conf(leg, 'lendário garantido no saque');
 
+  // a cutscene do evento (Açougueiro) ainda está no ar — o jogador
+  // dispensaria antes de usar a UI (spec cutscenes: auto-dismiss 3,5s)
+  sandbox.Cutscene.fecha();
   jogoCanvas._textos = [];
   clique(412 + 4 * 70 + 33, 54);            // aba Stats
   frame(1);
@@ -3893,7 +3896,13 @@ console.log('41) monstros novos: espécies com skill, ranged, comum intacto e ev
   // cena de jogo com estado limpo (a 40 terminou na arena)
   Salvar.salvarEstado(p.id, 1, Date.now(), false, 1);
   Game.setScene('jogo');
-  frame(2);
+  // 62 frames (não 2): o herói nasce em iniciar() com inv: 1 (graça de
+  // 1s) e a onda 1 só nasce no frame 60 — rodar até aqui deixa o inv
+  // zerado SEM combate (os bichos nascem no último frame e ainda estão
+  // a 110+px). Sem isso o 1º tiro do atirador pousa na janela de graça
+  // e machucaHeroi engole o dano (o 2º tiro vem a 2,2s = fora da espera
+  // do teste) — flake medido: 3 falhas em 5 runs.
+  frame(62);
   if (Batalha.info().pausada) Batalha.alternarPausa();
 
   // --- 1) as 3 espécies novas, cada uma com a skill declarada
@@ -4072,6 +4081,200 @@ console.log('41) monstros novos: espécies com skill, ranged, comum intacto e ev
     'cofre paga ouro (' + Math.round(Mapas.forca(1) * 25) + ') + drop rar 2');
 
   Eventos.cofreColetado();
+}
+
+console.log('42) cutscenes: fronteiras de mundo, eventos e mapa do universo');
+{
+  const Cutscene = sandbox.Cutscene;
+  const Batalha = sandbox.Batalha;
+  const Eventos = sandbox.Eventos;
+  const p = Game.personagem;
+
+  // eventos DESLIGADOS na seção inteira (mosquetão): cada teste religa
+  // só o que precisa — sem isso um cofre aleatório abriria cutscene e
+  // bloquearia a gestão no meio dos testes
+  Eventos.nasceAco = SEM_ACO;
+  Eventos.nasceGat = SEM_GAT;
+  Eventos.nasceEnxame = SEM_ENX;
+  Eventos.nasceCofre = SEM_COF;
+  Eventos.limpa();
+  Cutscene.fecha();
+
+  // cena de jogo com estado limpo (a 41 terminou na arena)
+  Salvar.salvarEstado(p.id, 1, Date.now(), false, 1);
+  Game.setScene('jogo');
+  frame(2);
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  clique(445, 50);                        // aba Atributos (p/ o botão +)
+  frame(1);
+
+  // --- 1) gatilho: só fronteiras de mundo da campanha
+  Batalha.restaurarMapa(10);
+  Batalha.passaMapa();                    // 10 → 11: mundo 1 → 2
+  conf(Cutscene.ativa(), 'fronteira 10→11 abre a cutscene');
+  let inf = Cutscene.info();
+  conf(inf.tipo === 'mundo' && inf.de === 1 && inf.para === 2,
+    'cutscene de MUNDO 1 → 2 (tipo/de/para)');
+  Cutscene.fecha();
+  Batalha.restaurarMapa(3);
+  Batalha.passaMapa();                    // 3 → 4: mesmo mundo
+  conf(!Cutscene.ativa(), '3→4 (mesmo mundo) não abre');
+  Batalha.restaurarMapa(20);
+  conf(!Cutscene.ativa(), 'restaurarMapa não dispara (só passaMapa)');
+  Cutscene.mundo(5, 6);                   // pendente proposital
+  Batalha.restaurarMapa(100);
+  Batalha.passaMapa();                    // 100 → 101: mundo 11
+  conf(!Cutscene.ativa(),
+    '100→101 corta a pendente (a vitória assume)');
+  Batalha.restaurarMapa(1);
+
+  // --- 2) prioridade (mundo > evento) e teto 1 dos eventos
+  Cutscene.evento('cofre');
+  inf = Cutscene.info();
+  conf(inf.tipo === 'evento' && inf.chave === 'cofre',
+    'evento abre cutscene');
+  Cutscene.mundo(2, 3);
+  inf = Cutscene.info();
+  conf(inf.tipo === 'mundo' && inf.para === 3,
+    'mundo SUBSTITUI evento (prioridade)');
+  Cutscene.evento('enxame');
+  inf = Cutscene.info();
+  conf(inf.tipo === 'mundo' && inf.para === 3,
+    'evento NÃO interrompe mundo (teto 1)');
+  Cutscene.fecha();
+
+  // --- 3) auto-dismiss dos eventos (~3,5s)
+  Cutscene.evento('acougueiro');
+  const rest0 = Cutscene.info().restante;
+  conf(rest0 > 3, 'evento abre com cronômetro (' + rest0 + 's)');
+  jogoCanvas._textos = [];
+  frame(1);
+  const te = jogoCanvas._textos;
+  conf(te.some(x => x.indexOf('AÇOUGUEIRO') >= 0),
+    'cutscene de evento renderiza o título');
+  conf(te.some(x => x.indexOf('fareja o seu rastro') >= 0),
+    'narração do evento na tela');
+  conf(te.some(x => x.indexOf('Continuar') >= 0),
+    'cutscene de evento tem botão Continuar');
+  frame(60);                              // ~1s
+  const inf3 = Cutscene.info();
+  conf(inf3 && inf3.restante < rest0,
+    'cronômetro anda (' + rest0 + '→' + inf3.restante + ')');
+  frame(200);                             // +3,3s
+  conf(!Cutscene.ativa(), 'evento some sozinho (~3,5s)');
+
+  // --- 4) silenciar (voltaAusencia desliga eventos na simulação)
+  Cutscene.silenciar(true);
+  Cutscene.evento('gatuno');
+  conf(!Cutscene.ativa(), 'silenciado: evento não abre');
+  Cutscene.silenciar(false);
+  Cutscene.evento('gatuno');
+  conf(Cutscene.ativa() && Cutscene.info().chave === 'gatuno',
+    'liberado: evento abre');
+  Cutscene.fecha();
+
+  // --- 5) render do overlay de fronteira (mapa do universo + narração)
+  Batalha.restaurarMapa(10);
+  Batalha.passaMapa();                    // mundo 2 no ar
+  jogoCanvas._textos = [];
+  frame(1);
+  const t42 = jogoCanvas._textos;
+  conf(t42.some(x => x.indexOf('MUNDO 2') >= 0), 'título MUNDO 2 na tela');
+  conf(t42.some(x => x.indexOf('Cripta Congelada') >= 0),
+    'nome do mundo na tela');
+  conf(t42.some(x => x.indexOf('Morcego Ancião') >= 0),
+    'chefe do novo mundo na tela');
+  conf(t42.some(x => x.indexOf('Entrar no Mundo 2') >= 0),
+    'botão Entrar na tela');
+  conf(t42.some(x => x.indexOf('O gelo cobre tudo') >= 0),
+    'narração da fronteira na tela');
+  conf(t42.some(x => x.indexOf('conquistado') >= 0),
+    'legenda do mapa do universo na tela');
+
+  // --- 6) bloqueio da gestão + fechar (Enter e botão)
+  p.xp = 0;                               // sem level-up no meio do teste
+  p.pontos = 5;
+  const for0 = p.atributos.for;
+  clique(722, 92);                        // botão + de Força
+  frame(1);
+  conf(p.atributos.for === for0 && p.pontos === 5,
+    'cutscene bloqueia a gestão (+ não responde)');
+  tecla('keydown', 'Enter', 'Enter');
+  tecla('keyup', 'Enter', 'Enter');
+  frame(1);
+  conf(!Cutscene.ativa(), 'Enter fecha a cutscene');
+  Cutscene.mundo(1, 2);                   // reabre p/ testar o botão
+  const b = Cutscene.info().botao;
+  clique(b.x + b.w / 2, b.y + b.h / 2);
+  frame(1);
+  conf(!Cutscene.ativa(), 'clique no botão fecha a cutscene');
+  clique(722, 92);
+  frame(1);
+  conf(p.atributos.for > for0 && p.pontos < 5,
+    'gestão desbloqueada após fechar (+ responde)');
+  Batalha.restaurarMapa(1);
+
+  // --- 7) wiring: os 4 eventos chamam Cutscene.evento (RNG religado;
+  //        spy substitui a função p/ não abrir cutscene de verdade)
+  Eventos.limpa();
+  const evOrig = Cutscene.evento;
+  const chaves = [];
+  Cutscene.evento = function (k) { chaves.push(k); };
+  const rnd7 = Math.random;
+  Math.random = function () { return 0; };   // rolagens sempre "sim"
+
+  Eventos.nasceEnxame = Eventos._nasceEnxame;
+  Batalha.restaurarOnda(16);             // onda 16 ≥ 15 (mínimo do enxame)
+  frame(1);
+  conf(chaves.indexOf('enxame') >= 0, 'wiring: enxame → Cutscene.evento');
+  Eventos.nasceEnxame = SEM_ENX;
+
+  Eventos.nasceCofre = Eventos._nasceCofre;
+  Batalha.restaurarOnda(11);             // onda 11 ≥ 10 (mínimo do cofre)
+  frame(1);
+  conf(chaves.indexOf('cofre') >= 0, 'wiring: cofre → Cutscene.evento');
+  Eventos.nasceCofre = SEM_COF;
+
+  Eventos.nasceAco = Eventos._nasceAco;
+  Batalha.restaurarOnda(31);             // onda 31 ≥ 30 (mínimo do Açougueiro)
+  frame(1);
+  conf(chaves.indexOf('acougueiro') >= 0,
+    'wiring: açougueiro → Cutscene.evento');
+  Eventos.nasceAco = SEM_ACO;
+
+  p.ouro = Math.max(p.ouro || 0, 1000);  // gatuno só rola com ouro > 0
+  Eventos.nasceGat = Eventos._nasceGat;
+  Batalha.restaurarOnda(2);
+  frame(1);
+  conf(chaves.indexOf('gatuno') >= 0, 'wiring: gatuno → Cutscene.evento');
+  Eventos.nasceGat = SEM_GAT;
+
+  Math.random = rnd7;
+  Cutscene.evento = evOrig;
+  Cutscene.fecha();
+
+  // --- 8) cena própria: mapa do universo (botão na seleção)
+  Game.setScene('selecao');
+  frame(1);
+  Salvar.salvarEstado(Game.personagem.id, 25, Date.now(), false, 25);
+  clique(192, 319);                      // botão Universo (132,306,120,26)
+  frame(2);
+  conf(Game.cena === 'universo',
+    'botão Universo na seleção abre a cena');
+  jogoCanvas._textos = [];
+  frame(1);
+  const tu = jogoCanvas._textos;
+  conf(tu.some(x => x.indexOf('MAPA DO UNIVERSO') >= 0),
+    'título MAPA DO UNIVERSO na tela');
+  conf(tu.some(x => x.indexOf('Ninho Rubro') >= 0),
+    'mundo atual do save (3) com nome');
+  conf(tu.some(x => x.indexOf('Aranha Matriarca') >= 0),
+    'chefe do mundo atual na tela');
+  conf(tu.some(x => x.indexOf('mapa 25') >= 0),
+    'progresso do save (mapa 25) na tela');
+  clique(Math.round(Game.W / 2), 358);   // botão Voltar (W/2-70,340,140,36)
+  frame(1);
+  conf(Game.cena === 'selecao', 'Voltar retorna à seleção');
 }
 
 console.log('');

@@ -111,8 +111,13 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    pressão/paga e Cofre Abandonado, o 1º evento "bom"). **Seção 41** ·
    gate 3× = 548 confs · sanidade medida (240/480min idênticos à
    referência).
-3. ⬜ **Cutscenes entre mundos** — mapa do universo com os 10 mundos +
-   cutscene de eventos.
+3. ✅ **`cutscenes`** — 3 frentes confirmadas: cutscene ao cruzar
+   fronteira de mundo (mapa do universo + narração, 9 na campanha;
+   100→101 é da vitória), cutscene nos **4 eventos** (auto-dismiss
+   3,5s, teto 1) e **Mapa do Universo** como cena própria (botão na
+   seleção). Batalha nunca pausa (padrão vitória). **Seção 42** ·
+   gate 3× = **585 confs** · sanidade `ritmo 60`: mapa 1 em 31,5min
+   (alvo intacto).
 4. ⬜ **Árvore de skills maior** — o jogador escolhe quais usar
    (amplia o loadout de 3).
 5. ⬜ **IA monstros** (leva 1 de 2) — Flocking + influence map

@@ -75,6 +75,30 @@
   `regeneraEspecie`/`drenaVida` exportados p/ fixtures. **RNG novo
   exige o mosquetão do topo da fumaça** (regra já documentada — o
   Enxame sem stub derruba stats de qualquer teste que rode ondas).
+- **Cutscenes entre mundos (spec `cutscenes`)** — `js/cutscene.js`
+  (módulo `Cutscene` + cena `universo` registrada em `main.js`;
+  declarado no `index.html` antes de `batalha.js`). **Fronteira**:
+  `passaMapa` compara `Mapas.mundo` antes/depois do `mapa++` — destino
+  ≤ 10 → `Cutscene.mundo(de,para)`; destino > 10 (100→101 e infinito)
+  → `Cutscene.fecha()` (a vitória assume; mundos ciclam = sem
+  cutscene). **Eventos**: `Cutscene.evento(chave)` nos 4 avisos da
+  arena — **mosquetão do topo da fumaça** (SEM_* religa só na seção
+  42, senão um cofre aleatório bloqueia a gestão nos testes). Overlay
+  no **padrão da vitória**: batalha NUNCA pausa (idle sagrado),
+  bloqueio em **dois níveis** (`UI.bloqueia(vit||corte)` no desenho +
+  pulo do `Gestao.update`) e `Cutscene.update(dt)` no `jogo.update`
+  (auto-dismiss 3,5s **só dos eventos** — a fronteira espera o
+  jogador). `jogo.enter` chama `Cutscene.fecha()` (reentrada não
+  herda) e `voltaAusencia` envolve a simulação em
+  `Cutscene.silenciar(true/false)` (eventos offline não viram cutscene;
+  a de MUNDO continua = resumo da ausência). Prioridade no render:
+  **vitória > cutscene**. Sondas: `Cutscene.info()` →
+  `{tipo,de,para,chave,restante,mudo,botao}`; fecha por botão ou
+  `Enter`. Cena `universo`: lê `Salvar.lerEstado(p.id).mapa` (funciona
+  fora da jogatina); botão "Universo" na seleção em (132,306,120,26).
+  Narração (9 fronteiras + 4 eventos) em dados puros no próprio
+  `cutscene.js`; nome/chefe dos mundos saem de `Mapas.LISTA` (fonte
+  única). Só primitivas do rasterizador (fillRect/strokeRect/text).
 - **Curvas de status com teto (spec `gestao-atributos`)** — auditoria
   revelou "teto onde pensaram, sem teto onde não pensaram" (crítico 45
   e recarga 0,08 têm; vel/XP/HP não tinham). Hoje: **velocidade =

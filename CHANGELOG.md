@@ -12,6 +12,26 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Cutscenes entre mundos: mapa do universo, narração e eventos
+  (spec `cutscenes`)** — 3 frentes confirmadas com o mantenedor:
+  **(1)** ao cruzar fronteira de mundo na campanha (mapas 10→11 …
+  90→91) abre um overlay com o **mapa do universo** (10 nós com a cor
+  do tema de cada mundo: conquistado/atual/trancado), **narração** do
+  que você venceu + o que espera (com o chefe do novo mundo) e botão
+  "Entrar no Mundo N" — 9 cutscenes; **100→101 não dispara** (a
+  vitória assume e corta a pendente) e no modo infinito não há (os
+  mundos ciclam = spam); **(2)** os **4 eventos aleatórios**
+  (Açougueiro, Gatuno, Enxame, Cofre) também viram cutscene —
+  **auto-dismiss ~3,5s** (são frequentes) e **teto 1** (nunca acumula
+  nem reinicia timer; mundo substitui evento); **(3)** **Mapa do
+  Universo como cena própria** (botão "Universo" na seleção) com o
+  progresso do save. Padrão do **overlay de vitória**: a batalha
+  **nunca pausa** (idle sagrado) — só a gestão bloqueia, em **dois
+  níveis** (`UI.bloqueia` + pulo do `Gestao.update`); eventos
+  **silenciados** na simulação de ausência (`voltaAusencia` — a
+  cutscene de mundo continua: é o resumo do que aconteceu enquanto
+  esteve fora). Teste: **seção 42 (36 confs)** + screenshots
+  `tela-cutscene*.png`/`tela-universo.png`.
 - **Monstros novos: espécies com skill própria, ataques à distância e
   2 eventos (spec `monstros-novos`)** — as 4 espécies viram **10** e
   nenhuma é só recolor: **`atirador`** (ataque à distância — alcance

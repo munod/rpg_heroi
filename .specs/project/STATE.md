@@ -296,6 +296,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   (mesmo `distH` de todos) — dano com distância maior **só** pode ter
   vindo do missil.
 
+- **Cutscenes: a batalha NUNCA pausa** (spec `cutscenes`) — decisão
+  após comparar com o overlay de vitória: pausar violaria o idle (AFK
+  numa fronteira = progresso travado até clicar). Fronteira espera o
+  jogador (9 na campanha, sem auto-dismiss); evento tem auto-dismiss
+  3,5s + teto 1 (Cofre é 8% por onda — bloquear sem saída seria
+  intrusivo). Eventos silenciados em `voltaAusencia` (centenas de
+  ondas disparariam em massa); a cutscene de MUNDO continua ali de
+  propósito: é o resumo da ausência. Não persiste entre sessões (é
+  momento, não estado — fechar no meio perde a narração, o progresso
+  não).
+
 ## Bloqueios
 
 - Nenhum.
@@ -315,6 +326,19 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   minúsculo + escopo opcional; corpo/descrição em pt-BR).
 
 ## Lições
+
+- **`iniciar()` dá `inv: 1` ao herói (1s de graça)** — teste que monta
+  a arena logo após `setScene('jogo')` corre o risco de o **1º golpe
+  cair na janela de graça** e o dano ser engolido **sem retry** (o 2º
+  tiro do atirador vem a 2,2s = fora de uma espera de 120 frames).
+  Flake medido na seção 41: **3 falhas em 5 runs**. Fix: rodar **≥61
+  frames** antes de montar a arena — a onda 1 nasce no frame 60, então
+  até lá não há combate e o `inv` decai em paz. Regra: fixture que
+  depende de dano recebido precisa de frames de folga após o `iniciar`.
+- **ROADMAP ambíguo: perguntar antes de codar** — "mapa do universo +
+  cutscene de eventos" admitia 3 leituras diferentes (cutscene só na
+  fronteira / tela própria / também eventos); uma pergunta de escopo
+  com opções antes da spec evitou retrabalho de uma leva inteira.
 
 - **Cena com backend: render de estado só muda via `enter`/`atualiza`**
   (lição da seção 35) — `Ranking.top(cb)` direto chama o callback do

@@ -207,6 +207,13 @@ var Selecao = (function () {
       Gravacao.msg('Arquivo .json exportado!');
     }
 
+    // Mapa do universo (fora da jogatina): mesma linha do Ranking —
+    // grava antes de trocar de tela (o autosave daqui só roda no update)
+    if (UI.button(132, 306, 120, 26, 'Universo')) {
+      if (foco) Gravacao.salvarPersonagem(foco, false);
+      Game.setScene('universo');
+    }
+
     // Ranking global (fora da jogatina): grava antes de trocar de tela,
     // porque o autosave daqui só roda no update
     if (UI.button(260, 306, 108, 26, 'Ranking')) {

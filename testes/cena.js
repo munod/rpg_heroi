@@ -355,5 +355,27 @@ clique(412 + 4 * 70 + 33 + dxL, 54);
 frame(4);
 salvar('tela-stats.png');
 
+// cutscene de fronteira de mundo (spec cutscenes): mapa do universo +
+// narração — o 2º mundo entra com 1 conquistado e o atual destacado
+sandbox.Cutscene.mundo(1, 2);
+for (let i = 0; i < 4; i++) frame(1);
+salvar('tela-cutscene.png');
+sandbox.Cutscene.fecha();
+
+// cutscene de evento (auto-dismiss ~3,5s — captura no ar)
+sandbox.Cutscene.evento('acougueiro');
+for (let i = 0; i < 4; i++) frame(1);
+salvar('tela-cutscene-evento.png');
+sandbox.Cutscene.fecha();
+
+// mapa do universo como cena própria (progresso do save: mundo 3)
+sandbox.Salvar.salvarEstado(sandbox.Game.personagem.id, 25, Date.now(),
+  false, 25);
+sandbox.Game.setScene('universo');
+frame(4);
+salvar('tela-universo.png');
+sandbox.Game.setScene('jogo');
+frame(2);
+
 console.log('cena atual: ' + sandbox.Game.cena);
 console.log('batalha: ' + JSON.stringify(sandbox.Batalha.info()));
