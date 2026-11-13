@@ -362,6 +362,19 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   22/32 passaram sem mudança de assert — refator de comportamento
   idêntico é verificável pelos contratos antigos.
 
+- **Base visual da série = os 3 docs em `/home/thiago/Projetos/Docs/`**
+  (ui/efeitos/cutscenes — escritos para OUTRO build: resolução
+  384×216 e cutscene a cada 10 ondas). Mantidos os nossos: esquema
+  768×432+adaptativo (mais novo, testes dependem) e gatilhos de
+  cutscene da spec leva 3 (mundo/evento) — adotado só o **visual**.
+  Série de 3 levas aprovada pelo mantenedor: ui → efeitos → cutscene.
+- **Ritmo do mapa 1 variou 31→37min entre sessões SEM mudança de
+  gameplay** (leva `visual-ui`): A/B com `git stash` — o código
+  ANTIGO de hoje dá 37,7/34,6min vs média 34,1 do novo. A faixa
+  31-33 era de sessões antigas; variação entre sessões > dentro
+  delas. **Regra: A/B (stash) antes de culpar uma leva pela medição**;
+  critério de estol do mantenedor (>40min) segue como porto seguro.
+
 ## Bloqueios
 
 - Nenhum.
@@ -382,6 +395,16 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 
 ## Lições
 
+- **Receita de doc externo × rasterizador de teste** (leva
+  visual-ui): a receita "caminho + fill" faria painéis/botões
+  sumirem das screenshots — o `fill()` do `cena.js` só tratava
+  elipse. Antes de adotar primitiva de doc: conferir o que o
+  rasterizador suporta; se faltar, **estender o rasterizador (infra)**
+  em vez de rebaixar o visual.
+- **`typeof` mente em Proxy**: o ctx do harness "tem" `roundRect`
+  (o Proxy devolve fn genérica); só `fn.length > 0` separa o real
+  (WebIDL ≥4) do fake (length 0) — probe de assinatura, não de
+  existência.
 - **Degradar para o comportamento antigo por CONSTRUÇÃO** (leva IA do
   herói): a evasão devolve exatamente o destino antigo quando o mapa
   está vazio (k=0 com desempate por `<` estrito) e a BT usa os gates

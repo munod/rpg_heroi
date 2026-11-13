@@ -142,6 +142,21 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    **mapa 38/36 · nv 3442/3244 · 0-3 mortes** (levemente à frente da
    faixa — sem estol, sem intervenção). **Série de 6 levas concluída.**
 
+## Série visual (3 levas — base: `/home/thiago/Projetos/Docs/`)
+
+7. ✅ **`visual-ui`** — paleta/primitivas com fallback, gradientes,
+   cantos arredondados, sombras, CSS (moldura + halo). **Seção 46** ·
+   gate 3× = **658 confs** · sanidade: A/B ritmo prova que a variação
+   31→37min do mapa 1 é de SESSÃO, não da leva (antigo hoje:
+   37,7/34,6min).
+8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
+   fórmula, flash/vinheta/perigo de vida, receitas com valores
+   exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,
+   `silenciar()`, números em 3 estilos.
+9. ⬜ **`visual-cutscene`** — `Docs/cutscenes.md`: letterbox
+   deslizante, datilografado, dica piscando, painel arredondado —
+   **nos gatilhos atuais** (mundo/evento).
+
 ## Backlog de ideias (sem compromisso)
 
 - Mais mapas/temas no ciclo infinito com mecânicas próprias.

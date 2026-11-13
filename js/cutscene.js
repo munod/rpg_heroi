@@ -238,10 +238,8 @@ var Cutscene = (function () {
   // progresso do SAVE (funciona fora da jogatina —Salvar.lerEstado).
   function renderUniverso(ctx) {
     var W = Game.W;
-    ctx.fillStyle = '#141020';
-    ctx.fillRect(0, 0, W, 432);
-    ctx.fillStyle = '#191326';
-    ctx.fillRect(0, 0, W, 30);
+    UI.fundo(ctx);
+    UI.faixaTopo(ctx, 30);
     UI.text('MAPA DO UNIVERSO', 6, 16,
       { color: '#e8c86a', font: 'bold 16px monospace' });
 

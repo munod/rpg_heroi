@@ -12,6 +12,33 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **UI visual: paleta, gradientes e cantos arredondados (spec
+  `visual-ui`, 1ª de 3 frentes visuais — base: `Docs/ui.md`)** —
+  `js/ui.js` ganha **`UI.PALETA`** (fonte única do cromo com os hex
+  do doc) e primitivas **com fallback**: `grad` (sem
+  `createLinearGradient` real → 1ª cor sólida), `caminho` (probe de
+  assinatura — o Proxy do harness tem `length 0` → `rect`), `caixa`,
+  `sombra`, `tom` (hex misturado com branco) e `text` com **sombra
+  opt-in**. Receitas novas: `fundo`/`faixaTopo` (gradiente de tela +
+  faixa de cabeçalho com **fio dourado** — as 4 cenas passam a
+  chamá-las), **painel** (sombra + gradiente + borda dupla por duplo
+  preenchimento + faixa de título `[8,8,0,0]` com fio dourado),
+  **botão** (4 estados com gradientes/bordas exatos do doc — hover
+  roxo claro, ativo dourado — cantos `r≤6`, sombra; **hit-test
+  intocado**), **barra** (degradê tom claro→cor + brilho de 1px;
+  guarda `h≥4` intacta) e tooltip/swatch arredondados. **Testes veem
+  quadrado/chapado, navegador vê arredondado/gradiente.** `style.css`
+  com a moldura do "monitor" (fio dourado + anel roxo + halo +
+  `border-radius`). Rasterizador de teste (`cena.js`): `fill()`
+  passou a rasterizar **retângulo de caminho** (antes só elipse —
+  painéis sumiriam dos PNGs). **Seção 46 (13 confs)** · gate 3× =
+  **658 confs** · sanidade: A/B com `git stash` prova que a variação
+  do mapa 1 (31→37min entre sessões) **não é da leva** (código
+  antigo hoje: 37,7/34,6min). Também **fix de flake** na asserção de
+  rocha da seção 32: `direcaoEvasao` valida a rocha no ponto
+  **arredondado** (o mesmo que `info()` exibe — matou a classe de
+  falso-positivo por casca ≤0,7px) + tolerância de 1% para o
+  fallback de todos-bloqueados.
 - **IA do herói: Behavior Tree e evasão de cerco (spec `ia-heroi`, leva
   2 de 2 — fecha a série de 6)** — `decideHeroi` vira um **seletor de
   camadas** (`IA.CAMADAS`: sobrevivência → posicionamento → combate →

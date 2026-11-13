@@ -1,7 +1,10 @@
 html, body {
   margin: 0;
   height: 100%;
-  background: #0d0b14;
+  /* halo roxo atrás do "monitor" (base visual: Docs/ui.md §5) */
+  background-color: #0a0812;
+  background-image: radial-gradient(ellipse 70% 55% at 50% 42%,
+    #241b3f 0%, #120e20 55%, #0a0812 100%);
   overflow: hidden;
 }
 
@@ -21,7 +24,13 @@ canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #000;
-  box-shadow: 0 0 0 4px #1a1420, 0 10px 40px rgba(0, 0, 0, 0.7);
+  /* moldura do "monitor": fio dourado + anel roxo + halo + sombra */
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgba(232, 200, 106, 0.22),
+    0 0 0 5px #191330,
+    0 0 42px rgba(120, 84, 200, 0.28),
+    0 14px 44px rgba(0, 0, 0, 0.75);
   cursor: crosshair;
   /* toque: sem rolagem, sem zoom, sem seleção, sem flash cinza */
   touch-action: none;

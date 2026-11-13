@@ -201,6 +201,23 @@ function novoCtxRGBA(cv) {
       elipsePend = { cx, cy, rx, ry };
     },
     fill() {
+      if (retPend) {
+        // retângulo do caminho (UI.caminho — cantos arredondados caem
+        // no rect no rasterizador): o fill() antes só tratava elipse e
+        // os painéis/botões novos sumiam das screenshots
+        const r = retPend;
+        retPend = null;
+        const [pr, pg, pb, pa0] = parseCor(st.fillStyle);
+        const pa = pa0 * st.alpha;
+        const X0 = Math.round(r.x);
+        const Y0 = Math.round(r.y);
+        const X1 = Math.round(r.x + r.w);
+        const Y1 = Math.round(r.y + r.h);
+        for (let Y = Y0; Y < Y1; Y++) {
+          for (let X = X0; X < X1; X++) put(cv, X, Y, pr, pg, pb, pa);
+        }
+        return;
+      }
       if (!elipsePend) return;
       const { cx, cy, rx, ry } = elipsePend;
       const [r, g, b, a0] = parseCor(st.fillStyle);

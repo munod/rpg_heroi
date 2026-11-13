@@ -160,7 +160,7 @@ js/
   ranking-config.js config pública do Firebase (preenchida pelo mantenedor)
   ranking.js        ranking global: score, apelido, SDK lazy-load + cena
   cutscene.js       cutscenes: mapa do universo, narração e cena "Universo"
-  ui.js             botões, painéis, barras e texto no canvas
+  ui.js             UI visual: paleta/gradientes/cantos arredondados — botões, painéis, barras
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
   gestao.js         painel de gestão (atributos/aparência/classe) compartilhado
   selecao.js        tela de criação e seleção de personagem (fora da jogatina)
@@ -216,7 +216,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 632 asserções: sprites, status, UI, idle, toque, ranking, mundos, cutscenes, árvore, IA (monstros + herói)
+node testes/fumaca.js     # 645 asserções: sprites, status, UI visual, idle, toque, ranking, mundos, cutscenes, árvore, IA (monstros + herói)
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)

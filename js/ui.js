@@ -1,6 +1,24 @@
 // UI imediata desenhada direto no canvas (botões, painéis, barras, texto).
 var UI = (function () {
   var ctx = null;
+
+  // ---- PALETA (base visual: Docs/ui.md §2) — fonte única do cromo.
+  // Cores semânticas de domínio (skills, dano, temas de Mapas) ficam
+  // nos seus arquivos — aqui vive o chrome da interface.
+  var PALETA = {
+    bgTop: '#1b1433', bgBot: '#0f0b1c',        // fundo da tela
+    topoTop: '#251e42', topoBot: '#191330',    // faixa do cabeçalho
+    painelTop: '#241d3e', painelBot: '#16112c', // painéis
+    borda: '#4d4370',                          // borda dos painéis
+    btnTop: '#3d3466', btnBot: '#292345',      // botão normal
+    btnTopH: '#584b8a', btnBotH: '#3d3466',    // botão hover
+    ativoTop: '#5b4c33', ativoBot: '#3b3120',  // aba/lista ativa (dourado)
+    sombra: 'rgba(0, 0, 0, 0.38)',
+    // acentos
+    ouro: '#e8c86a', ouroClaro: '#f0cd72', ouroEsc: '#c9a24a',
+    texto: '#f2eef8', suave: '#9a90b8', suave2: '#c9c2dd',
+    apagado: '#6f678a', verde: '#8ce08c', vermelho: '#d84a4a'
+  };
   // deslocamento horizontal do grupo em desenho (painel de gestão âncora
   // à direita em tela larga): o hit-test do button desconta a origem
   var deslocX = 0;
@@ -17,6 +35,57 @@ var UI = (function () {
   var DICA_PRENSA = 500;    // ms segurando p/ abrir no toque
 
   function setContext(c) { ctx = c; }
+
+  // ---- primitivas com fallback (base visual: Docs/ui.md §3) —
+  // "teste nunca quebra": o harness não tem gradiente nem roundRect
+  // REAL, então testes veem cor sólida/quadrado e o navegador vê a
+  // versão bonita.
+
+  // degradê vertical/horizontal; sem suporte no ctx → 1ª cor sólida
+  function grad(x0, y0, x1, y1, cores) {
+    if (typeof ctx.createLinearGradient !== 'function') return cores[0][1];
+    var g = ctx.createLinearGradient(x0, y0, x1, y1);
+    if (!g || typeof g.addColorStop !== 'function') return cores[0][1];
+    for (var i = 0; i < cores.length; i++) g.addColorStop(cores[i][0], cores[i][1]);
+    return g;
+  }
+
+  // mistura um hex com branco (f: 0 = cor, 1 = branco) — topo das
+  // barras e fios de luz (equivalente exato a rgba branco sobre a cor)
+  function tom(hex, f) {
+    if (typeof hex !== 'string' || hex.charAt(0) !== '#') return hex;
+    function m(c) { return Math.round(c + (255 - c) * f); }
+    function hx(c) { return (c < 16 ? '0' : '') + c.toString(16); }
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return hex;
+    return '#' + hx(m(r)) + hx(m(g)) + hx(m(b));
+  }
+
+  // caminho de retângulo arredondado (r = nº = todos os cantos, ou
+  // [tl, tr, br, bl]); probe de ASSINATURA: o Proxy do harness devolve
+  // fn genérica com length 0 → cai no rect (rasterizador também não
+  // tem roundRect)
+  function caminho(x, y, w, h, r) {
+    ctx.beginPath();
+    if (r && typeof ctx.roundRect === 'function' && ctx.roundRect.length > 0) {
+      ctx.roundRect(x, y, w, h, r);
+    } else {
+      ctx.rect(x, y, w, h);
+    }
+  }
+
+  function caixa(x, y, w, h, r, cor) {
+    caminho(x, y, w, h, r);
+    ctx.fillStyle = cor;
+    ctx.fill();
+  }
+
+  // sombra 1px abaixo (doc: antes de cada caixa)
+  function sombra(x, y, w, h, r) {
+    caixa(x, y + 1, w, h, r, PALETA.sombra);
+  }
 
   function dica(ret, linhas, cor) {
     if (bloqueado) return;    // overlay de vitória: sem tooltip de baixo
@@ -80,11 +149,8 @@ var UI = (function () {
     if (dicaCand) dicaCand.usada = true;   // consumido por este frame
     if (!alvo) return;
     var w2 = larguraDica(alvo.linhas), h2 = alturaDica(alvo.linhas);
-    ctx.fillStyle = 'rgba(16, 12, 24, 0.96)';
-    ctx.fillRect(alvo.x, alvo.y, w2, h2);
-    ctx.strokeStyle = '#6a5f90';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(alvo.x + 0.5, alvo.y + 0.5, w2 - 1, h2 - 1);
+    caixa(alvo.x, alvo.y, w2, h2, 4, '#6a5f90');
+    caixa(alvo.x + 1, alvo.y + 1, w2 - 2, h2 - 2, 3, 'rgba(16, 12, 24, 0.96)');
     for (var i = 0; i < alvo.linhas.length; i++) {
       var ln = alvo.linhas[i];
       text(ln[0], alvo.x + 8, alvo.y + 14 + i * 17, {
@@ -97,28 +163,57 @@ var UI = (function () {
 
   function text(str, x, y, o) {
     o = o || {};
-    ctx.fillStyle = o.color || '#f2eef8';
     ctx.font = o.font || '16px monospace';
     ctx.textAlign = o.align || 'left';
     ctx.textBaseline = 'middle';
+    // sombra OPT-IN (cópia escura 1px abaixo) — nunca ligue sem
+    // precisar: dobra fillText e muda contagens de texto nos testes
+    if (o.sombra) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.fillText(String(str), x, y + 1);
+    }
+    ctx.fillStyle = o.color || '#f2eef8';
     ctx.fillText(String(str), x, y);
   }
 
+  // fundo da tela + faixa do cabeçalho (base visual: Docs/ui.md §4) —
+  // as cenas chamam em vez de fillRect solto; fio dourado separa
+  function fundo(c) {
+    c = c || ctx;
+    c.fillStyle = grad(0, 0, 0, 432, [[0, PALETA.bgTop], [1, PALETA.bgBot]]);
+    c.fillRect(0, 0, Game.W, 432);
+  }
+  function faixaTopo(c, h) {
+    c = c || ctx;
+    c.fillStyle = grad(0, 0, 0, h, [[0, PALETA.topoTop], [1, PALETA.topoBot]]);
+    c.fillRect(0, 0, Game.W, h);
+    c.fillStyle = 'rgba(232, 200, 106, 0.30)';
+    c.fillRect(0, h, Game.W, 1);
+  }
+
   function panel(x, y, w, h, title) {
-    ctx.fillStyle = 'rgba(16, 12, 24, 0.94)';
-    ctx.fillRect(x, y, w, h);
+    // padrão do doc ui.md §4: sombra + gradiente + borda dupla + cantos
+    // arredondados. A borda é DUPLO PREENCHIMENTO (anel externo na cor
+    // da borda): strokeRect não acompanha canto arredondado e o
+    // stroke() do rasterizador de testes é no-op
+    sombra(x, y, w, h, 8);
+    caixa(x, y, w, h, 8, PALETA.borda);
+    caixa(x + 1, y + 1, w - 2, h - 2, 7,
+      grad(x, y + 1, x, y + h - 1,
+        [[0, PALETA.painelTop], [1, PALETA.painelBot]]));
     if (title) {
-      ctx.fillStyle = '#2a2340';
-      ctx.fillRect(x + 1, y + 1, w - 2, 26);
-      text(title, x + 10, y + 15, { color: '#e8c86a', font: 'bold 16px monospace' });
+      // faixa de título só em cima [8,8,0,0] + fio dourado embaixo
+      caixa(x + 1, y + 1, w - 2, 26, [7, 7, 0, 0],
+        grad(x, y + 1, x, y + 27, [[0, '#2f2752'], [1, '#241d42']]));
+      ctx.fillStyle = 'rgba(232, 200, 106, 0.35)';
+      ctx.fillRect(x + 1, y + 27, w - 2, 1);
+      text(title, x + 10, y + 15,
+        { color: PALETA.ouroClaro, font: 'bold 16px monospace', sombra: true });
+    } else {
+      // realce interno de 1px: sensação de profundidade
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.fillRect(x + 2, y + 2, w - 4, 1);
     }
-    // realce interno de 1px: sensação de profundidade (só fillRect —
-    // primitiva que o rasterizador de testes entende)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-    ctx.fillRect(x + 1, y + (title ? 27 : 2), w - 2, 1);
-    ctx.strokeStyle = '#5a4f78';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   }
 
   function button(x, y, w, h, label, o) {
@@ -132,24 +227,32 @@ var UI = (function () {
     // pressionado = dedo/mouse em cima: feedback visual no toque (antes
     // só existia hover, que não faz sentido sem mouse)
     var apertado = hover && m.down;
-    ctx.fillStyle = o.disabled ? '#241f33'
-      : (apertado ? '#241f33' : ((hover || ativo) ? '#4c4070' : '#322a4d'));
-    ctx.fillRect(x, y, w, h);
+    // 4 estados com gradiente/borda do doc ui.md §4; apertado mantém o
+    // papel de sempre (preenchimento escuro no toque). SÓ o desenho
+    // muda aqui — o retângulo de clique acima é contrato de teste
+    var r = Math.min(6, Math.floor(h / 2));
+    var topo, bot, borda;
+    if (o.disabled) { topo = '#241f33'; bot = '#241f33'; borda = '#3a3450'; }
+    else if (ativo) { topo = PALETA.ativoTop; bot = PALETA.ativoBot; borda = '#c9a24a'; }
+    else if (apertado) { topo = PALETA.btnBot; bot = PALETA.btnBot; borda = '#8f82c4'; }
+    else if (hover) { topo = PALETA.btnTopH; bot = PALETA.btnBotH; borda = '#8f82c4'; }
+    else { topo = PALETA.btnTop; bot = PALETA.btnBot; borda = '#5d5386'; }
+    if (!o.disabled) sombra(x, y, w, h, r);
+    caixa(x, y, w, h, r, borda);          // borda acompanha o canto
+    caixa(x + 1, y + 1, w - 2, h - 2, Math.max(0, r - 1),
+      grad(x, y + 1, x, y + h - 1, [[0, topo], [1, bot]]));
     if (!o.disabled && h >= 20) {
       // faixa de luz no topo (profundidade) — 1px, fillRect puro
       ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-      ctx.fillRect(x + 2, y + 2, w - 4, 1);
+      ctx.fillRect(x + 3, y + 3, w - 6, 1);
     }
-    ctx.strokeStyle = o.disabled ? '#3a3450'
-      : ((apertado || hover || ativo) ? '#e8c86a' : '#6a5f90');
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
     var tx = o.align === 'left' ? x + 8
       : (o.align === 'right' ? x + w - 8 : x + w / 2);
     text(label, tx, y + h / 2 + 2, {
       color: o.disabled ? '#6f678a' : (o.color || '#f2eef8'),
       align: o.align || 'center',
-      font: o.font || '16px monospace'
+      font: o.font || '16px monospace',
+      sombra: ativo && !o.disabled
     });
     return hover && m.clicked;
   }
@@ -157,14 +260,19 @@ var UI = (function () {
   function bar(x, y, w, h, frac, color, bg) {
     if (frac < 0) frac = 0;
     if (frac > 1) frac = 1;
+    var cor = color || '#d84a4a';
     ctx.fillStyle = bg || '#241f33';
     ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = color || '#d84a4a';
+    // degradê do doc: topo 35% mais claro (fallback devolve o claro)
+    ctx.fillStyle = grad(x, y, x, y + h, [[0, tom(cor, 0.35)], [1, cor]]);
     ctx.fillRect(x, y, Math.round(w * frac), h);
     // contorno só em barra alta: em 2-3px a linha de 1px cobriria o
     // preenchimento inteiro e a barra pareceria sempre vazia (barras de
     // inimigo vivem em espaço de mundo e seguem finas, sem contorno)
     if (h >= 4) {
+      // brilho de 1px no topo + contorno (invariante: NUNCA < 4)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.20)';
+      ctx.fillRect(x + 1, y + 1, Math.max(0, Math.round(w * frac) - 2), 1);
       ctx.strokeStyle = '#0d0a14';
       ctx.lineWidth = 1;
       ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
@@ -172,11 +280,8 @@ var UI = (function () {
   }
 
   function swatch(x, y, w, h, color) {
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = '#0d0a14';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    caixa(x, y, w, h, 4, '#0d0a14');
+    caixa(x + 1, y + 1, w - 2, h - 2, 3, color);
   }
 
   // Linha de status derivado dos rodapés das duas telas (HP/dano/vel/...).
@@ -267,7 +372,15 @@ var UI = (function () {
   function bloqueia(v) { bloqueado = !!v; }
 
   return {
+    PALETA: PALETA,
     setContext: setContext,
+    grad: grad,
+    tom: tom,
+    caminho: caminho,
+    caixa: caixa,
+    sombra: sombra,
+    fundo: fundo,
+    faixaTopo: faixaTopo,
     abrev: abrev,
     deslocar: deslocar,
     bloqueia: bloqueia,

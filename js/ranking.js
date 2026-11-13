@@ -373,10 +373,8 @@ var Ranking = (function () {
   function cenaRender(ctx) {
     var W = Game.W;
     var rd = W - 768;      // âncora direita (tela larga)
-    ctx.fillStyle = '#141020';
-    ctx.fillRect(0, 0, W, 432);
-    ctx.fillStyle = '#191326';
-    ctx.fillRect(0, 0, W, 30);
+    UI.fundo(ctx);
+    UI.faixaTopo(ctx, 30);
     UI.text('RANKING GLOBAL', 6, 16,
       { color: '#e8c86a', font: 'bold 16px monospace' });
     UI.text('progresso: mapa · onda · nível', 168, 16, { color: '#9a90b8' });

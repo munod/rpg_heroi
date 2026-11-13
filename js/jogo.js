@@ -207,12 +207,10 @@ var Jogo = (function () {
     var p = Game.personagem;
     var W = Game.W;           // largura dinâmica (768 em 16:9)
 
-    ctx.fillStyle = '#141020';
-    ctx.fillRect(0, 0, W, 432);
+    UI.fundo(ctx);
 
     // ---------------- cabeçalho: nível, XP (centrado) e pontos (direita)
-    ctx.fillStyle = '#191326';
-    ctx.fillRect(0, 0, W, 30);
+    UI.faixaTopo(ctx, 30);
     UI.text('HERÓI IDLE', 6, 16, { color: '#e8c86a', font: 'bold 16px monospace' });
     UI.text('Nv ' + p.nivel, 152, 16, { color: '#f2eef8' });
     var cx = Math.round(W / 2);

@@ -230,6 +230,22 @@
   frame no hit). **`personagem.js` não pode depender de `itens.js`**
   (grade/previa carregam só sprite+personagem) — chaves de bônus **e**
   `APR`/`MAX_UP` são espelhadas nos dois arquivos.
+- **UI visual (spec `visual-ui`)** — base visual em
+  `/home/thiago/Projetos/Docs/ui.md`: `UI.PALETA` (fonte única do
+  cromo) + primitivas **com fallback** — `grad` (sem
+  `createLinearGradient` real → 1ª cor sólida), `caminho` (probe de
+  assinatura: o Proxy do harness tem `length 0` → `rect`), `caixa`,
+  `sombra`, `tom` (hex misturado com branco) e `text` com sombra
+  **opt-in** (`o.sombra` dobra `fillText` — só ligue onde os testes
+  usam `.some`). Receitas: `fundo`/`faixaTopo` (gradiente + fio
+  dourado — as 4 cenas chamam), `panel` (sombra + gradiente + borda
+  por **duplo preenchimento** — `strokeRect` não acompanha canto e
+  `stroke()` é no-op — + faixa `[8,8,0,0]`), `button` (4 estados do
+  doc; **só o desenho muda — o retângulo de clique é contrato**),
+  `bar` (degradê + brilho; guarda `h>=4` intacta), tooltip/swatch
+  r=4. **Testes veem quadrado/chapado, navegador vê
+  arredondado/gradiente.** CSS com moldura do "monitor" (fio dourado
+  + anel + halo) em `style.css`. Fumaça seção 46.
 - Tooltips (Leva 3) em `js/ui.js`: `UI.dica(ret, linhas)` é chamado
   durante o render (retângulo LOCAL como os botões; o rodapé é global —
   `deslocX` está 0 lá) e `UI.desenhaTooltip()` fecha o render de
@@ -399,9 +415,11 @@
 - Efeitos visuais em `js/efeitos.js` (chamado por `Batalha` em
   `atualizar`/`desenhar`/`limparEfeitos`): **só primitivas que
   `testes/cena.js` rasteriza** — `fillRect`, `strokeRect` (com
-  `strokeStyle`/`lineWidth`), `ellipse`+`fill`, `translate`/`scale`/
-  `setTransform` e `globalAlpha`. `arc`/`stroke()`/gradiente
-  **quebram o screenshot** (o `stroke()` do rasterizador é no-op). O dano do missil vive no callback
+  `strokeStyle`/`lineWidth`), `ellipse`+`fill`, **`rect`+`fill`**
+  (caminho da UI — `fill()` rasteriza retângulo pendente desde a spec
+  `visual-ui`), `translate`/`scale`/`setTransform` e `globalAlpha`.
+  `arc`/`stroke()`/gradiente **quebram o screenshot** (o `stroke()`
+  do rasterizador é no-op; gradiente cai no fallback sólido). O dano do missil vive no callback
   que a `Batalha` passa, não no Efeitos. Em teste, para zerar efeitos
   pendentes use `Batalha.limparEfeitos()` (limpa também `nums`): só
   `Efeitos.limpar()` deixa texto flutuando por 1,4s e dá falso-positivo

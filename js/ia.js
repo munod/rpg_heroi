@@ -209,7 +209,10 @@ var IA = (function () {
       var pt = clampFuga(h.x + Math.cos(ang) * dist,
                          h.y + Math.sin(ang) * dist);
       var s = celulaOcup(pt.x, pt.y);
-      if (celulaObst(pt.x, pt.y, 6)) s += 100;
+      // rocha testada no PONTO ARREDONDADO: é o mesmo que info()
+      // exibe (int) e que o teste sonda — sem isso, a casca de ≤0,7px
+      // entre o float "livre" e o int "dentro" gera falso-positivo
+      if (celulaObst(Math.round(pt.x), Math.round(pt.y), 6)) s += 100;
       if (s < melhorS) { melhorS = s; melhor = pt; }
     }
     return melhor;

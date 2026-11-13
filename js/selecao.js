@@ -116,12 +116,10 @@ var Selecao = (function () {
     var p = Game.personagem;
     var W = Game.W;           // largura dinâmica (768 em 16:9)
 
-    ctx.fillStyle = '#141020';
-    ctx.fillRect(0, 0, W, 432);
+    UI.fundo(ctx);
 
     // ---------------- cabeçalho: título + nome digitável (direita)
-    ctx.fillStyle = '#191326';
-    ctx.fillRect(0, 0, W, 30);
+    UI.faixaTopo(ctx, 30);
     UI.text('RPG HERÓI', 6, 16, { color: '#e8c86a', font: 'bold 16px monospace' });
     UI.text('crie ou escolha um herói', 152, 16, { color: '#9a90b8' });
     var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';
