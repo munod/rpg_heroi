@@ -12,6 +12,28 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **IA dos monstros: flocking (separação) e influence map (spec
+  `ia-monstros`, leva 1 de 2)** — a matilha agora **cerca** de
+  verdade: **separação universal** (`IA.separacao` — empurra o destino
+  para longe dos aliados, **só monstro×monstro**, magnitude ≤10px,
+  **exatamente 0 com 1 monstro** = baseline intacta) integrada no
+  movimento com **clamp a 12,5px do alvo** (sem ele o destino sai de
+  13px e o ramo de golpe — `distH ≤13` — nunca dispara) + **mapa de
+  influência** (grade **8px** 48×34, ocupação repintada por frame;
+  obstáculo = consulta direta com o **raio da entidade** — o boss de
+  r11 não passa onde o slime de r6 passa; sem memo entre frames, nunca
+  stale entre mapas) que escolhe o **destino do cerco**: **12
+  candidatos a raio exato 11** (contrato da seção 23) com score =
+  ocupação 3×3 ×3 + preferência do ângulo do slot — desvia de aliados
+  e rochas em vez do slot fixo que colidia com >6 monstros e podia
+  cair dentro de uma rocha. Escopo confirmado com o mantenedor:
+  **separação universal, destino escalado pela astúcia** (burros
+  continuam direto no herói) e **prioridade = caber na medição**.
+  Teste: **seção 44 (16 confs)** — a matilha chega ao alcance, par
+  mínimo **12px** (sem empilhar) e **cerco com vão máximo 81°**;
+  seções 23/32/41 intactas. **Sanidade**: mapa 1 em **31,8min** (alvo
+  31-33) · 2×2400min em **mapa 36 · nv 3216/3280 · 1-4 mortes** (faixa
+  29-36 · 2600-3300) — sem rebalance.
 - **Árvore de skills maior: 8 skills, ramos e loadout escalonado
   (spec `arvore-skills`)** — 3 frentes confirmadas com o mantenedor:
   **(1)** 5 → **8 skills por classe** (12 novas reusando os 6 tipos de

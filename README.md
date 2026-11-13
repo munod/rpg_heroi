@@ -151,7 +151,7 @@ js/
   itens.js          drops: armas/armaduras, bolsa e auto-equip
   skills.js         skills por classe (procs, ramos e loadout escalonado)
   efeitos.js        efeitos visuais das skills (missis, cortes, motes)
-  ia.js             IA tática: decisões ponderadas por INT/astúcia + A*
+  ia.js             IA tática: decisões por INT/astúcia, flocking/influence map + A*
   eventos.js        eventos aleatórios (Açougueiro, gatuno) — rolagens puras
   ranking-config.js config pública do Firebase (preenchida pelo mantenedor)
   ranking.js        ranking global: score, apelido, SDK lazy-load + cena
@@ -212,7 +212,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 602 asserções: sprites, status, UI, idle, toque, ranking, mundos, cutscenes, árvore de skills
+node testes/fumaca.js     # 618 asserções: sprites, status, UI, idle, toque, ranking, mundos, cutscenes, árvore, IA dos monstros
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -245,8 +245,9 @@ distância** do mago/ladino/clérigo (projétil do golpe básico) e os
 **gatilhos de fuga** (Empurrão, Teleporte, Esquiva e Amedronta quando o
 bando se fecha) — tudo com **efeitos visuais** (projétil teleguiado, arco
 de corte, anel de impacto, respingos de veneno, motes de cura e marcador
-de medo), a **IA tática** (agudeza/estados do herói, cerco/antecipação/
-esquiva dos monstros e rotas por A*), a **câmera sobre o
+de medo), a **IA tática** (agudeza/estados do herói, **matilha com
+separação e influence map** — cerco/antecipação/esquiva dos monstros —
+e rotas por A*), a **câmera sobre o
 mundo 384×268** com o **renascimento em local aleatório**, o **toque no
 celular** (clique, arrasto e soltura por dedo, com bloqueio de rolagem),
 a **escala responsiva** e o **layout de largura adaptativa** (768–1728,

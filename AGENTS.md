@@ -366,9 +366,19 @@
   ×(1−agu); estados espera/perseguir/combate/kite/recuar — kite só em
   classe à distância com agu≥0,35, recuar só agu≥0,45 e HP<0,25+0,15×agu);
   `astucia(tipo, mapa)` (base da espécie + 0,12/mapa, teto 1) →
-  `decideInimigo` (slot de cerco ≥0,35 a 11px do herói com ângulo por
-  `en.slot`, antecipação ≥0,45 usando `heroi.escapa` (direção da fuga,
-  0,6s), esquiva ≥0,55 com cooldown 3,5−1,5×ast); `skillEfeito` aplicado
+  `decideInimigo` (cerco ≥0,35 via **influence map** — `destinoCerco`
+  escolhe entre **12 candidatos a raio exato 11** com score = ocupação
+  3×3 ×3 + preferência do ângulo do `en.slot`, rejeitando obstáculos e
+  descontando a própria célula; antecipação ≥0,45 usando
+  `heroi.escapa` (direção da fuga, 0,6s), esquiva ≥0,55 com cooldown
+  3,5−1,5×ast); **flocking** — `separacao` (só monstro×monstro, raio
+  somado+6px, teto 10px, **0 com 1 monstro**) desloca o alvo em
+  `atualizaInimigos` com **clamp a 12,5px do alvo** (sem o clamp o
+  destino sai de 13px e o golpe nunca sai; base longa tipo antecipação
+  não é clampada); `pintaMapa` repinta a **ocupação** por frame (grade
+  **8px** 48×34 — resolução menor que o anel de 11px; a do A* segue
+  16px) e `celulaObst` consulta `colideObst` com o raio da entidade
+  (sem memo entre frames = nunca stale entre mapas); `skillEfeito` aplicado
   em `skillsPeriodicas`/`skillsPosicionamento` (raio/cooldown por
   agudeza); `linhaLivre`/`caminho` (A* 16px/8-dir) chamados por
   `Batalha.moverPara` **só** com linha bloqueada + entidade esperta

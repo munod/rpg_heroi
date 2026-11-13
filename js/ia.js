@@ -206,10 +206,11 @@ var IA = (function () {
     var dx = heroi.x - en.x, dy = heroi.y - en.y;
     var d = Math.sqrt(dx * dx + dy * dy) || 1;
     if (ast >= 0.35) {
-      // slot do cerco: ângulo fixo por inimigo + jitter pela astúcia
-      var ang = (en.slot % 6) * 1.0472 + (ast - 0.35) * 1.4;
-      ia.destino = { x: heroi.x + Math.cos(ang) * 11,
-                     y: heroi.y + Math.sin(ang) * 11 };
+      // cerco via INFLUENCE MAP (spec ia-monstros): 12 candidatos a
+      // raio 11, score = ocupação 3×3 ×3 + preferência do ângulo do
+      // slot (com jitter) — desvia de aliados e rochas em vez do slot
+      // fixo que colidia com >6 monstros e caía em obstáculo
+      ia.destino = destinoCerco(en, heroi);
     } else {
       ia.destino = null;                 // reto no herói vivo (na hora)
     }
@@ -365,6 +366,132 @@ var IA = (function () {
     return out;
   }
 
+  // --------------------------- influence map + flocking (ia-monstros)
+  // Mapa de influência do mundo: grade de 8px (48×34 = 1632 células —
+  // resolução para discriminar os candidatos do anel de 11px, que ficam
+  // ~5,7px entre si; a grade do A* continua em 16px). A camada de
+  // OCUPAÇÃO é repintada por frame (monstros por célula); obstáculos
+  // são consulta DIRETA por candidato com o raio da entidade — sem memo
+  // entre frames, para nunca ficar stale entre mapas (o A* usa memo por
+  // chamada: mesmo princípio).
+  var IG = 8;
+  var ICOLS = 48, ILINHAS = 34;         // ceil(384/8), ceil(268/8)
+  var mapaOcup = new Array(ICOLS * ILINHAS).fill(0);
+
+  function idxInfl(x, y) {
+    var ci = Math.floor(x / IG), cj = Math.floor(y / IG);
+    if (ci < 0) ci = 0; else if (ci >= ICOLS) ci = ICOLS - 1;
+    if (cj < 0) cj = 0; else if (cj >= ILINHAS) cj = ILINHAS - 1;
+    return cj * ICOLS + ci;
+  }
+
+  // repinta a ocupação — chamada no topo de atualizaInimigos, antes do
+  // laço (cada frame os monstros estão onde estão)
+  function pintaMapa(inimigos) {
+    for (var i = 0; i < mapaOcup.length; i++) mapaOcup[i] = 0;
+    for (var j = 0; j < inimigos.length; j++) {
+      mapaOcup[idxInfl(inimigos[j].x, inimigos[j].y)]++;
+    }
+  }
+
+  // ocupação na vizinhança 3×3 (~24px — amostra suave: um aliado
+  // penaliza o candidato e os vizinhos dele)
+  function celulaOcup(x, y) {
+    var ci = Math.floor(x / IG), cj = Math.floor(y / IG);
+    var s = 0;
+    for (var a = -1; a <= 1; a++) {
+      for (var b = -1; b <= 1; b++) {
+        var ii = ci + a, jj = cj + b;
+        if (ii < 0 || jj < 0 || ii >= ICOLS || jj >= ILINHAS) continue;
+        s += mapaOcup[jj * ICOLS + ii];
+      }
+    }
+    return s;
+  }
+
+  // obstáculo no ponto — com o RAIO DA ENTIDADE (o boss de r=11 não
+  // passa onde o slime de r=6 passa)
+  function celulaObst(x, y, raio) {
+    return Batalha.colideObst(x, y, raio || 6);
+  }
+
+  // ---- cerco via influence map (decideInimigo, ast >= 0,35) ----------
+  // 12 candidatos a raio EXATO 11 (contrato da seção 23: |raio−11| <
+  // 0,01) — dobra a resolução dos 6 slots p/ mais de 6 monstros. Score
+  // (menor vence): ocupação 3×3 ×3 + preferência do ângulo do slot (0
+  // no ângulo próprio, sobe com o desvio — mantém a identidade de cada
+  // um e evita trocar de ângulo a cada frame). Obstáculo rejeita o
+  // candidato; se TODOS estiverem bloqueados, cai no slot de sempre.
+  var ANEL_R = 11, ANEL_N = 12;
+  var PESO_OCUP = 3;
+  var PESO_SLOT = 0.5;                  // por passo de 60° fora do slot
+
+  function destinoCerco(en, heroi) {
+    var ast = en.astucia || 0;
+    var angSlot = ((en.slot || 0) % 6) * 1.0472 + (ast - 0.35) * 1.4;
+    var meu = idxInfl(en.x, en.y);
+    var mi = meu % ICOLS, mj = (meu / ICOLS) | 0;
+    var melhor = null, melhorS = Infinity;
+    for (var k = 0; k < ANEL_N; k++) {
+      var ang = k * (Math.PI * 2 / ANEL_N);
+      var px = heroi.x + Math.cos(ang) * ANEL_R;
+      var py = heroi.y + Math.sin(ang) * ANEL_R;
+      if (celulaObst(px, py, en.raio || 6)) continue;   // rejeita rocha
+      // o próprio monstro não se conta (senão a própria célula sempre
+      // tem ≥1 e ele troca de candidato para sempre — instabilidade)
+      var ocup = celulaOcup(px, py);
+      var alvoIdx = idxInfl(px, py);
+      var ai = alvoIdx % ICOLS, aj = (alvoIdx / ICOLS) | 0;
+      if (Math.abs(ai - mi) <= 1 && Math.abs(aj - mj) <= 1) ocup--;
+      if (ocup < 0) ocup = 0;
+      var d = Math.abs(ang - angSlot) % (Math.PI * 2);
+      if (d > Math.PI) d = Math.PI * 2 - d;
+      var pref = Math.min(d / 1.0472, 6) * PESO_SLOT;
+      var s = ocup * PESO_OCUP + pref;
+      if (s < melhorS) { melhorS = s; melhor = { x: px, y: py }; }
+    }
+    if (melhor) return melhor;
+    return { x: heroi.x + Math.cos(angSlot) * ANEL_R,   // slot de sempre
+             y: heroi.y + Math.sin(angSlot) * ANEL_R };
+  }
+
+  // ---- flocking: separação universal (spec ia-monstros) ---------------
+  // Empurra o destino para longe dos aliados próximos — SÓ monstro ×
+  // monstro (o herói é o alvo, nunca é "aliado"). Com 1 monstro o
+  // vetor é exatamente 0 (comportamento idêntico ao de sempre: as
+  // fixtures das seções 23/32/41 são de 1 bicho e não mudam).
+  var SEP_MARGEM = 6;                   // px além dos raios somados
+  var SEP_FORCA = 10;                   // magnitude máxima (px)
+
+  function separacao(en, inimigos) {
+    var meuR = en.raio || 6;
+    var sx = 0, sy = 0;
+    for (var i = 0; i < inimigos.length; i++) {
+      var out = inimigos[i];
+      if (out === en) continue;
+      var dx = en.x - out.x, dy = en.y - out.y;
+      var d2 = dx * dx + dy * dy;
+      var min = meuR + (out.raio || 6) + SEP_MARGEM;
+      if (d2 >= min * min) continue;
+      if (d2 < 0.0001) {
+        // empilhados no MESMO ponto: direção estável e diferente por
+        // índice (senão os dois seriam empurrados na mesma direção e
+        // continuariam juntos)
+        var ang = i * 1.0472;
+        sx += Math.cos(ang);
+        sy += Math.sin(ang);
+        continue;
+      }
+      var d = Math.sqrt(d2);
+      sx += dx / d;
+      sy += dy / d;
+    }
+    var m = Math.sqrt(sx * sx + sy * sy);
+    if (m < 0.0001) return { x: 0, y: 0 };   // 1 monstro ou simetria
+    var mag = SEP_FORCA * Math.min(1, m);    // saturação: teto 10px
+    return { x: (sx / m) * mag, y: (sy / m) * mag };
+  }
+
   return {
     TICK: TICK,
     agudeza: agudeza,
@@ -374,6 +501,11 @@ var IA = (function () {
     decideInimigo: decideInimigo,
     skillEfeito: skillEfeito,
     linhaLivre: linhaLivre,
-    caminho: caminho
+    caminho: caminho,
+    pintaMapa: pintaMapa,
+    celulaOcup: celulaOcup,
+    celulaObst: celulaObst,
+    separacao: separacao,
+    destinoCerco: destinoCerco
   };
 })();

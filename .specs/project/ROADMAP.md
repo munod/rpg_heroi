@@ -125,8 +125,14 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    grade 2×4 com botão de ramo. **Seção 43** · gate 3× = **615
    confs** · sanidade 2×2400min: **mapa 36 · nv 3247 · 1 morte**
    (faixa 29-36/2600-3300) — sem rebalance.
-5. ⬜ **IA monstros** (leva 1 de 2) — Flocking + influence map
-   (matilha que cerca; resolve as ondas ince fáceis).
+5. ✅ **`ia-monstros`** — **flocking + influence map**: separação
+   universal (0 com 1 monstro = baseline intacta) com clamp de 12,5px +
+   destino do cerco via influence map (grade 8px, 12 candidatos a
+   raio 11, score = ocupação + preferência do slot, obstáculo com o
+   raio da entidade). Escopo: separação universal, destino por
+   astúcia. **Seção 44** (vão do cerco = 81°) · gate 3× = **631
+   confs** · sanidade: mapa 1 **31,8min** + 2×2400min **mapa 36 · nv
+   3216/3280** (faixa 29-36 · 2600-3300) — sem rebalance.
 6. ⬜ **IA herói** (leva 2 de 2) — Behavior Tree por camadas de
    prioridade (INT controla a profundidade da árvore).
 

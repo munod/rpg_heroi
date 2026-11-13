@@ -1531,6 +1531,7 @@ console.log('23) IA dos NPCs: astúcia, cerco, antecipação e esquiva');
   const IA = sandbox.IA;
   const Batalha = sandbox.Batalha;
   const heroi = { x: 100, y: 100, morto: false, hp: 100, escapa: null };
+  IA.pintaMapa([]);   // limpa ocupação residual da arena (spec ia-monstros)
 
   // --- burro (slime do mapa 1): segue o herói vivo na hora, sem slot
   const burro = { x: 60, y: 100, astucia: IA.astucia('slime', 1), slot: 0 };
@@ -4482,6 +4483,140 @@ console.log('43) árvore de skills: 8 por classe, ramos e loadout escalonado');
 
   p.loadout = null;
   p.ramos = null;
+}
+
+console.log('44) IA dos monstros: flocking (separação) e influence map');
+{
+  const IA = sandbox.IA;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // cena limpa (a 43 terminou na arena)
+  Salvar.salvarEstado(p.id, 1, Date.now(), false, 1);
+  Game.setScene('jogo');
+  frame(2);
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- 1) mapa de influência: ocupação repintada por frame
+  IA.pintaMapa([{ x: 104, y: 108 }, { x: 200, y: 50 }]);
+  conf(IA.celulaOcup(104, 108) >= 1,
+    'mapa pinta a ocupação na célula do monstro');
+  conf(IA.celulaOcup(300, 240) === 0, 'célula sem monstro = 0');
+  IA.pintaMapa([]);
+  conf(IA.celulaOcup(104, 108) === 0, 'repintar zera a ocupação');
+
+  // --- obstáculo: consulta direta com o RAIO da entidade
+  const rochas = Batalha.info().obst;
+  conf(rochas.length > 0, 'arena tem obstáculos p/ o teste');
+  const r0 = rochas[0];
+  conf(IA.celulaObst(r0.cx, r0.cy, 6) === true,
+    'rocha = obstáculo para o slime (r 6)');
+  let brecha = null;
+  for (let dist = 8; dist <= 17 && !brecha; dist++) {
+    for (let a = 0; a < 8 && !brecha; a++) {
+      const ang = a * Math.PI / 4;
+      const bx = Math.round(r0.cx + Math.cos(ang) * dist);
+      const by = Math.round(r0.cy + Math.sin(ang) * dist);
+      if (!IA.celulaObst(bx, by, 6) && IA.celulaObst(bx, by, 11)) {
+        brecha = [bx, by];
+      }
+    }
+  }
+  conf(!!brecha, 'brecha: slime (r6) passa onde o boss (r11) não para');
+
+  // --- 2) separação (função pura — o flocking universal)
+  const A = { x: 100, y: 100, raio: 6 }, B = { x: 108, y: 100, raio: 6 };
+  const sNada = IA.separacao(A, [A]);
+  conf(sNada.x === 0 && sNada.y === 0,
+    '1 monstro: separação exatamente 0 (baseline intacta)');
+  const sA = IA.separacao(A, [A, B]);
+  const sB = IA.separacao(B, [A, B]);
+  conf(Math.abs(sA.x + 10) < 0.01 && Math.abs(sB.x - 10) < 0.01,
+    'dois a 8px se empurram para longe (±10px opostos)');
+  const sLonge = IA.separacao(A, [{ x: 140, y: 100, raio: 6 }]);
+  conf(sLonge.x === 0 && sLonge.y === 0, 'aliado a 40px: separação 0');
+
+  // --- 3) destino via influence map (decideInimigo)
+  const h2 = { x: 100, y: 100, morto: false, hp: 100, escapa: null };
+  IA.pintaMapa([]);
+  const s0 = { x: 60, y: 100, astucia: 0.5, slot: 0, raio: 6 };
+  IA.decideInimigo(s0, h2, 0.0167);
+  const r0d = Math.sqrt((s0.ia.destino.x - 100) ** 2 +
+                        (s0.ia.destino.y - 100) ** 2);
+  conf(Math.abs(r0d - 11) < 0.01,
+    'sem ocupação: mantém o anel a 11px (contrato da seção 23)');
+  IA.pintaMapa([{ x: 111, y: 100 }]);        // aliado no candidato do slot 0
+  const s1 = { x: 60, y: 100, astucia: 0.5, slot: 0, raio: 6 };
+  IA.decideInimigo(s1, h2, 0.0167);
+  const d1 = s1.ia.destino;
+  const r1 = Math.sqrt((d1.x - 100) ** 2 + (d1.y - 100) ** 2);
+  conf(Math.abs(r1 - 11) < 0.01 &&
+       !(Math.abs(d1.x - 111) < 0.01 && Math.abs(d1.y - 100) < 0.01),
+    'aliado no slot preferido → gira p/ célula livre (raio 11 mantido)');
+  IA.pintaMapa([]);
+  const burro = { x: 60, y: 100, astucia: IA.astucia('slime', 1), slot: 0 };
+  IA.decideInimigo(burro, h2, 0.0167);
+  conf(burro.ia.destino === null,
+    'burro continua sem slot (só separação — escopo confirmado)');
+
+  // --- 4) integração na arena: a matilha não se empilha e cerca
+  p.nivel = 1;                        // sem skills desbloqueadas (sem procs)
+  p.atributos.for = 1;
+  p.atributos.int = 1;
+  p.atributos.des = 1;
+  p.atributos.con = 9999;             // tanque: ninguém derruba o herói
+  p.equip.arma = null;
+  p.equip.armadura = null;
+  p.autoApr = false;
+  p.loadout = null;
+  p.ramos = null;
+  Batalha.restaurarOnda(2);            // limpa a arena (onda 1, vel base)
+  const hb = Batalha.info().heroi;
+  for (let i = 0; i < 6; i++) {
+    const en = Batalha.spawn({ tipo: 'slime' });
+    // anel controlado a 40px: ângulos uniformes (determinístico)
+    const ang = i * Math.PI / 3;
+    en.x = hb.x + Math.cos(ang) * 40;
+    en.y = hb.y + Math.sin(ang) * 40;
+    en.hp = en.hpMax = 9999;          // ninguém morre no meio do teste
+  }
+  // espera a matilha chegar ao alcance de ataque (teto 400 frames)
+  let chegou = 0;
+  for (let i = 0; i < 400 && chegou < 5; i++) {
+    frame(1);
+    chegou = Batalha.info().bichos.filter(b => b.dist <= 14).length;
+  }
+  conf(chegou >= 5,
+    'matilha chega em alcance de ataque (' + chegou + '/6 a ≤14px)');
+
+  const bs = Batalha.info().bichos;
+  conf(bs.length === 6,
+    'ninguém morreu no caminho (' + bs.length + '/6 vivos)');
+  let minD = Infinity;
+  for (let a = 0; a < bs.length; a++) {
+    for (let b = a + 1; b < bs.length; b++) {
+      const dd = Math.sqrt((bs[a].x - bs[b].x) ** 2 +
+                           (bs[a].y - bs[b].y) ** 2);
+      if (dd < minD) minD = dd;
+    }
+  }
+  conf(minD >= 8,
+    'sem empilhamento: par mais próximo a ' + Math.round(minD) +
+    'px (≥8 — a separação segura o corpos distantes)');
+
+  // cerco: os ângulos ao redor do herói cobrem o círculo (vão ≤170°)
+  const hh = Batalha.info().heroi;
+  const angs = bs.map(b => Math.atan2(b.y - hh.y, b.x - hh.x))
+    .sort((x, y) => x - y);
+  let maiorVao = 0;
+  for (let i = 0; i < angs.length; i++) {
+    const dd = (angs[(i + 1) % angs.length] - angs[i] + Math.PI * 2) %
+      (Math.PI * 2);
+    if (dd > maiorVao) maiorVao = dd;
+  }
+  const graus = Math.round(maiorVao * 180 / Math.PI);
+  conf(graus <= 170,
+    'cerco cobre o herói (maior vão ' + graus + '° ≤170°)');
 }
 
 console.log('');

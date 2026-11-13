@@ -321,6 +321,28 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   meia hora, então a sanidade (2 runs de 2400min: mapa 36/nv 3247,
   dentro da faixa 29-36/2600-3300) não precisou de rebalance.
 
+- **Flocking mora na camada de MOVIMENTO, não em `ia.destino`** (spec
+  `ia-monstros`) — a seção 23 é contrato: burro = `destino === null` e
+  astuto = raio **exato 11px**. Se a separação entrasse em
+  `ia.destino`, esses asserts cairiam (e o `null` dos burros seria
+  mentira). O deslocamento entra no alvo (`alvoX/Y += sep`) com
+  **clamp a 12,5px**: sem o clamp o destino do anel (11) + sep (10)
+  chega a 21px, o monstro para em cima dele e o ramo de golpe
+  (`distH ≤13`) **nunca dispara** — o monstro vira estátua. Base longa
+  (antecipação a 40px) não é clampada: cortar a fuga precisa do ponto
+  à frente.
+- **Influence map em 8px, não 16** — resolução tem que ser MENOR que
+  o fenômeno: o anel de 11px tem candidatos a ~5,7px, todos na mesma
+  célula de grade 16px (a do A*) → ocupação sem discriminação nenhuma.
+  Obstáculo é consulta DIRETA por candidato (com o raio da entidade —
+  boss não passa onde slime passa) em vez de memo: memo entre frames
+  fica stale quando `garanteCenario` troca o mapa.
+- **Escopo e prioridade decididos com o mantenedor**: separação
+  universal + destino escalado pela astúcia (burros seguem direto);
+  se a sanidade estourasse a faixa, afro os NOVOS mecanismos até caber
+  (a progressão medida é o contrato). Aprovado sem ajuste: mapa 1 em
+  31,8min e 2×2400min em mapa 36/nv ~3250.
+
 ## Bloqueios
 
 - Nenhum.
@@ -340,6 +362,18 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   minúsculo + escopo opcional; corpo/descrição em pt-BR).
 
 ## Lições
+
+- **Ler os CONTRATOS dos testes antes de projetar** (leva IA
+  monstros): a seção 23 (burro `destino === null`, astuto raio exato
+  11) decidiu ANTES do código onde a separação podia morar — se eu
+  tivesse implementado "bonito" (separação dentro de `ia.destino`),
+  teria descoberto o conflito só depois de4 asserts caírem, com a
+  solução certa (camada de movimento) bem mais cara de refazer.
+- **Influence map: a grade precisa ser mais fina que o fenômeno** —
+  candidatos do anel ficam a ~5,7px; grade de 16px coloca 4+ candidatos
+  na mesma célula e a "discriminação" vira zero.8px resolve; e o
+  obstáculo não entra na grade (memo fica stale entre mapas) — consulta
+  direta com o raio da entidade.
 
 - **Mudança de layout = mapear TODOS os cliques dos testes** (leva
   árvore de skills): a coluna única → grade 2×4 quebrou 4 asserts da

@@ -1501,6 +1501,9 @@ var Batalha = (function () {
   }
 
   function atualizaInimigos(dt) {
+    // influence map: ocupação repintada por frame antes do laço
+    // (spec ia-monstros — decideInimigo lê para escolher o slot)
+    IA.pintaMapa(inimigos);
     // de trás pra frente: o veneno pode matar e remover no meio do laço
     for (var i = inimigos.length - 1; i >= 0; i--) {
       var en = inimigos[i];
@@ -1583,6 +1586,25 @@ var Batalha = (function () {
       if (!heroi.morto && en.ia && en.ia.destino) {
         alvoX = en.ia.destino.x;
         alvoY = en.ia.destino.y;
+      }
+      // flocking (spec ia-monstros): a separação universal desloca o
+      // destino para longe dos aliados — e, quando a base É de ataque
+      // (≤13px), mantém o resultado ≤12,5px do alvo: sem o clamp o
+      // destino sai de 13px, o monstro para em cima dele e o ramo de
+      // golpe (distH ≤13) nunca dispara. Base longa (antecipação a
+      // 40px) não é clampada — cortar a fuga precisa do ponto à frente.
+      var brx = alvoX - hx, bry = alvoY - hy;
+      var br = Math.sqrt(brx * brx + bry * bry);
+      var sep = IA.separacao(en, inimigos);
+      alvoX += sep.x;
+      alvoY += sep.y;
+      if (br <= 13) {
+        var sdx = alvoX - hx, sdy = alvoY - hy;
+        var sr = Math.sqrt(sdx * sdx + sdy * sdy);
+        if (sr > 12.5) {
+          alvoX = hx + sdx * (12.5 / sr);
+          alvoY = hy + sdy * (12.5 / sr);
+        }
       }
       var vx = alvoX - en.x, vy = alvoY - en.y;
 
@@ -1983,7 +2005,9 @@ var Batalha = (function () {
         for (var bi = 0; bi < inimigos.length; bi++) {
           var be = inimigos[bi];
           out.push({ chave: be.chave, hp: Math.round(be.hp),
-                     hpMax: be.hpMax, atkCd: Math.round(be.atkCd * 100) / 100,
+                     hpMax: be.hpMax,
+                     x: Math.round(be.x), y: Math.round(be.y),
+                     atkCd: Math.round(be.atkCd * 100) / 100,
                      dist: Math.round(Math.sqrt(
                        (be.x - heroi.x) * (be.x - heroi.x) +
                        (be.y - heroi.y) * (be.y - heroi.y))) });
