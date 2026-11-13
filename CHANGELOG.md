@@ -12,6 +12,27 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **IA do herói: Behavior Tree e evasão de cerco (spec `ia-heroi`, leva
+  2 de 2 — fecha a série de 6)** — `decideHeroi` vira um **seletor de
+  camadas** (`IA.CAMADAS`: sobrevivência → posicionamento → combate →
+  perseguição) onde a **INT controla a profundidade da árvore**
+  (`IA.profundidade(agu)` 1/2/3 com os **gates de sempre** — 0,35 e
+  0,45 — comportamento medido preservado **por construção**; o
+  decorador de ruído/cambaleia mantém a fórmula antiga). O destino de
+  fuga ganha **evasão de cerco** (`IA.direcaoEvasao` — 12 direções a
+  partir da direção de sempre, score = ocupação do influence map + 100
+  se cai em rocha, `<` estrito desempata em k=0 → **mapa vazio =
+  exatamente o destino antigo**): o herói não corre mais para dentro
+  de rocha nem da matilha. O `pintaMapa` subiu para o **topo de
+  `atualizar()`** (herói e monstros leem a pintura do frame) e
+  `info().heroi` ganhou `prof`. Escopo e prioridade definidos com o
+  mantenedor: **BT estrutural + evasão** e — pela primeira vez —
+  **comportamento novo > progressão** (dificuldades de endgame
+  virão; intervir só em estol). Teste: **seção 45 (13 confs)** +
+  asserção de rocha na32. **Sanidade**: mapa 1 em **31,5/33,5min** ·
+  2×2400min em **mapa 38/36 · nv 3442/3244 · 0-3 mortes** —
+  progressão levemente mais rápida (menos mortes), dentro da
+  maleabilidade aceita; sem intervenção.
 - **IA dos monstros: flocking (separação) e influence map (spec
   `ia-monstros`, leva 1 de 2)** — a matilha agora **cerca** de
   verdade: **separação universal** (`IA.separacao` — empurra o destino

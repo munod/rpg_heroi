@@ -343,6 +343,25 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   (a progressão medida é o contrato). Aprovado sem ajuste: mapa 1 em
   31,8min e 2×2400min em mapa 36/nv ~3250.
 
+- **Escopo da IA do herói: BT estrutural + evasão de cerco** (spec
+  `ia-heroi` — resposta do mantenedor a "o que deve sair da leva 6"):
+  a Behavior Tree é ARQUITETURA (mesmos 5 estados, mesmos gates) e a
+  evasão de cerco é o comportamento novo visível.
+- **PRIORIDADE INVERTIDA nesta leva (decisão do mantenedor)** — pela
+  primeira vez **o comportamento novo vale mais que a progressão
+  medida**: "a progressão pode ser mais maleável, pois futuramente
+  vamos implementar níveis de dificuldade no endgame". Intervenção só
+  em ESTOL (mapa 1 > ~40min / estol de nível / mortes em massa) —
+  medido: mapa 1 em 31,5/33,5min e 2×2400 levemente à frente
+  (mapa 38/36 · nv 3442/3244) → nenhuma intervenção. Levas futuras
+  que retomem o contrato antigo confirmam com o mantenedor antes de
+  afro qualquer coisa.
+- **Gates da INT = profundidade da árvore** — a BT não INVENTOU
+  limiares novos: `profundidade(agu)` formaliza os 0,35 (kite) e 0,45
+  (recuar) que já existiam, como camadas 1/2/3. Por isso as seções
+  22/32 passaram sem mudança de assert — refator de comportamento
+  idêntico é verificável pelos contratos antigos.
+
 ## Bloqueios
 
 - Nenhum.
@@ -363,6 +382,12 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 
 ## Lições
 
+- **Degradar para o comportamento antigo por CONSTRUÇÃO** (leva IA do
+  herói): a evasão devolve exatamente o destino antigo quando o mapa
+  está vazio (k=0 com desempate por `<` estrito) e a BT usa os gates
+  numéricos de sempre — o teste novo prova o degrau ("sem influence
+  map = igual") e os antigos provam a continuidade. Forma mais barata
+  de mudar arquitetura sem renegociar cada assert.
 - **Ler os CONTRATOS dos testes antes de projetar** (leva IA
   monstros): a seção 23 (burro `destino === null`, astuto raio exato
   11) decidiu ANTES do código onde a separação podia morar — se eu

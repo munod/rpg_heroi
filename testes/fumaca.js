@@ -2727,7 +2727,7 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
   Batalha.restaurarOnda(30);
   e0 = 0;
   while (Batalha.info().morto && e0 < 900) { frame(1); e0++; }
-  let fugas = 0, fora = 0;
+  let fugas = 0, fora = 0, emRocha = 0;
   for (let i = 0; i < 9000; i++) {
     frame(1);
     const f = Batalha.info();
@@ -2737,11 +2737,16 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
       const d = f.destino;
       // limites com margem 16 (mundo 384×268): fora disso = bug
       if (d.x < 16 || d.x > 368 || d.y < 16 || d.y > 252) fora++;
+      // evasão de cerco (spec ia-heroi): fuga nunca pousa em rocha
+      if (sandbox.IA.celulaObst(d.x, d.y, 6)) emRocha++;
     }
   }
   conf(fugas > 500 && fora === 0,
     'destino de fuga sempre dentro do mapa (' + fugas +
     ' fugas, ' + fora + ' fora)');
+  conf(emRocha === 0,
+    'destino de fuga nunca dentro de rocha (' + emRocha + '/' + fugas +
+    ' em rocha)');
 
   // --- 3) DES volta a acelerar o ataque (ciclo = recarga, não 0,36s)
   // Mesma onda fraca p/ dois heróis: conta golpes em janela igual.
@@ -4617,6 +4622,131 @@ console.log('44) IA dos monstros: flocking (separação) e influence map');
   const graus = Math.round(maiorVao * 180 / Math.PI);
   conf(graus <= 170,
     'cerco cobre o herói (maior vão ' + graus + '° ≤170°)');
+}
+
+console.log('45) IA do herói: Behavior Tree e evasão de cerco');
+{
+  const IA = sandbox.IA;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // --- 1) estrutura da árvore
+  conf(IA.CAMADAS.map(c => c.nome).join(',') ===
+       'sobrevivencia,posicionamento,combate,perseguicao',
+    'CAMADAS na ordem de prioridade (sobrevivência primeiro)');
+  conf(IA.CAMADAS[0].prof === 3 && IA.CAMADAS[1].prof === 2 &&
+       IA.CAMADAS[2].prof === 1 && IA.CAMADAS[3].prof === 1,
+    'profundidade por camada: 3/2/1/1');
+  conf(IA.profundidade(0) === 1 && IA.profundidade(0.34) === 1 &&
+       IA.profundidade(0.35) === 2 && IA.profundidade(0.44) === 2 &&
+       IA.profundidade(0.45) === 3 && IA.profundidade(1) === 3,
+    'profundidade da INT: 1/2/3 nas fronteiras 0,35 e 0,45');
+
+  // --- 2) gates por fixture direta (sem arena)
+  const mkH = (int, hp) => ({ x: 100, y: 100, hp: hp, hpMax: 100,
+    stats: { alcance: 26, atributos: { int: int } } });
+  const inim = [{ x: 150, y: 100, hp: 50, hpMax: 50, dmg: 5 }];
+  const perto2 = [{ x: 112, y: 100, hp: 50, hpMax: 50, dmg: 5 }];
+  const salv = p.classe;
+  p.classe = 'mago';                 // ranged: habilita posicionamento
+
+  const burro = mkH(1, 1);
+  let viuRecuar = false, viuKite = false;
+  for (let i = 0; i < 60; i++) {
+    IA.decideHeroi(burro, inim, 0.3);
+    if (burro.ia.estado === 'recuar') viuRecuar = true;
+    if (burro.ia.estado === 'kite') viuKite = true;
+  }
+  conf(!viuRecuar && !viuKite,
+    'burro (prof 1) com HP 1 nunca recua nem kita em 60 ticks');
+
+  const genio = mkH(20, 1);
+  IA.decideHeroi(genio, inim, 0.3);
+  conf(genio.ia.estado === 'recuar' && genio.ia.prof === 3,
+    'gênio (prof 3) com HP 1 recua já no 1º tick (' + genio.ia.estado +
+    ', prof ' + genio.ia.prof + ')');
+
+  const kg = mkH(20, 100);
+  IA.decideHeroi(kg, perto2, 0.3);
+  conf(kg.ia.estado === 'kite',
+    'ranged gênio perto kita — camada de posicionamento (' +
+    kg.ia.estado + ')');
+
+  const kb = mkH(1, 100);
+  IA.decideHeroi(kb, perto2, 0.3);
+  conf(kb.ia.estado !== 'kite',
+    'ranged burro perto NÃO kita — prof 1 pula a camada (' +
+    kb.ia.estado + ')');
+  p.classe = salv;
+
+  // --- 3) evasão de cerco (função pura)
+  const cf = (x, y) => ({ x: Math.max(16, Math.min(368, x)),
+                          y: Math.max(16, Math.min(252, y)) });
+  IA.pintaMapa([]);
+  const he = { x: 100, y: 100 };
+  const base = IA.direcaoEvasao(he, 0, 90);
+  conf(Math.abs(base.x - 190) < 0.001 && Math.abs(base.y - 100) < 0.001,
+    'mapa vazio: a evasão cai exatamente no destino antigo (190,100)');
+
+  // zona aberta: os 12 candidatos de 90px livres de rocha — o teste de
+  // ocupação não pode depender do sorteio do cenário
+  let livre = null;
+  for (let hx = 110; hx <= 270 && !livre; hx += 10) {
+    for (let hy = 110; hy <= 160 && !livre; hy += 10) {
+      let ok = true;
+      for (let k = 0; k < 12 && ok; k++) {
+        const pt = cf(hx + Math.cos(k * Math.PI / 6) * 90,
+                      hy + Math.sin(k * Math.PI / 6) * 90);
+        if (IA.celulaObst(pt.x, pt.y, 6)) ok = false;
+      }
+      if (ok) livre = { x: hx, y: hy };
+    }
+  }
+  conf(!!livre, 'mapa tem zona aberta p/ o teste de evasão');
+
+  if (livre) {
+    IA.pintaMapa([{ x: livre.x + 90, y: livre.y }]);   // inimigo na base
+    const giro = IA.direcaoEvasao(livre, 0, 90);
+    conf(!(Math.abs(giro.x - (livre.x + 90)) < 0.01 &&
+           Math.abs(giro.y - livre.y) < 0.01) &&
+         IA.celulaOcup(giro.x, giro.y) === 0,
+      'inimigo no ponto base → evasão gira p/ célula livre');
+  }
+  IA.pintaMapa([]);
+
+  // rocha na base: achar uma rocha cuja base esteja bloqueada e exista
+  // rota livre fora dela (senão o desempate k=0 mantém o ponto de sempre)
+  let cen = null;
+  const rochas = Batalha.info().obst;
+  for (let r = 0; r < rochas.length && !cen; r++) {
+    const o = rochas[r];
+    if (o.cx < 110 || o.cx > 300 || o.cy < 30 || o.cy > 240) continue;
+    const hr = { x: o.cx - 90, y: o.cy };
+    const k0 = cf(hr.x + 90, hr.y);
+    if (!IA.celulaObst(k0.x, k0.y, 6)) continue;   // base na rocha
+    let melhor = Infinity;
+    for (let k = 1; k < 12; k++) {
+      const pt = cf(hr.x + Math.cos(k * Math.PI / 6) * 90,
+                    hr.y + Math.sin(k * Math.PI / 6) * 90);
+      const sc = IA.celulaObst(pt.x, pt.y, 6) ? 100 : 0;
+      if (sc < melhor) melhor = sc;
+    }
+    if (melhor < 100) cen = hr;         // existe rota fora da rocha
+  }
+  conf(!!cen, 'rocha com rota de fuga livre encontrada p/ o teste');
+  if (cen) {
+    IA.pintaMapa([]);
+    const desvio = IA.direcaoEvasao(cen, 0, 90);
+    conf(!IA.celulaObst(desvio.x, desvio.y, 6),
+      'rocha no ponto base → evasão foge para fora da rocha');
+  }
+  IA.pintaMapa([]);
+
+  // --- 4) sonda prof na arena (a 44 deixou INT 1 → prof 1)
+  frame(25);
+  const inf = Batalha.info();
+  conf(inf.heroi.prof >= 1 && inf.heroi.prof <= 3,
+    'sonda prof na arena = ' + inf.heroi.prof + ' (faixa 1-3)');
 }
 
 console.log('');

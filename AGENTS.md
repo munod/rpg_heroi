@@ -363,8 +363,15 @@
 - IA tática em `js/ia.js` (carregado antes de `batalha.js`; usa
   `Batalha.colideObst` em runtime): `agudeza(int)` (INT 4→0, 20→1) →
   `decideHeroi` (alvo por peso = −distância + prioridade×40×agu + ruído
-  ×(1−agu); estados espera/perseguir/combate/kite/recuar — kite só em
-  classe à distância com agu≥0,35, recuar só agu≥0,45 e HP<0,25+0,15×agu);
+  ×(1−agu)) roda uma **Behavior Tree** (spec `ia-heroi`): seletor de
+  `CAMADAS` por prioridade (sobrevivência→`recuar` · posicionamento→
+  `kite` · combate · perseguição; `espera` sem inimigos = os mesmos 5
+  estados de sempre) com **profundidade pela INT**
+  (`profundidade(agu)` 1/2/3 — os gates de sempre 0,35/0,45 =
+  comportamento medido intacto) e decorador de ruído (cambaleia)
+  pós-seleção; destino de fuga via **`direcaoEvasao`** (12 direções a
+  partir da base, score = ocupação 3×3 + 100×rocha, `<` estrito
+  desempata em k=0 → **mapa vazio = destino antigo**);
   `astucia(tipo, mapa)` (base da espécie + 0,12/mapa, teto 1) →
   `decideInimigo` (cerco ≥0,35 via **influence map** — `destinoCerco`
   escolhe entre **12 candidatos a raio exato 11** com score = ocupação
@@ -375,7 +382,9 @@
   somado+6px, teto 10px, **0 com 1 monstro**) desloca o alvo em
   `atualizaInimigos` com **clamp a 12,5px do alvo** (sem o clamp o
   destino sai de 13px e o golpe nunca sai; base longa tipo antecipação
-  não é clampada); `pintaMapa` repinta a **ocupação** por frame (grade
+  não é clampada); `pintaMapa` repinta a **ocupação** no **topo de
+  `atualizar()`** — antes do herói e dos monstros, os dois leem a
+  pintura do frame (grade
   **8px** 48×34 — resolução menor que o anel de 11px; a do A* segue
   16px) e `celulaObst` consulta `colideObst` com o raio da entidade
   (sem memo entre frames = nunca stale entre mapas); `skillEfeito` aplicado
@@ -385,7 +394,8 @@
   (herói agu≥0,35, monstro ast≥0,4 — burros escorregam na colisão).
   Esquiva inimiga faz o golpe errar ('ESQUIVOU!') em `golpeCorpo` e na
   chegada do projétil (AoE/nuke acertam sempre). Exposições em `info()`:
-  `heroi.estado`/`heroi.agu`/`esquivando`. Fumaça seções 22-23.
+  `heroi.estado`/`heroi.agu`/`heroi.prof`/`esquivando`. Fumaça seções
+  22-23 (IA do herói/monstros) e 44-45 (flocking + Behavior Tree).
 - Efeitos visuais em `js/efeitos.js` (chamado por `Batalha` em
   `atualizar`/`desenhar`/`limparEfeitos`): **só primitivas que
   `testes/cena.js` rasteriza** — `fillRect`, `strokeRect` (com

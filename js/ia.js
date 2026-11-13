@@ -69,6 +69,7 @@ var IA = (function () {
     var s = h.stats;
     var agu = agudeza(s.atributos ? s.atributos.int : 8);
     ia.agu = agu;
+    ia.prof = profundidade(agu);       // profundidade vigente (sonda)
 
     if (!inimigos.length) {
       ia.estado = 'espera';
@@ -110,7 +111,11 @@ var IA = (function () {
     var dxAlvo = ia.alvo.x - h.x, dyAlvo = ia.alvo.y - h.y;
     var dAlvo = Math.sqrt(dxAlvo * dxAlvo + dyAlvo * dyAlvo);
 
-    // ---- estado: limiares contínuos escalados pela agudeza
+    // ---- estado: seletor de CAMADAS da Behavior Tree (spec ia-heroi)
+    // A raiz avalia as camadas de cima p/ baixo e para na primeira cujo
+    // gate satisfaz; a profundidade (INT) decide quantas camadas a
+    // árvore alcança. Os gates são os de sempre (prof 3 = agu >= 0,45;
+    // prof 2 = agu >= 0,35) — comportamento preservado por construção.
     var cl = null;
     if (typeof Personagem !== 'undefined') {
       var clId = (typeof Game !== 'undefined' && Game.personagem)
@@ -118,31 +123,19 @@ var IA = (function () {
       cl = Personagem.CLASSES[clId];
     }
     var longe = !!(cl && cl.distancia);
-    var estado;
-    if (agu >= 0.45 && hpPct < 0.25 + 0.15 * agu) {
-      estado = 'recuar';               // gênio abre mão do golpe para viver
-    } else if (longe && agu >= 0.35 &&
-               (ia.estado === 'kite' ? dAlvo < alc * 0.9 : dNearest < alc * 0.7)) {
-      // ranged: mantém a distância e atira em retirada (com histerese
-      // p/ não oscilar entre perseguir e kite na fronteira)
-      estado = 'kite';
-    } else if (dAlvo <= alc * 0.75) {
-      estado = 'combate';
-    } else {
-      estado = 'perseguir';
-    }
-    // burro cambaleia: com agudeza baixa troca de ideia sem motivo
-    if (estado !== 'recuar' && Math.random() < (0.55 - agu) * 0.45) {
-      estado = Math.random() < 0.5 ? 'perseguir' : 'combate';
-    }
+    var estado = avaliaCamadas({ agu: agu, hpPct: hpPct, alc: alc,
+                                 longe: longe, dAlvo: dAlvo,
+                                 dNearest: dNearest, prev: ia.estado });
     ia.estado = estado;
 
     // ---- destino por estado (o perseguir/combate segue o alvo vivo a
-    // cada frame — ver batalha.js; aqui ficam os pontos fixos)
+    // cada frame — ver batalha.js; aqui ficam os pontos de fuga — com
+    // EVASÃO DE CERCO: as bases geométricas de sempre, agora com olhos
+    // no influence map)
     if (estado === 'recuar') {
       var cx = perto ? sx / perto : dxAlvo, cy = perto ? sy / perto : dyAlvo;
-      var cd = Math.sqrt(cx * cx + cy * cy) || 1;
-      ia.destino = clampFuga(h.x - (cx / cd) * 90, h.y - (cy / cd) * 90);
+      if (cx === 0 && cy === 0) ia.destino = clampFuga(h.x, h.y);
+      else ia.destino = direcaoEvasao(h, Math.atan2(-cy, -cx), 90);
     } else if (estado === 'kite') {
       // recua até a faixa segura: ponto ~24px para longe do mais perto
       var mi = 0, d2m = Infinity;
@@ -152,11 +145,74 @@ var IA = (function () {
         if (dv < d2m) { d2m = dv; mi = i; }
       }
       var nx = h.x - inimigos[mi].x, ny = h.y - inimigos[mi].y;
-      var nd = Math.sqrt(nx * nx + ny * ny) || 1;
-      ia.destino = clampFuga(h.x + (nx / nd) * 24, h.y + (ny / nd) * 24);
+      if (nx === 0 && ny === 0) ia.destino = clampFuga(h.x, h.y);
+      else ia.destino = direcaoEvasao(h, Math.atan2(ny, nx), 24);
     } else {
       ia.destino = ia.alvo;             // segue vivo, atualizado no frame
     }
+  }
+
+  // ---- Behavior Tree: seletor de CAMADAS por prioridade --------------
+  // Raiz = seletor: avalia as camadas de cima p/ baixo e para na
+  // primeira cujo gate satisfaz. A PROFUNDIDADE (INT) decide quantas
+  // camadas a árvore alcança — e os limiares são os de sempre
+  // (0,35 e 0,45), preservando o comportamento medido por construção.
+  var CAMADAS = [
+    { nome: 'sobrevivencia', estado: 'recuar', prof: 3,
+      gate: function (c) { return c.hpPct < 0.25 + 0.15 * c.agu; } },
+    { nome: 'posicionamento', estado: 'kite', prof: 2,
+      gate: function (c) {
+        return c.longe && (c.prev === 'kite'
+          ? c.dAlvo < c.alc * 0.9
+          : c.dNearest < c.alc * 0.7); } },
+    { nome: 'combate', estado: 'combate', prof: 1,
+      gate: function (c) { return c.dAlvo <= c.alc * 0.75; } },
+    { nome: 'perseguicao', estado: 'perseguir', prof: 1,
+      gate: function () { return true; } }
+  ];
+
+  // profundidade da árvore pela agudeza: 1 = só movimento básico
+  // (combate/perseguição), 2 = + posicionamento (kite), 3 = completa
+  function profundidade(agu) {
+    return agu >= 0.45 ? 3 : (agu >= 0.35 ? 2 : 1);
+  }
+
+  function avaliaCamadas(c) {
+    var prof = profundidade(c.agu);
+    var estado = 'perseguir';
+    for (var i = 0; i < CAMADAS.length; i++) {
+      var cam = CAMADAS[i];
+      if (prof < cam.prof) continue;    // camada fora da profundidade
+      if (cam.gate(c)) { estado = cam.estado; break; }
+    }
+    // decorador de RUÍDO pós-seleção (o "cambaleia" do burro) — mesma
+    // fórmula de sempre: troca perseguir<->combate, nunca toca a
+    // camada de sobrevivência
+    if (estado !== 'recuar' && Math.random() < (0.55 - c.agu) * 0.45) {
+      estado = Math.random() < 0.5 ? 'perseguir' : 'combate';
+    }
+    return estado;
+  }
+
+  // ---- evasão de cerco (spec ia-heroi) -------------------------------
+  // 12 direções girando a partir da base (k=0 = direção de sempre),
+  // todas clampFuga; score = ocupação da célula (3×3) + 100 se o ponto
+  // cai em rocha. Menor score vence com `<` estrito → desempate
+  // determinístico no candidato base: mapa vazio = score 0 em todos =
+  // k=0 = exatamente o destino antigo.
+  var EVASAO_N = 12;
+
+  function direcaoEvasao(h, angBase, dist) {
+    var melhor = null, melhorS = Infinity;
+    for (var k = 0; k < EVASAO_N; k++) {
+      var ang = angBase + k * (Math.PI * 2 / EVASAO_N);
+      var pt = clampFuga(h.x + Math.cos(ang) * dist,
+                         h.y + Math.sin(ang) * dist);
+      var s = celulaOcup(pt.x, pt.y);
+      if (celulaObst(pt.x, pt.y, 6)) s += 100;
+      if (s < melhorS) { melhorS = s; melhor = pt; }
+    }
+    return melhor;
   }
 
   // --------------------------------------------------------- inimigos
@@ -506,6 +562,10 @@ var IA = (function () {
     celulaOcup: celulaOcup,
     celulaObst: celulaObst,
     separacao: separacao,
-    destinoCerco: destinoCerco
+    destinoCerco: destinoCerco,
+    CAMADAS: CAMADAS,
+    profundidade: profundidade,
+    avaliaCamadas: avaliaCamadas,
+    direcaoEvasao: direcaoEvasao
   };
 })();

@@ -133,8 +133,14 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    astúcia. **Seção 44** (vão do cerco = 81°) · gate 3× = **631
    confs** · sanidade: mapa 1 **31,8min** + 2×2400min **mapa 36 · nv
    3216/3280** (faixa 29-36 · 2600-3300) — sem rebalance.
-6. ⬜ **IA herói** (leva 2 de 2) — Behavior Tree por camadas de
-   prioridade (INT controla a profundidade da árvore).
+6. ✅ **`ia-heroi`** — **Behavior Tree** (seletor de `CAMADAS`, INT =
+   profundidade com os gates de sempre) + **evasão de cerco** (destino
+   de fuga por células livres — mapa vazio = destino antigo). Escopo e
+   prioridade com o mantenedor: **comportamento novo > progressão**
+   (maleável p/ dificuldades de endgame). **Seção 45** · gate 3× =
+   **645 confs** · sanidade: mapa 1 **31,5/33,5min** + 2×2400min
+   **mapa 38/36 · nv 3442/3244 · 0-3 mortes** (levemente à frente da
+   faixa — sem estol, sem intervenção). **Série de 6 levas concluída.**
 
 ## Backlog de ideias (sem compromisso)
 

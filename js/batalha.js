@@ -1501,9 +1501,6 @@ var Batalha = (function () {
   }
 
   function atualizaInimigos(dt) {
-    // influence map: ocupação repintada por frame antes do laço
-    // (spec ia-monstros — decideInimigo lê para escolher o slot)
-    IA.pintaMapa(inimigos);
     // de trás pra frente: o veneno pode matar e remover no meio do laço
     for (var i = inimigos.length - 1; i >= 0; i--) {
       var en = inimigos[i];
@@ -1654,6 +1651,10 @@ var Batalha = (function () {
     if (!heroi) return;
     atualizaCamera(dt);        // é apresentação: segue mesmo pausada
     if (pausada) return;
+    // influence map: ocupação repintada no TOPO do frame, antes do
+    // herói (atualizaHeroi) e dos monstros (atualizaInimigos) — os
+    // dois leem a pintura corrente (spec ia-heroi / ia-monstros)
+    IA.pintaMapa(inimigos);
     if (contaTempo) stat('tempo', dt);
 
     if (shake > 0) shake -= dt;
@@ -2027,7 +2028,9 @@ var Batalha = (function () {
                y: Math.round(heroi ? heroi.y : 0),
                estado: (heroi && heroi.ia) ? heroi.ia.estado : null,
                agu: (heroi && heroi.ia && typeof heroi.ia.agu === 'number')
-                 ? Math.round(heroi.ia.agu * 100) / 100 : 0 },
+                 ? Math.round(heroi.ia.agu * 100) / 100 : 0,
+               prof: (heroi && heroi.ia && typeof heroi.ia.prof === 'number')
+                 ? heroi.ia.prof : 0 },
       inimigos: inimigos.length,
       // diagnóstico p/ teste (seções 32): distância do inimigo mais
       // perto, se o golpe está em animação e o destino de fuga atual
