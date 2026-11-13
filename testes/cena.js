@@ -377,5 +377,16 @@ salvar('tela-universo.png');
 sandbox.Game.setScene('jogo');
 frame(2);
 
+// árvore de skills: aba Classe com as 8 skills (grade 2×4) e um ramo
+// escolhido — spec arvore-skills
+sandbox.Game.personagem.classe = 'guerreiro';
+sandbox.Game.personagem.nivel = 400;
+sandbox.Game.personagem.loadout = null;
+sandbox.Game.personagem.ramos = { 'golpe-bravo': 'largada' };
+clique(585 + dxL, 50);                  // aba Classe
+frame(4);
+salvar('tela-arvore.png');
+sandbox.Game.personagem.ramos = null;
+
 console.log('cena atual: ' + sandbox.Game.cena);
 console.log('batalha: ' + JSON.stringify(sandbox.Batalha.info()));

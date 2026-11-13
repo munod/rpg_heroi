@@ -428,7 +428,8 @@ var Gestao = (function () {
   }
 
   // Alterna uma skill no loadout: começa do automático na primeira troca;
-  // mínimo 1 e máximo Skills.LIMITE (recusas com toast).
+  // mínimo 1 e máximo Skills.limite(nivel) — 3/4/5 (spec arvore-skills;
+  // recusas com toast).
   function alternarSkill(p, id) {
     var sel = Array.isArray(p.loadout) ? p.loadout.slice()
       : Skills.carregadas(p).map(function (s) { return s.id; });
@@ -440,17 +441,48 @@ var Gestao = (function () {
       }
       sel.splice(i, 1);
     } else {
-      if (sel.length >= Skills.LIMITE) {
-        Gravacao.msg('Máximo de ' + Skills.LIMITE + ' skills ativas');
+      var lim = Skills.limite(p.nivel);
+      if (sel.length >= lim) {
+        Gravacao.msg('Máximo de ' + lim + ' skills ativas');
         return;
       }
       sel.push(id);
     }
     p.loadout = sel;
-    Gravacao.msg('Skills ativas: ' + sel.length + '/' + Skills.LIMITE);
+    Gravacao.msg('Skills ativas: ' + sel.length + '/' +
+      Skills.limite(p.nivel));
   }
 
-  // Aba Classe: grade 2×2 das classes + loadout de skills (máx 3) +
+  // ---- ramos (spec arvore-skills): ciclo base → A → B → base -------
+  function nomeRamo(sk, ramoId) {
+    if (!Array.isArray(sk.ramos)) return '';
+    for (var i = 0; i < sk.ramos.length; i++) {
+      if (sk.ramos[i].id === ramoId) return sk.ramos[i].nome;
+    }
+    return '';
+  }
+
+  function alternaRamo(p, sk) {
+    var prox = Skills.cicloRamo(p, sk);
+    Gravacao.msg('Ramo de ' + sk.nome + ': ' +
+      (prox ? nomeRamo(sk, prox) : 'base neutra'));
+  }
+
+  function dicaRamo(sk, ramo) {
+    var out = [['Ramo da skill: ' + sk.nome, '#e8c86a']];
+    if (Array.isArray(sk.ramos)) {
+      for (var i = 0; i < sk.ramos.length; i++) {
+        var r = sk.ramos[i];
+        out.push([r.nome + ': ' + r.efeito + (ramo === r.id ? '  [ATIVO]' : ''),
+          ramo === r.id ? '#e8c86a' : '#9a90b8']);
+      }
+    }
+    out.push(['Sem escolha = base neutra (valores originais)', '#6f678a']);
+    return out;
+  }
+
+  // Aba Classe: grade 2×2 das classes + loadout de skills (máx
+  // Skills.limite = 3/4/5 por nível) em GRADE 2×4 com botão de ramo +
   // keystone (efeito e custo no rótulo). Sem descrição/próxima skill:
   // bônus aparecem na aba Atributos e o nível de cada skill na própria
   // linha. Linhas de 24px (alvo de toque do celular).
@@ -471,28 +503,44 @@ var Gestao = (function () {
       }
     });
 
-    // loadout: as 5 skills da classe — ativas em dourado, bloqueadas
-    // travadas no nível
+    // loadout: as 8 skills da classe em GRADE 2×4 (coluna única não
+    // cabe — spec arvore-skills) — ativas em dourado, bloqueadas com o
+    // nível de desbloqueio; cada linha tem o toggle (110px) e o botão
+    // de ramo (52px: base → A → B → base)
     var ativasIds = Skills.carregadas(p).map(function (s) { return s.id; });
-    UI.text('Skills ativas (máx ' + Skills.LIMITE + ')', 416, 168,
+    var lim = Skills.limite(p.nivel);
+    UI.text('Skills ativas (máx ' + lim + ')', 416, 168,
       { color: '#9a90b8', font: '13px monospace' });
-    UI.text(ativasIds.length + '/' + Skills.LIMITE, 752, 168,
+    UI.text(ativasIds.length + '/' + lim, 752, 168,
       { align: 'right', color: '#e8c86a', font: '13px monospace' });
     Skills.daClasse(p.classe).forEach(function (sk, i) {
-      var y = 178 + i * 25;
+      var x = 416 + (i % 2) * 174;        // 2 colunas de 166 (110+4+52)
+      var y = 178 + Math.floor(i / 2) * 29;  // 4 linhas: 178..289
       var aberta = sk.nivel <= p.nivel;
       var on = aberta && ativasIds.indexOf(sk.id) >= 0;
-      if (UI.button(416, y, 340, 24,
-        sk.nome + ' (nv ' + sk.nivel + ')', {
+      var ramo = Skills.ramoDe(p, sk);
+      if (UI.button(x, y, 110, 24, sk.nome, {
           disabled: !aberta,
           ativo: on,
           align: 'left',
           color: on ? '#e8c86a' : (aberta ? '#f2eef8' : '#6f678a'),
-          font: '13px monospace'
+          font: '10px monospace'
         })) {
         alternarSkill(p, sk.id);
       }
-      UI.dica({ x: 416, y: y, w: 340, h: 24 }, Skills.dicas(sk));
+      UI.dica({ x: x, y: y, w: 110, h: 24 }, Skills.dicas(sk, ramo));
+      // ramo: bloqueada mostra o nível; sem escolha = "Base"
+      var rot = !aberta ? ('nv ' + sk.nivel)
+        : (ramo ? nomeRamo(sk, ramo) : 'Base');
+      if (UI.button(x + 114, y, 52, 24, rot, {
+          disabled: !aberta,
+          ativo: !!ramo,
+          color: ramo ? '#e8c86a' : '#9a90b8',
+          font: '10px monospace'
+        })) {
+        alternaRamo(p, sk);
+      }
+      UI.dica({ x: x + 114, y: y, w: 52, h: 24 }, dicaRamo(sk, ramo));
     });
 
     // keystone da classe: efeito e custo no rótulo (11px p/ caber)
@@ -716,7 +764,8 @@ var Gestao = (function () {
         UI.text(aberta ? txtCooldown(sk, p, agu) : 'nv ' + sk.nivel,
           752, y, { align: 'right',
             color: aberta ? '#e8c86a' : '#6f678a', font: '13px monospace' });
-        UI.dica({ x: 416, y: y - 7, w: 340, h: 14 }, Skills.dicas(sk));
+        UI.dica({ x: 416, y: y - 7, w: 340, h: 14 },
+          Skills.dicas(sk, Skills.ramoDe(p, sk)));
       });
     });
 

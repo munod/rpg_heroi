@@ -156,6 +156,7 @@ var Personagem = (function () {
       bolsa: [],
       ouro: 0,              // moeda: abates, venda e sucata de itens
       loadout: null,        // skills escolhidas (null = automático)
+      ramos: null,          // ramos escolhidos {skillId: ramoId} (null = base neutra)
       trava: { arma: false, armadura: false },  // slot fixado (não auto-troca)
       autoApr: false,       // auto-aprimorar (A+) itens equipados
       keystoneLib: false,   // keystone desbloqueado (compra única)
@@ -605,16 +606,36 @@ var Personagem = (function () {
     return out;
   }
 
-  // loadout: até Skills.LIMITE ids (espelho do 3 — skills.js não é
-  // carregado pelos testes de sprite); lixo/ids alheios viram null
-  // (automático) e o fallback por classe está em Skills.carregadas.
+  // loadout: até Skills.LIMITE ids (espelho do 5 — skills.js não é
+  // carregado pelos testes de sprite; a FATIA POR NÍVEL 3/4/5 fica em
+  // Skills.limite); lixo/ids alheios viram null (automático) e o
+  // fallback por classe está em Skills.carregadas.
   function normalizaLoadout(l) {
     if (!Array.isArray(l)) return null;
     var out = [];
-    for (var i = 0; i < l.length && out.length < 3; i++) {
+    for (var i = 0; i < l.length && out.length < 5; i++) {
       if (typeof l[i] === 'string' && l[i]) out.push(l[i].slice(0, 24));
     }
     return out.length ? out : null;
+  }
+
+  // ramos escolhidos {skillId: ramoId} (spec arvore-skills): só strings
+  // válidas (a validação de pertencer à árvore é de Skills.carregadas,
+  // como o loadout); lixo vira null = base neutra. Teto de 32 entradas
+  // p/ save editado não virar bolha.
+  function normalizaRamos(r) {
+    if (!r || typeof r !== 'object') return null;
+    var out = null, n = 0;
+    for (var k in r) {
+      if (!Object.prototype.hasOwnProperty.call(r, k)) continue;
+      if (n >= 32) break;
+      if (typeof k === 'string' && k && typeof r[k] === 'string' && r[k]) {
+        if (!out) out = {};
+        out[k.slice(0, 24)] = r[k].slice(0, 24);
+        n++;
+      }
+    }
+    return out;
   }
 
   function num(v, min, padrao) {
@@ -651,6 +672,7 @@ var Personagem = (function () {
       bolsa: normalizaBolsa(p.bolsa),
       ouro: Math.min(num(p.ouro, 0, 0), OURO_MAX),
       loadout: normalizaLoadout(p.loadout),
+      ramos: normalizaRamos(p.ramos),
       trava: {
         arma: !!(p.trava && p.trava.arma),
         armadura: !!(p.trava && p.trava.armadura)

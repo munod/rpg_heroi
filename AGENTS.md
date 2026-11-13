@@ -245,10 +245,25 @@
 - Gestão tem 5 abas (Atrib/Apar/Classe/Itens/Stats): botões de 66px com
   passo 70 a partir de x=412, y=40 — centros 445/515/585/655/725 em y=54;
   testes que clicam abas dependem dessa grade.
-- Skills automáticas em `js/skills.js` (procs por classe; 5 skills em
-  5/15/25/35/45) com **loadout** (`Skills.LIMITE = 3` ativas;
-  `Skills.carregadas(p)` = desbloqueadas ∩ `p.loadout`, automático =
-  3 mais avançadas; `Batalha` lê só ela). **Keystones** (1 por classe,
+- Skills automáticas em `js/skills.js` (procs por classe; **8 skills**
+  em **5/15/25/35/45/60/150/400**) com **loadout escalonado**
+  (`Skills.limite(nivel)` = 3 → **4 no nv 50** → **5 no nv 150**;
+  `Skills.LIMITE = 5` é o teto ABSOLUTO (espelho do
+  `normalizaLoadout`); `Skills.carregadas(p)` = desbloqueadas ∩
+  `p.loadout` **fatiada no limite atual**, automático = as `limite`
+  mais avançadas; `Batalha` lê só ela). **RAMOS** (árvore literal,
+  spec `arvore-skills`): toda skill tem 2 variantes
+  (`ramos:[{id,nome,efeito,mods}]`) com **mods numéricos** (fatores
+  × campos) — escolha em `p.ramos` (ciclo **base→A→B**, **base
+  neutra sem escolha** = valores originais intactos — quem não mexe
+  joga o baseline medido); `Skills.comRamo` faz o merge (**`aCada`
+  arredonda ≥1** — o proc `area` usa `%`; **`gatilho` proibido** nos
+  mods) e `carregadas` devolve as skills PRONTAS — **a batalha não
+  muda** (lê campos). Sentido buff/nerf em `Skills.SENTIDO` (todo
+  ramo mistura os dois — asserção na 43). UI na aba Classe: **grade
+  2×4** (toggle 110 + ramo 52; linha `178+floor(i/2)*29`, coluna
+  `416+(i%2)*174` — coordenadas viram contrato de teste), tooltips
+  com os ramos, aviso no level-up quando o teto sobe (nv 50/150). **Keystones** (1 por classe,
   tradeoff) vivem em `personagem.js` junto do `status` (fonte única:
   `KEYSTONES`, compra nv 30 × 200, respec 10 — sem espelho). Gatilhos em
   `Batalha` — `golpeia()` conta as 'area' e

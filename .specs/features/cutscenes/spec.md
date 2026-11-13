@@ -1,6 +1,7 @@
 # Spec: Cutscenes entre mundos — mapa do universo, narração e eventos
 
-Status: **em execução** · Data: 2026-11-11 · Iniciativa: série de
+Status: **concluída** (gate verde 3× = 585 confs, ritmo 60min na
+faixa: mapa 1 em 31,5min) · Data: 2026-11-11 · Iniciativa: série de
 implementações (4ª leva — ROADMAP `Cutscenes entre mundos`).
 
 Pedido do mantenedor: *"cutscenes entre mundos — mapa do universo com os

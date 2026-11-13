@@ -118,8 +118,13 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    seleção). Batalha nunca pausa (padrão vitória). **Seção 42** ·
    gate 3× = **585 confs** · sanidade `ritmo 60`: mapa 1 em 31,5min
    (alvo intacto).
-4. ⬜ **Árvore de skills maior** — o jogador escolhe quais usar
-   (amplia o loadout de 3).
+4. ✅ **`arvore-skills`** — 3 frentes confirmadas: **8 skills por
+   classe** (12 novas, níveis 60/150/400), **ramos literais** (2
+   variantes por skill, sidegrade obrigatório, base neutra sem
+   escolha) e **loadout escalonado** 3 → 4 (nv 50) → 5 (nv 150). UI:
+   grade 2×4 com botão de ramo. **Seção 43** · gate 3× = **615
+   confs** · sanidade 2×2400min: **mapa 36 · nv 3247 · 1 morte**
+   (faixa 29-36/2600-3300) — sem rebalance.
 5. ⬜ **IA monstros** (leva 1 de 2) — Flocking + influence map
    (matilha que cerca; resolve as ondas ince fáceis).
 6. ⬜ **IA herói** (leva 2 de 2) — Behavior Tree por camadas de

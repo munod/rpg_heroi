@@ -699,6 +699,13 @@ var Batalha = (function () {
         numero(heroi ? heroi.x : MW / 2, (heroi ? heroi.y : MH / 2) - 46,
           nova.nome + ' desbloqueada!', nova.cor, true);
       }
+      // teto do loadout que subiu (spec arvore-skills: 3 → 4 no nv 50,
+      // → 5 no nv 150) — o jogador fica sabendo que o slot abriu
+      var limAqui = Skills.limite(p.nivel);
+      if (limAqui > Skills.limite(p.nivel - 1)) {
+        numero(heroi ? heroi.x : MW / 2, (heroi ? heroi.y : MH / 2) - 60,
+          'Loadout: ' + limAqui + ' skills ativas!', '#8ce08c', true);
+      }
     }
     // chegou ao teto neste lote: sobra do último nível é descartada
     if (p.nivel >= Personagem.NIVEL_MAX) p.xp = 0;

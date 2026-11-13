@@ -12,6 +12,29 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Árvore de skills maior: 8 skills, ramos e loadout escalonado
+  (spec `arvore-skills`)** — 3 frentes confirmadas com o mantenedor:
+  **(1)** 5 → **8 skills por classe** (12 novas reusando os 6 tipos de
+  gatilho; desbloqueio em **60/150/400** além de 5/15/25/35/45 — a
+  árvore rende novidade muito além dos 20min atuais); **(2)**
+  **ramos (árvore literal)**: toda skill tem **2 variantes com mods
+  numéricos** — **sidegrade obrigatório** (todo ramo mistura buff e
+  nerf, asserção de dados com a tabela `SENTIDO`; `gatilho` proibido
+  nos mods por polaridade ambígua), escolha por skill em `p.ramos`
+  (ciclo **base → A → B → base**; **sem escolha = base neutra
+  intacta**, então o baseline medido não muda para quem não mexe);
+  o merge vive em `Skills.comRamo` (`aCada` arredonda ≥1 — o proc
+  `area` usa `%`) e `carregadas` devolve as skills **prontas** — **a
+  batalha não mudou**; **(3)** **loadout escala com o nível**:
+  `Skills.limite(nivel)` 3 → **4 no nv 50** → **5 no nv 150** (teto
+  absoluto `LIMITE = 5`, espelho do `normalizaLoadout`) com aviso no
+  level-up. UI da aba Classe vira **grade 2×4** (toggle + botão de
+  ramo por skill; tooltips mostram os dois ramos e os números do
+  estado atual). Teste: **seção 43 (30 confs)** + screenshot
+  `tela-arvore.png`; seções 16/25 atualizadas (contrato 5→8, teto de
+  migração 5). **Sanidade**: 2 runs de 2400min → **mapa 36 · nv 3247
+  · 1 morte**, dentro da faixa de referência (mapa 29-36 · nv
+  2600-3300) — sem rebalance.
 - **Cutscenes entre mundos: mapa do universo, narração e eventos
   (spec `cutscenes`)** — 3 frentes confirmadas com o mantenedor:
   **(1)** ao cruzar fronteira de mundo na campanha (mapas 10→11 …

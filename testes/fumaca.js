@@ -898,22 +898,26 @@ console.log('16) skills automáticas (procs por classe)');
        Skills.ativas('mago', 5).length === 1 &&
        Skills.ativas('mago', 15).length === 2 &&
        Skills.ativas('mago', 25).length === 3 &&
-       Skills.ativas('mago', 45).length === 5,
-    'skills desbloqueiam nos níveis 5, 15, 25, 35 e 45');
+       Skills.ativas('mago', 45).length === 5 &&
+       Skills.ativas('mago', 60).length === 6 &&
+       Skills.ativas('mago', 150).length === 7 &&
+       Skills.ativas('mago', 400).length === 8,
+    'skills desbloqueiam nos níveis 5, 15, 25, 35, 45, 60, 150 e 400');
   conf(!!Skills.desbloqueada('mago', 5) &&
        Skills.desbloqueada('mago', 6) === null &&
        Skills.desbloqueada('ladino', 5).tipo === 'veneno',
     'desbloqueada devolve a skill exata do nível');
   conf(['guerreiro', 'mago', 'ladino', 'clerigo']
-       .every(c => Skills.daClasse(c).length === 5),
-    'toda classe tem 5 skills');
+       .every(c => Skills.daClasse(c).length === 8),
+    'toda classe tem 8 skills');
   conf(['guerreiro', 'mago', 'ladino']
        .every(c => Skills.daClasse(c).some(s => s.tipo === 'mobilidade')) &&
        Skills.daClasse('clerigo').some(s => s.tipo === 'medo'),
     'cada classe tem a skill de fuga (mobilidade) ou medo (clérigo)');
   conf(Skills.proxima('mago', 4).nivel === 5 &&
-       Skills.proxima('mago', 45) === null,
-    'proxima aponta a próxima skill (ou null com todas)');
+       Skills.proxima('mago', 45).nivel === 60 &&
+       Skills.proxima('mago', 400) === null,
+    'proxima aponta a próxima skill (nv 45 → nv 60; null com todas)');
 
   // --- aviso ao subir de nível (mago: força o nível 4 e espera o kill)
   p.classe = 'mago';
@@ -1761,11 +1765,11 @@ console.log('25) gestão de skills: loadout e keystone');
 
   // --- migração dos campos de build
   const mig = Personagem.importarJSON(
-    '{"nome":"K","nivel":45,"loadout":["a","b","c","d"],' +
+    '{"nome":"K","nivel":45,"loadout":["a","b","c","d","e","f"],' +
     '"keystoneLib":"x","keystoneOn":1}');
-  conf(Array.isArray(mig.loadout) && mig.loadout.length === 3 &&
+  conf(Array.isArray(mig.loadout) && mig.loadout.length === 5 &&
        mig.keystoneLib === false && mig.keystoneOn === false,
-    'migração: loadout truncado no teto e keystone booleanizado');
+    'migração: loadout truncado no teto 5 e keystone booleanizado');
 
   // --- efeito exato de cada keystone (liga e compara com desligado)
   for (const ks of Personagem.KEYSTONES) {
@@ -1847,24 +1851,26 @@ console.log('25) gestão de skills: loadout e keystone');
   conf(p.classe === 'mago' && p.loadout === null,
     'trocar classe na grade zera o loadout (automático)');
   p.loadout = ['bola-fogo'];
-  clique(584, 265);                // linha Meteoro (i=3: y=253..277)
+  // grade 2×4 (spec arvore-skills): linha = 178 + floor(i/2)*29,
+  // coluna = 416 + (i%2)*174, toggle de 110px
+  clique(645, 219);                // Meteoro (i=3: col1 linha1)
   frame(2);
   conf(p.loadout.length === 2 && p.loadout.indexOf('meteoro') >= 0,
     'clicar na skill liga no loadout');
-  clique(584, 290);                // linha Rajada (i=4: y=278..302)
+  clique(471, 248);                // Rajada (i=4: col0 linha2)
   frame(2);
-  clique(584, 215);                // linha Nova (i=1: y=203..227) com 3/3
+  clique(645, 190);                // Nova (i=1: col1 linha0) com 3/3
   frame(2);
   conf(p.loadout.length === 3,
     'loadout respeita o máximo de 3');
   conf((jogoCanvas._textos = jogoCanvas._textos || [])
        .some(t => t.indexOf('Máximo de 3') >= 0),
     'ultrapassar o máximo recusa com aviso');
-  clique(584, 190);                // linha Bola (i=0): sai -> 2/3
+  clique(471, 190);                // Bola (i=0: col0 linha0): sai -> 2/3
   frame(2);
-  clique(584, 265);                // linha Meteoro (i=3): sai -> 1/3
+  clique(645, 219);                // Meteoro (i=3): sai -> 1/3
   frame(2);
-  clique(584, 290);                // linha Rajada (i=4): última ativa
+  clique(471, 248);                // Rajada (i=4): última ativa
   frame(2);
   conf(p.loadout.length === 1,
     'loadout mantém o mínimo de 1 skill');
@@ -4275,6 +4281,207 @@ console.log('42) cutscenes: fronteiras de mundo, eventos e mapa do universo');
   clique(Math.round(Game.W / 2), 358);   // botão Voltar (W/2-70,340,140,36)
   frame(1);
   conf(Game.cena === 'selecao', 'Voltar retorna à seleção');
+}
+
+console.log('43) árvore de skills: 8 por classe, ramos e loadout escalonado');
+{
+  const Skills = sandbox.Skills;
+  const Personagem = sandbox.Personagem;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // cena de jogo limpa (a 42 terminou na seleção)
+  Salvar.salvarEstado(p.id, 1, Date.now(), false, 1);
+  Game.setScene('jogo');
+  frame(2);
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- 1) árvore: 8 skills/classe, níveis 5..400 na ordem
+  const NVS = [5, 15, 25, 35, 45, 60, 150, 400];
+  conf(['guerreiro', 'mago', 'ladino', 'clerigo'].every(c => {
+    const d = Skills.daClasse(c);
+    return d.length === 8 && d.every((s, i) => s.nivel === NVS[i]);
+  }), 'toda classe tem 8 skills nos níveis 5, 15, 25, 35, 45, 60, 150, 400');
+  conf(Skills.proxima('mago', 45).nivel === 60 &&
+       Skills.proxima('mago', 400) === null,
+    'proxima(45) aponta a nv 60; null com todas desbloqueadas');
+
+  // --- 2) as novas abrem os tipos que faltavam em cada classe
+  const tipos = c => new Set(Skills.daClasse(c).map(s => s.tipo));
+  conf(['cura', 'medo'].every(t => tipos('guerreiro').has(t)) &&
+       ['veneno', 'medo', 'cura'].every(t => tipos('mago').has(t)) &&
+       ['cura', 'medo'].every(t => tipos('ladino').has(t)) &&
+       ['mobilidade', 'veneno'].every(t => tipos('clerigo').has(t)),
+    'novas skills preenchem os tipos que faltavam por classe');
+  conf(['guerreiro', 'mago', 'ladino', 'clerigo']
+       .every(c => tipos(c).size >= 5),
+    'toda classe cobre ao menos 5 dos 6 tipos');
+
+  // --- 3) loadout escalonado: 3 → 4 (nv 50) → 5 (nv 150)
+  conf([1, 49, 50, 149, 150, 9000].map(n => Skills.limite(n))
+       .join(',') === '3,3,4,4,5,5' && Skills.LIMITE === 5,
+    'limite(nivel): 3 → 4 no nv 50 → 5 no nv 150 (teto absoluto 5)');
+
+  // --- 4) carregadas: automático acompanha o teto; seleção é fatiada
+  p.classe = 'mago';
+  p.nivel = 45;
+  p.loadout = null;
+  p.ramos = null;
+  conf(Skills.carregadas(p).length === 3,
+    'auto nv45 = 3 (idêntico ao baseline medido)');
+  p.nivel = 200;
+  const auto5 = Skills.carregadas(p);
+  conf(auto5.length === 5 && auto5[0].nivel === 25,
+    'auto nv200 = 5 (as mais avançadas desbloqueadas)');
+  p.loadout = ['bola-fogo', 'nova-arcano', 'teleporte', 'meteoro',
+    'rajada-arcana', 'toxina-arcano'];
+  conf(Skills.carregadas(p).length === 5,
+    'seleção de 6 ids fatia no limite atual (5)');
+  p.nivel = 45;
+  conf(Skills.carregadas(p).length === 3,
+    'a mesma seleção no nv45 fatia em 3');
+  p.loadout = null;
+
+  // --- 5) ramos: dados — 2 por skill, campos permitidos, sidegrade
+  const CAMPOS = Object.keys(Skills.SENTIDO);
+  let ramOk = true, sideOk = true, nomesOk = true;
+  for (const sk of Skills.LISTA) {
+    if (!Array.isArray(sk.ramos) || sk.ramos.length !== 2) {
+      ramOk = false;
+      continue;
+    }
+    for (const r of sk.ramos) {
+      if (!r.nome || r.nome.length > 7) nomesOk = false;
+      let buff = 0, nerf = 0;
+      for (const k in r.mods) {
+        if (CAMPOS.indexOf(k) < 0) { ramOk = false; continue; }
+        const s = Skills.SENTIDO[k] * (r.mods[k] - 1);
+        if (s > 0) buff++;
+        else if (s < 0) nerf++;
+      }
+      if (!buff || !nerf) sideOk = false;
+    }
+  }
+  conf(ramOk, 'toda skill tem 2 ramos com mods só em campos permitidos');
+  conf(sideOk, 'todo ramo é sidegrade (≥1 buff e ≥1 nerf, nunca buff puro)');
+  conf(nomesOk, 'nomes de ramo têm ≤7 chars (cabe no botão de 52px)');
+
+  // --- 6) comRamo: base neutra, merge e aCada inteiro
+  const bravo = Skills.daClasse('guerreiro')[0];   // aCada 7, mult 1.2
+  conf(Skills.comRamo(bravo, null) === bravo,
+    'sem escolha = base neutra (a própria skill, valores intactos)');
+  conf(bravo.aCada === 7 && bravo.mult === 1.2,
+    'a base NÃO é mutada pelo merge');
+  const largada = Skills.comRamo(bravo, 'largada');  // ×1.4 aCada, ×1.35 mult
+  conf(largada.aCada === 10 && Math.abs(largada.mult - 1.62) < 1e-9 &&
+       largada.ramo === 'largada',
+    'comRamo aplica os fatores e arredonda aCada (7 → 9.8 → 10)');
+  conf(Skills.comRamo(bravo, 'ramo-inexistente') === bravo,
+    'ramo inválido cai na base neutra');
+
+  // --- 7) ciclo: base → A → B → base (e limpa p.ramos)
+  p.ramos = null;
+  const ciclo = [];
+  ciclo.push(Skills.cicloRamo(p, bravo));
+  ciclo.push(Skills.cicloRamo(p, bravo));
+  ciclo.push(Skills.cicloRamo(p, bravo));
+  conf(ciclo.join(',') === 'largada,pressa,' && p.ramos === null,
+    'ciclo do ramo: base → A → B → base (p.ramos volta a null)');
+
+  // --- 8) carregadas mergeia o ramo escolhido
+  p.classe = 'mago';
+  p.nivel = 200;
+  p.loadout = ['bola-fogo'];
+  p.ramos = { 'bola-fogo': 'chama' };   // ×1.5 mult, ×1.35 intervalo
+  const chama = Skills.carregadas(p)[0];
+  conf(chama.ramo === 'chama' &&
+       Math.abs(chama.mult - 2.7) < 1e-9 &&
+       Math.abs(chama.intervalo - 6.075) < 1e-9,
+    'carregadas mergeia o ramo ativo (chama: ×1.5 dano, ×1.35 recarga)');
+  p.loadout = null;
+  p.ramos = null;
+
+  // --- 9) normalização do save (personagem — sem depender de skills)
+  const mig = Personagem.normalizar(JSON.parse(JSON.stringify({
+    nome: 'R', nivel: 10,
+    ramos: { 'bola-fogo': 'chama', 'x': 5, '': 'y', 'mal': 6 }
+  })));
+  conf(mig.ramos && mig.ramos['bola-fogo'] === 'chama' &&
+       Object.keys(mig.ramos).length === 1,
+    'ramos no save: só pares de strings sobrevivem (lixo some)');
+  conf(Personagem.normalizar({}).ramos === null,
+    'save novo nasce sem ramos (base neutra)');
+
+  // --- 10) level-up anuncia o teto que subiu (nv 50 → 4 skills)
+  p.classe = 'mago';
+  p.nivel = 49;
+  p.xpProx = Personagem.custoProximo(49);
+  p.xp = p.xpProx - 1;
+  p.atributos.for = 50;
+  p.atributos.int = 50;
+  p.atributos.con = 200;
+  Batalha.restaurarOnda(3);
+  jogoCanvas._textos = [];
+  let subiu = false;
+  for (let i = 0; i < 3000 && !subiu; i++) {
+    frame(1);
+    subiu = (jogoCanvas._textos || [])
+      .some(t => t.indexOf('Loadout: 4 skills') >= 0);
+  }
+  conf(subiu && p.nivel === 50,
+    'level-up do nv 50 anuncia o teto novo do loadout (4 skills)');
+
+  // --- 11) UI da aba Classe: grade 2×4 + botões de ramo
+  p.classe = 'guerreiro';
+  p.nivel = 400;
+  p.loadout = null;
+  p.ramos = null;
+  clique(585, 50);                        // aba Classe
+  frame(2);
+  jogoCanvas._textos = [];
+  frame(1);
+  const t43 = jogoCanvas._textos;
+  conf(['Golpe Embravecido', 'Ímpeto Vital', 'Grito de Guerra']
+       .every(n => t43.some(x => x.indexOf(n) >= 0)),
+    'grade 2×4 desenha as 8 skills (1ª, 6ª e 8ª)');
+  conf(t43.some(x => x === 'Base'),
+    'ramo sem escolha mostra "Base" no botão');
+  conf(t43.some(x => x.indexOf('máx 5') >= 0),
+    'cabeçalho usa o teto do nível (máx 5 no nv 400)');
+
+  // ciclo por clique no botão de ramo (530..582, 178..202)
+  clique(556, 190);
+  frame(1);
+  conf(p.ramos && p.ramos['golpe-bravo'] === 'largada',
+    'clique no ramo: base → A (largada)');
+  clique(556, 190);
+  frame(1);
+  conf(p.ramos && p.ramos['golpe-bravo'] === 'pressa',
+    'clique no ramo: A → B (pressa)');
+  clique(556, 190);
+  frame(1);
+  conf(p.ramos === null, 'clique no ramo: B → base (limpa p.ramos)');
+
+  // tooltip da skill (dwell ~0,4s): hover no toggle da 1ª skill
+  clique(471, 190);                       // toggle — também alterna o loadout
+  jogoCanvas._textos = [];
+  for (let i = 0; i < 26; i++) frame(1);
+  const tt = jogoCanvas._textos;
+  conf(tt.some(x => x.indexOf('Base neutra') >= 0),
+    'tooltip da skill mostra a base neutra como opção');
+  conf(tt.some(x => x.indexOf('Largada:') >= 0),
+    'tooltip lista o ramo A com o efeito');
+
+  // tooltip do botão de ramo
+  clique(556, 190);                       // volta a ser largada (base → A)
+  jogoCanvas._textos = [];
+  for (let i = 0; i < 26; i++) frame(1);
+  conf(jogoCanvas._textos
+       .some(x => x.indexOf('Ramo da skill: Golpe Embravecido') >= 0),
+    'tooltip do ramo descreve os dois ramos da skill');
+
+  p.loadout = null;
+  p.ramos = null;
 }
 
 console.log('');

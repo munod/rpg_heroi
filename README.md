@@ -53,8 +53,11 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
 - Ele **regenera vida**: **2 por segundo** sempre e **4% do máximo por
   segundo** enquanto não apanha — segurar a fronteira é questão de
   build e gestão.
-- **Skills automáticas** — cada classe tem **5 skills** que desbloqueiam
-  nos níveis **5, 15, 25, 35 e 45** e disparam sozinhas, sem botão:
+- **Skills automáticas** — cada classe tem **8 skills** que desbloqueiam
+  nos níveis **5, 15, 25, 35, 45, 60, 150 e 400** e disparam sozinhas,
+  sem botão. O **loadout escala com o nível** (3 ativas → **4 no nv
+  50** → **5 no nv 150**) e cada skill tem **2 ramos** para escolher
+  (variantes com tradeoff — sem escolha fica a base neutra):
   varredura do guerreiro (a cada N golpes), bola de fogo/nova arcana do
   mago, veneno contínuo do ladino, bênção/castigo sagrado do clérigo — e
   **skills de fuga**, disparadas quando os inimigos se fecham:
@@ -146,7 +149,7 @@ js/
                     (mundo()/noMundo() — 10×10, ciclo no infinito)
   perlin.js         Perlin Noise com semente do mapa (cenários procedurais)
   itens.js          drops: armas/armaduras, bolsa e auto-equip
-  skills.js         skills automáticas por classe (procs, sem botão)
+  skills.js         skills por classe (procs, ramos e loadout escalonado)
   efeitos.js        efeitos visuais das skills (missis, cortes, motes)
   ia.js             IA tática: decisões ponderadas por INT/astúcia + A*
   eventos.js        eventos aleatórios (Açougueiro, gatuno) — rolagens puras
@@ -209,7 +212,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 572 asserções: sprites, status, UI, idle, toque, ranking, mundos, cutscenes
+node testes/fumaca.js     # 602 asserções: sprites, status, UI, idle, toque, ranking, mundos, cutscenes, árvore de skills
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -236,7 +239,8 @@ legado, **drops com auto-equip/bolsa** e a **aba Itens** equipando no clique,
 o **fixar slot** (`[x]` impede a troca automática) e o **Auto A+**
 (aprimoramento automático opcional),
 as **skills com os 6 tipos de proc** (área, nuke, veneno, cura, mobilidade
-e medo) — **5 por classe**, com aviso de desbloqueio, o **ataque à
+e medo) — **8 por classe**, com **ramos** (variantes por skill) e
+**loadout escalonado** (3 → 5 com o nível), com aviso de desbloqueio, o **ataque à
 distância** do mago/ladino/clérigo (projétil do golpe básico) e os
 **gatilhos de fuga** (Empurrão, Teleporte, Esquiva e Amedronta quando o
 bando se fecha) — tudo com **efeitos visuais** (projétil teleguiado, arco

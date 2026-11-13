@@ -307,6 +307,20 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   momento, não estado — fechar no meio perde a narração, o progresso
   não).
 
+- **Ramos: base NEUTRA como default, não o ramo A** (spec
+  `arvore-skills`) — se o ramo A viesse por padrão, todo jogador (e o
+  `ritmo.js`) jogaria com mods desde o nv 5 e o baseline medido
+  (222,5h) mudaria sem ninguém pedir. Sem escolha = valores originais
+  intactos; o merge só acontece em `p.ramos` preenchido. Corolário:
+  **todo ramo é sidegrade** (tabela `Skills.SENTIDO`: ≥1 buff e ≥1
+  nerf por variante, asserção de dados) — árvore não pode ser power
+  creep; e **`gatilho` é probito nos mods** (fugir antes é seguro mas
+  tira uptime — polaridade ambígua não dá para asserir).
+- **Loadout escalonado protege o early game** (nv < 50 = teto 3, idêntico
+  ao medido) — o crescimento 3→4→5 todo acontece depois da primeira
+  meia hora, então a sanidade (2 runs de 2400min: mapa 36/nv 3247,
+  dentro da faixa 29-36/2600-3300) não precisou de rebalance.
+
 ## Bloqueios
 
 - Nenhum.
@@ -326,6 +340,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   minúsculo + escopo opcional; corpo/descrição em pt-BR).
 
 ## Lições
+
+- **Mudança de layout = mapear TODOS os cliques dos testes** (leva
+  árvore de skills): a coluna única → grade 2×4 quebrou 4 asserts da
+  seção 25 (coordenadas antigas `y=178+i*25` caíam em linhas erradas).
+  Receita: `grep -n "clique(" testes/fumaca.js` na faixa de `y`
+  alterada e converter `i` → `(col=i%2, linha=floor(i/2))` — a seção
+  31 (tooltip) sobreviveu por acaso (x=500 ainda caía no toggle).
+- **Const de seção da fumaca não vaza para a próxima** — as seções são
+  blocos `{}`; `const Cutscene = sandbox.Cutscene` numa seção não
+  existe na seguinte (`ReferenceError` na 43). Usar `sandbox.X` ou
+  redeclarar em cada bloco que precisar.
 
 - **`iniciar()` dá `inv: 1` ao herói (1s de graça)** — teste que monta
   a arena logo após `setScene('jogo')` corre o risco de o **1º golpe
