@@ -10,6 +10,13 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Respiro entre ondas do mundo 1: 8s → 4s** (`ESPERA_BASE`,
+  ajuste **direto do mantenedor** — pedido explícito de commit
+  **sem medição**; o `ritmo.js` não roda nesta leva. Se a sim
+  estolar, o comentário do código manda subir o número de novo).
+
 ### Fixed
 
 - **Herói vira para o lado que está batendo (spec `virada-ataque`)** —
