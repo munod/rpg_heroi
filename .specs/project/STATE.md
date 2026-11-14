@@ -429,6 +429,16 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   doc de referência é alvo de partida, não de chegada; a régua final
   é o jogador.
 
+- **Cutscene sem véu, com a caixa do original** (spec
+  `cutscene-estetica` — mantenedor achou "visualmente feio" e mandou
+  o código do outro projeto como referência): a feiura vinha do véu
+  `rgba(8,6,16,0,84)` de tela inteira (achata tudo) + `UI.panel` roxa
+  (visual de painel de gestão) + título DUAS vezes no evento. Agora:
+  barras `#000`, caixa preta translúcida + fio dourado, título
+  único. Legibilidade sem véu = fundo 0,90 da própria caixa (a
+  solução do original). A lição do `stroke()` no-op (já registrada
+  na `visual-ui`) voltou na prática: borda por duplo preenchimento.
+
 ## Bloqueios
 
 - Nenhum.

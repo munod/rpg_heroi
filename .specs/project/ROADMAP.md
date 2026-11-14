@@ -166,6 +166,11 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    **exceção do missil** (dano offline). **Seção 49 (18 confs)** ·
    gate 3× = **694 confs** · sanidade 2× mapa 1 **30,7/32,6min**
    (hit-stop <2%). **Série visual completa (7-9 + 7b).**
+9b. ✅ **`cutscene-estetica`** — estética do original (feedback do
+   mantenedor): **sem véu** (arena viva entre as barras), barras
+   `#000`, caixa preta + fio dourado (duplo preenchimento) nos 2
+   overlays, título único, **Espaço** avança. Gate 3× = **695
+   confs** · 42/48 intactas · mapa 1 **34,0/37,4min**.
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,

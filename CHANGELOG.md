@@ -12,6 +12,22 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Cutscene com a estética do original (spec `cutscene-estetica`)** —
+  avaliação do mantenedor (*"está visualmente feio"*) com o código do
+  outro projeto como referência: **véu cheio removido** (a arena fica
+  viva entre as barras e a caixa — a legibilidade vem do fundo 0,90
+  da própria caixa, como no original), barras letterbox em **`#000`
+  puro** e os dois overlays ganharam a **caixa de legenda do
+  original** (`caixaCorte`: preto translúcido `rgba(8,6,14,0.90)` +
+  fio dourado `rgba(232,200,106,0.45)` — **borda por duplo
+  preenchimento**, nunca `stroke()`: no-op no rasterizador, lição da
+  `visual-ui`). **Título único** com sombra nos dois overlays (o
+  evento desenhava o dourado do `UI.panel` por baixo + a cor do
+  evento por cima = texto empilhado). **Espaço** agora avança a
+  narração (o pulo do original; `Enter` segue fechando — contrato da
+  42 intacto). Geometria/gatilhos/datilografado/piscar intocados —
+  seções 42/48 sem mudança. Gate 3× = **695 confs** · sanidade 2×:
+  mapa 1 **34,0/37,4min** (variância de sessão já mapeada).
 - **Visual efeitos: pools, receitas, hit-stop e camadas (spec
   `visual-efeitos`, 2ª frente da série visual — base:
   `Docs/efeitos.md`; a maior da série)** — `js/efeitos.js` reescrito

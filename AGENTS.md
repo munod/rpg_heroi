@@ -98,8 +98,13 @@
   entre linhas (`update` roda para os **2 tipos**; `info().revela =
   {linha, chars}`), **dicas piscando** (`floor(relogio*2)%2`) e
   **`avancar()` em 3 estágios** (linha → próxima → fecha) disparado
-  por **clique fora do botão** no `Jogo.update` (o clique dentro de
-  `info().botao` é do `UI.button`; `Enter` segue fechando direto).
+  por **clique fora do botão OU Espaço** no `Jogo.update` (o clique
+  dentro de `info().botao` é do `UI.button`; `Enter` segue fechando
+  direto). **Estética (spec `cutscene-estetica`)**: **sem véu** — a
+  arena fica viva entre as barras **`#000`** e a **caixa de
+  legenda** `caixaCorte` (preto 0,90 + fio dourado por **duplo
+  preenchimento** — `stroke()` é no-op no rasterizador); títulos
+  **únicos** com sombra (sem o dourado do `UI.panel` embaixo).
   Sondas: `Cutscene.info()` →
   `{tipo,de,para,chave,restante,mudo,barras,revela,botao}`. Cena
   `universo`: lê `Salvar.lerEstado(p.id).mapa` (funciona

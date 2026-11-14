@@ -243,12 +243,23 @@ var Cutscene = (function () {
 
   // ------------------------------------------------------------ overlays
 
+  // caixa de legenda do ORIGINAL (Docs/cutscenes.md): preto
+  // translúcido + fio dourado — borda por DUPLO PREENCHIMENTO (o
+  // stroke() do rasterizador é no-op e a sumiria das screenshots,
+  // lição da spec visual-ui)
+  function caixaCorte(ctx, x, y, w, h, r) {
+    UI.caixa(x, y, w, h, r, 'rgba(232, 200, 106, 0.45)');
+    UI.caixa(x + 1, y + 1, w - 2, h - 2, r - 1, 'rgba(8, 6, 14, 0.90)');
+  }
+
   function desenhaMundo(ctx, W) {
     var para = atual.para;
     var tema = Mapas.LISTA[para - 1];
     var pw = MUNDO_PW, ph = MUNDO_PH;
     var px = Math.round((W - pw) / 2), py = MUNDO_PY;
-    UI.panel(px, py, pw, ph, 'MUNDO ' + para + ' — ' + tema.nome);
+    caixaCorte(ctx, px, py, pw, ph, 8);
+    UI.text('MUNDO ' + para + ' — ' + tema.nome, px + 10, py + 15,
+      { color: '#f0cd72', font: 'bold 16px monospace', sombra: true });
     mapaUniverso(ctx, px + 28, py + 40, pw - 56, para);
     legenda(ctx, px + 28, py + 100);
     var linhas = FRONTEIRAS[para] || [];
@@ -275,10 +286,11 @@ var Cutscene = (function () {
     var e = EVENTOS[atual.chave];
     var pw = EV_PW, ph = EV_PH;
     var px = Math.round((W - pw) / 2), py = Math.round((432 - ph) / 2);
-    UI.panel(px, py, pw, ph, e.titulo);
-    // reescreve o título na cor do evento (o painel nasce dourado)
+    caixaCorte(ctx, px, py, pw, ph, 8);
+    // título ÚNICO na cor do evento, com sombra (o UI.panel antigo
+    // desenhava dourado por baixo = texto empilhado)
     UI.text(e.titulo, px + 10, py + 15,
-      { color: e.cor, font: 'bold 16px monospace' });
+      { color: e.cor, font: 'bold 16px monospace', sombra: true });
     UI.text(fatiada(0, e.linhas[0]), px + pw / 2, py + 64, {
       align: 'center', color: '#c9c2dd', font: '15px monospace'
     });
@@ -298,15 +310,14 @@ var Cutscene = (function () {
   function desenhar(ctx) {
     if (!atual) return;
     var W = Game.W;
-    // véu por cima do jogo inteiro (só fillRect — primitiva do
-    // rasterizador; mesmo rgba do overlay de vitória)
-    ctx.fillStyle = 'rgba(8, 6, 16, 0.84)';
-    ctx.fillRect(0, 0, W, 432);
-    // letterbox deslizante (Docs/cutscenes.md): barras pretas no topo
-    // e na base subindo em 0,35s — o "quadro" cinematográfico
+    // SEM véu (estética do original — decisão do mantenedor): a
+    // arena fica viva entre as barras e a caixa de legenda; a
+    // legibilidade vem do fundo 0,90 da própria caixa
+    // letterbox deslizante (Docs/cutscenes.md): barras PRETAS puras
+    // no topo e na base subindo em 0,35s — o "quadro" cinematográfico
     var alt = Math.round(BARRA_ALT * (atual.barras / ABERTURA));
     if (alt > 0) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.92)';
+      ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, W, alt);
       ctx.fillRect(0, 432 - alt, W, alt);
     }
