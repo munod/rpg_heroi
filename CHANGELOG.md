@@ -10,6 +10,8 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-11-14
+
 ### Changed
 
 - **Respiro entre ondas do mundo 1: 8s → 4s** (`ESPERA_BASE`,
@@ -664,7 +666,8 @@ e deploy no GitHub Pages.
 - **Barras laterais no celular**: layout passou a seguir o aspecto da
   viewport (bug reportado por print) (`4c249e4`).
 
-[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/munod/rpg_heroi/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/munod/rpg_heroi/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/munod/rpg_heroi/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/munod/rpg_heroi/compare/v0.1.0...v0.2.0

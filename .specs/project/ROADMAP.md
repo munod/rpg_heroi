@@ -5,6 +5,12 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Entregue
 
+### v0.4.1 — 2026-11-14 (ver `CHANGELOG.md`)
+- `virada-ataque` — herói espelha o sprite/corte para o alvo
+- `ajustes` — ESPERA_BASE 8→4s (mantenedor, sem medição)
+- `cutscene-estetica` — caixa transparente (0,60) e sem botão
+- **release v0.4.1** (tag + gh release + Pages, 2026-11-14)
+
 ### v0.4.0 — 2026-11-14 (ver `CHANGELOG.md`)
 - `ranking` · `velocidade` · `ajustes` · `progressao` ·
   `gestao-atributos` (19 commits desde a v0.3.0)
