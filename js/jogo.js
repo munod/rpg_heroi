@@ -90,7 +90,9 @@ var Jogo = (function () {
     // eventos NÃO viram cutscene na simulação offline (centenas de ondas
     // disparariam em massa); a de MUNDO continua — é o resumo da ausência
     Cutscene.silenciar(true);
+    Efeitos.silenciar(true);   // offline sem spawns decorativos (doc)
     for (var i = 0; i < passos; i++) Batalha.atualizar(PASSO);
+    Efeitos.silenciar(false);
     Cutscene.silenciar(false);
     Batalha.limparEfeitos();
 

@@ -400,6 +400,35 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   dica pisca de verdade; `Enter`/botão seguem fechando direto
   (contrato da 42 preservado).
 
+- **Efeitos: dono único + missil como exceção do silenciar** (spec
+  `visual-efeitos`) — o doc manda silenciar a simulação offline
+  inteira, mas NOSSO dano à distância cai na CHEGADA do missil
+  (callback da Batalha): silenciar bloqueia só os spawns
+  decorativos, **preserva o missil** (voa e acerta offline) e o
+  update roda sempre. Adotar o doc literalmente teria REDUZIDO a
+  renda offline das classes à distância.
+- **nums/parts migraram para o Efeitos por FACHADA** —
+  `Batalha.numero(x, y, txt, cor, big)` virou casca sobre
+  `Efeitos.nota` (booleano legado `true`='big' preserva os ~20 call
+  sites; só o dano crítico mudou de estilo: big → crit com tremor do
+  doc). `limparEfeitos` = `Efeitos.limpar()` (a nota antiga do
+  AGENTS "só Efeitos.limpar deixa texto" morreu).
+- **Flash/vinheta/perigo em espaço de JANELA** — desvio documentado
+  do doc (que não tem câmera): `desenharTela` roda depois do
+  `restore` porque flash tem que cobrir a janela, não o mundo.
+- **Hit-stop ligado e medido**: 0,02s/golpe normal, 0,08 crítico,
+  0,14 fatal — sanidade 2×: mapa 1 em **30,7/32,6min** (banda
+  intacta; a quantização por frame custa <2%).
+
+- **Shake: conforto do mantenedor vence os valores do doc** (ajuste
+  pré-push da `visual-efeitos` — "tremedeira muito bruta"): o caos
+  vinha do **salto aleatório por frame** (o doc manda round(rand(±amp))
+  por frame) + amplitudes até ±3px. Virou **senóide com fase por
+  impacto** (encadeamentos mantêm a fase), duração/amplitude ~40%
+  menores e forças maiores cortadas — hit normal agora ±1px. Lição:
+  doc de referência é alvo de partida, não de chegada; a régua final
+  é o jogador.
+
 ## Bloqueios
 
 - Nenhum.
@@ -420,6 +449,16 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 
 ## Lições
 
+- **Consolidar > duplicar** (leva visual-efeitos): o game feel vivia
+  espalhado (shake/tFlash/parts/nums/vinheta no `batalha`) e o doc
+  descrevia um sistema único — a migração inteira passou o gate de
+  PRIMEIRA porque os contratos eram **fachadas finas**
+  (`numero`/`limparEfeitos`/`qtd`) e não arrays internos. Amar
+  testes a estruturas internas custaria uma refactor de 7 seções.
+- **Assert de hit-stop tem que entender quantização por frame**:
+  `congelar(dt)` devolve `true` no frame em que HÁ saldo mesmo que
+  `dt` passe do saldo — o teste "0,03+0,03 = 0,05 → false no 2º"
+  estava errado, não o código. Semântica de frame, não de relógio.
 - **Animação × contrato de "está na tela"**: virar texto estático em
   datilografado derruba asserts que afirmam a linha no frame 1 (42).
   Correto = **esperar o texto aparecer com teto de frames** (não

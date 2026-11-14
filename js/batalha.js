@@ -10,14 +10,9 @@ var Batalha = (function () {
   var obst = [];
   var heroi = null;
   var inimigos = [];
-  var nums = [];
-  var parts = [];
   var poeira = [];       // pó ambiente da arena (visual só)
   var onda = 0;
   var tOnda = 1.0;                // espera até a próxima onda
-  var tFlash = 0;                 // flash de "NÍVEL X!"
-  var nivelFlash = 0;
-  var shake = 0;
   var pausada = false;
   var donoId = null;         // personagem dono da batalha em memória
   var mapa = 1;              // mapa atual (ciclo de FIM_MAPA ondas)
@@ -375,8 +370,6 @@ var Batalha = (function () {
     cam.x = c0.x;
     cam.y = c0.y;
     inimigos = [];
-    nums = [];
-    parts = [];
     semearPoeira();
     skillsEstado = {};
     Eventos.limpa();
@@ -384,8 +377,7 @@ var Batalha = (function () {
     ultimaSkill = null;
     onda = 0;
     tOnda = 1.0;
-    tFlash = 0;
-    shake = 0;
+    Efeitos.limpar();
     pausada = false;
   }
 
@@ -451,8 +443,7 @@ var Batalha = (function () {
     onda = Math.max(0, Math.floor(n) - 1);
     tOnda = 0;
     inimigos = [];
-    nums = [];
-    parts = [];
+    Efeitos.limpar();
   }
 
   // Retoma o mapa gravado no save (reabertura/progresso offline).
@@ -488,13 +479,10 @@ var Batalha = (function () {
     Ranking.submete();   // marco do ranking: fim de mapa (seção 35)
   }
 
-  // Zera números/partículas depois de uma simulação offline.
+  // Zera números/partículas/efeitos depois de uma simulação offline
+  // (nums e parts moram no Efeitos desde a spec visual-efeitos).
   function limparEfeitos() {
-    nums.length = 0;
-    parts.length = 0;
     Efeitos.limpar();
-    shake = 0;
-    tFlash = 0;
   }
 
   // ----------------------------------------------------------- ondas
@@ -524,10 +512,11 @@ var Batalha = (function () {
     var tem = Mapas.info(mapa);
     if (ehBoss(onda)) {
       // chefe + 2 minions do próprio mapa: a onda não espera um alvo só
-      spawn(tem.boss);
+      var chefe = spawn(tem.boss);
       spawn(tem.inimigos.comum);
       spawn(tem.inimigos.raro);
       aviso('BOSS! ' + tem.boss.nome, '#ff6b6b');
+      Efeitos.bossChegou(chefe.x, chefe.y);
     } else {
       // nº de inimigos: ramp 3+tot/2 até o teto do mundo (spec mundos —
       // era fixo 5 para sempre); raro entra pelo total como sempre
@@ -687,13 +676,11 @@ var Batalha = (function () {
         p.pontos += Personagem.PONTOS_NIVEL;
       }
       p.xpProx = Personagem.custoProximo(p.nivel);
-      tFlash = 1.6;
-      nivelFlash = p.nivel;
       if (heroi && !heroi.morto) heroi.hp = heroi.hpMax;
       numero(heroi ? heroi.x : MW / 2, (heroi ? heroi.y : MH / 2) - 34,
         'NIVEL ' + p.nivel + '!', '#ffd866', true);
-      Efeitos.explosao(heroi ? heroi.x : MW / 2,
-        (heroi ? heroi.y : MH / 2) - 12, '#ffd866', 1.1);
+      Efeitos.nivelUp(heroi ? heroi.x : MW / 2,
+        (heroi ? heroi.y : MH / 2) - 12);
       var nova = Skills.desbloqueada(p.classe, p.nivel);
       if (nova) {
         numero(heroi ? heroi.x : MW / 2, (heroi ? heroi.y : MH / 2) - 46,
@@ -754,19 +741,8 @@ var Batalha = (function () {
 
   // ----------------------------------------------------------- efeitos
   function numero(x, y, txt, cor, big) {
-    nums.push({ x: x, y: y, txt: txt, color: cor, big: !!big, t: big ? 1.4 : 0.9 });
-  }
-
-  function faísca(x, y, cor, n) {
-    for (var i = 0; i < n; i++) {
-      parts.push({
-        x: x, y: y,
-        vx: (Math.random() - 0.5) * 90,
-        vy: (Math.random() - 0.7) * 90,
-        t: 0.3 + Math.random() * 0.2,
-        color: cor
-      });
-    }
+    // estilo booleano legado: true = 'big' (Efeitos.nota normaliza)
+    Efeitos.nota(x, y, txt, cor, big);
   }
 
   // Estatísticas de vida inteira (Personagem.stats). Escreve sempre no
@@ -873,7 +849,7 @@ var Batalha = (function () {
     stat('danoRecebido', Math.round(dmg));
     heroi.hp -= dmg;
     heroi.inv = 0.5;
-    shake = 0.15;
+    Efeitos.impactoHeroi(heroi.x, heroi.y, false);
     numero(heroi.x, heroi.y - 26, '-' + dmg, '#ff6b6b', false);
     if (heroi.hp <= 0) {
       // 2ª vida lendária (Véu da Fênix): 1× por onda, revive com metade
@@ -897,7 +873,7 @@ var Batalha = (function () {
       morte.x = heroi.x;      // inimigos se agrupam onde ele caiu
       morte.y = heroi.y;
       heroi.anim = 'idle';
-      faísca(heroi.x, heroi.y - 10, '#ff6b6b', 14);
+      Efeitos.impactoHeroi(heroi.x, heroi.y, true);
       numero(heroi.x, heroi.y - 36, 'CAIU...', '#ff6b6b', true);
     }
   }
@@ -942,7 +918,7 @@ var Batalha = (function () {
   }
 
   function mataInimigo(i, en) {
-    faísca(en.x, en.y - 6, en.cor, 10);
+    Efeitos.morte(en.x, en.y, en.cor, !!(en.tipo && en.tipo.boss));
     inimigos.splice(i, 1);
     stat('abates');
     if (en.acougueiro) { stat('acougueiros'); Eventos.acoMorreu(); }
@@ -1065,8 +1041,9 @@ var Batalha = (function () {
         en.y += (dy / d) * 4;
         resolve(en, en.raio || 6);
       }
-      numero(en.x, en.y - 18, String(dmg), crit ? '#ffd866' : '#ffffff', crit);
-      faísca(en.x, en.y - 6, crit ? '#ffd866' : '#ffffff', crit ? 8 : 4);
+      numero(en.x, en.y - 18, String(dmg), crit ? '#ffd866' : '#ffffff',
+        crit ? 'crit' : false);
+      Efeitos.impacto(en.x, en.y - 4, '#ffffff', crit);
 
       if (en.hp > 0) aplicaVeneno(en, st);
       if (en.hp <= 0) mataInimigo(i, en);
@@ -1115,8 +1092,8 @@ var Batalha = (function () {
           resolve(alvo, alvo.raio || 6);
         }
         numero(alvo.x, alvo.y - 18, String(dmg),
-          crit ? '#ffd866' : '#ffffff', crit);
-        faísca(alvo.x, alvo.y - 6, crit ? '#ffd866' : '#ffffff', crit ? 8 : 4);
+          crit ? '#ffd866' : '#ffffff', crit ? 'crit' : false);
+        Efeitos.impacto(alvo.x, alvo.y - 4, cl.corProj, crit);
         if (alvo.hp > 0) aplicaVeneno(alvo, st);
         if (alvo.hp <= 0) mataInimigo(idx, alvo);
       });
@@ -1147,9 +1124,8 @@ var Batalha = (function () {
         alvo.hp -= dmg;
         stat('danoCausado', dmg);
         alvo.hitFlash = 0.15;
-        shake = Math.max(shake, 0.08);
         numero(alvo.x, alvo.y - 18, String(dmg), '#ffffff', false);
-        faísca(alvo.x, alvo.y - 6, mg.cor, 6);
+        Efeitos.impacto(alvo.x, alvo.y - 4, mg.cor, false);
         if (alvo.hp <= 0) mataInimigo(idx, alvo);
       });
   }
@@ -1206,7 +1182,7 @@ var Batalha = (function () {
       stat('danoCausado', dmg);
       en.hitFlash = 0.12;
       numero(en.x, en.y - 18, String(dmg), '#ffe89a', false);
-      faísca(en.x, en.y - 6, '#ffe89a', 5);
+      Efeitos.impacto(en.x, en.y - 4, '#ffe89a', false);
       if (en.hp <= 0) mataInimigo(i, en);
     }
   }
@@ -1216,7 +1192,7 @@ var Batalha = (function () {
     var st = heroi.stats;
     numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
     Efeitos.corte(heroi.x, heroi.y - 10, mg.cor, 1 + (mg.mult - 1) * 0.8);
-    shake = Math.max(shake, 0.1 + (mg.mult - 1) * 0.1);
+    Efeitos.sacudir(0.1 + (mg.mult - 1) * 0.15);
     for (var i = inimigos.length - 1; i >= 0; i--) {
       var en = inimigos[i];
       var dmg = Math.max(1, Math.round(st.dano * mg.mult) +
@@ -1225,7 +1201,7 @@ var Batalha = (function () {
       stat('danoCausado', dmg);
       en.hitFlash = 0.12;
       numero(en.x, en.y - 18, String(dmg), mg.cor, false);
-      faísca(en.x, en.y - 6, mg.cor, 6);
+      Efeitos.impacto(en.x, en.y - 4, mg.cor, false);
       if (en.hp <= 0) mataInimigo(i, en);
     }
   }
@@ -1281,7 +1257,7 @@ var Batalha = (function () {
   function empurra(sk) {
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
     Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 1.5);
-    shake = Math.max(shake, 0.12);
+    Efeitos.sacudir(0.25);
     var r2 = sk.alcance * sk.alcance;
     for (var i = 0; i < inimigos.length; i++) {
       var en = inimigos[i];
@@ -1330,7 +1306,7 @@ var Batalha = (function () {
   function aplicaMedo(sk) {
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
     Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 1.0);
-    shake = Math.max(shake, 0.08);
+    Efeitos.sacudir(0.15);
     var r2 = sk.alcance * sk.alcance;
     for (var i = 0; i < inimigos.length; i++) {
       var en = inimigos[i];
@@ -1651,17 +1627,20 @@ var Batalha = (function () {
     if (!heroi) return;
     atualizaCamera(dt);        // é apresentação: segue mesmo pausada
     if (pausada) return;
+    // hit-stop antes de tudo (doc): congela mundo E partículas — o
+    // tempo de jogo não corre durante o congelamento
+    if (Efeitos.congelar(dt)) return;
     // influence map: ocupação repintada no TOPO do frame, antes do
     // herói (atualizaHeroi) e dos monstros (atualizaInimigos) — os
     // dois leem a pintura corrente (spec ia-heroi / ia-monstros)
     IA.pintaMapa(inimigos);
     if (contaTempo) stat('tempo', dt);
 
-    if (shake > 0) shake -= dt;
-    if (tFlash > 0) tFlash -= dt;
+
 
     // efeitos visuais (missis podem matar e reduzir a lista de inimigos
     // antes do laço de baixo — por isso rodam primeiro)
+    Efeitos.perigo(heroi.hp / heroi.hpMax);
     Efeitos.atualizar(dt);
 
     // COFRE ABANDONADO: coleta por PROXIMIDADE (o herói caminha até lá
@@ -1682,6 +1661,7 @@ var Batalha = (function () {
         heroi.x = volta.x;
         heroi.y = volta.y;
         heroi.inv = 1.2;
+        Efeitos.reviver(heroi.x, heroi.y);
         numero(heroi.x, heroi.y - 26, 'DE VOLTA!', '#8ce08c', true);
         // o Açougueiro não fica p/ vingança: morte do herói = ele parte
         // (a penalidade já foi APLICADA EM DOBRO na morte)
@@ -1717,22 +1697,8 @@ var Batalha = (function () {
       if (tOnda <= 0) proximaOnda();
     }
 
-    for (var i = parts.length - 1; i >= 0; i--) {
-      var pa = parts[i];
-      pa.x += pa.vx * dt;
-      pa.y += pa.vy * dt;
-      pa.vy += 200 * dt;
-      pa.t -= dt;
-      if (pa.t <= 0) parts.splice(i, 1);
-    }
-    for (i = nums.length - 1; i >= 0; i--) {
-      nums[i].y -= 24 * dt;
-      nums[i].t -= dt;
-      if (nums[i].t <= 0) nums.splice(i, 1);
-    }
-
     // poeira: deriva lenta com wrap (só posição, sem alocação)
-    for (i = 0; i < poeira.length; i++) {
+    for (var i = 0; i < poeira.length; i++) {
       var po = poeira[i];
       po.x += po.vx * dt;
       po.y += po.vy * dt;
@@ -1808,6 +1774,8 @@ var Batalha = (function () {
 
   function desenhaInimigo(ctx, en) {
     var esc = en.escala;
+    // aura do chefe pulsa atrás do sprite (doc §7)
+    if (en.tipo && en.tipo.boss) Efeitos.auraBoss(ctx, en.x, en.y);
     var c = spriteInimigo(en);
     // envenenado: sombra ganha o tom do veneno (pulso vem do tempo restante)
     sombra(ctx, en.x, en.y - 1, 9 * esc,
@@ -1864,11 +1832,11 @@ var Batalha = (function () {
     ctx.scale(k, k);
     ctx.translate(-cam.x, -cam.y);
 
-    if (shake > 0) {
-      ctx.translate((Math.random() * 3 - 1.5) | 0, (Math.random() * 3 - 1.5) | 0);
-    }
+    var so = Efeitos.shakeOffset();
+    if (so) ctx.translate(so.x, so.y);
 
     ctx.drawImage(chao, 0, 0);
+    Efeitos.desenharBaixo(ctx);   // anéis no chão, atrás das entidades
 
     // profundidade: obstáculos e entidades ordenados pelos pés
     var cena = [];
@@ -1888,26 +1856,9 @@ var Batalha = (function () {
       else desenhaHeroi(ctx);
     }
 
-    for (i = 0; i < parts.length; i++) {
-      var pa = parts[i];
-      ctx.fillStyle = pa.color;
-      ctx.fillRect(Math.round(pa.x), Math.round(pa.y), 2, 2);
-    }
-
-    // efeitos das skills (missis, anéis, cortes, motes)
-    Efeitos.desenhar(ctx);
-
-    // em espaço de mundo: 8 un. × k=2 = 16px na tela (igual à UI)
-    ctx.font = 'bold 8px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (i = 0; i < nums.length; i++) {
-      var n = nums[i];
-      ctx.fillStyle = '#1b1424';
-      ctx.fillText(n.txt, Math.round(n.x) + 1, Math.round(n.y) + 1);
-      ctx.fillStyle = n.color;
-      ctx.fillText(n.txt, Math.round(n.x), Math.round(n.y));
-    }
+    // camada de topo: glows/corpos/fumaça + números flutuantes
+    // (ordem do doc: aditiva → sólida → fumaça → números)
+    Efeitos.desenharTopo(ctx);
 
     // poeira ambiente (espaço de mundo, dentro do clip da janela)
     for (i = 0; i < poeira.length; i++) {
@@ -1934,6 +1885,8 @@ var Batalha = (function () {
       ctx.fillRect(vx + vw - bd, vy, bd, vh);
     }
     ctx.globalAlpha = 1;
+    // flash/vinheta de evento/perigo — espaço de JANELA (spec visual-efeitos)
+    Efeitos.desenharTela(ctx, vx, vy, vw, vh);
 
     // ---- HUD do herói (espaço de tela, por cima da arena): offsets e
     // fontes proporcionais a k — com a janela nova (k=2) vira 16px
@@ -1951,14 +1904,6 @@ var Batalha = (function () {
       ctx.fillRect(vx, vy + vh / 2 - 12 * k, vw, 24 * k);
       UI.text('CAIU — revivendo em ' + Math.max(1, Math.ceil(heroi.revT)) + 's',
         vx + vw / 2, vy + vh / 2, { align: 'center', color: '#ff6b6b' });
-    }
-
-    if (tFlash > 0) {
-      ctx.globalAlpha = Math.min(1, tFlash);
-      UI.text('NIVEL ' + nivelFlash + '!', vx + vw / 2, vy + vh / 2 - 4 * k, {
-        align: 'center', color: '#ffd866', font: 'bold ' + (8 * k) + 'px monospace'
-      });
-      ctx.globalAlpha = 1;
     }
 
     if (pausada) {

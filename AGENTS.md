@@ -423,18 +423,41 @@
   chegada do projétil (AoE/nuke acertam sempre). Exposições em `info()`:
   `heroi.estado`/`heroi.agu`/`heroi.prof`/`esquivando`. Fumaça seções
   22-23 (IA do herói/monstros) e 44-45 (flocking + Behavior Tree).
-- Efeitos visuais em `js/efeitos.js` (chamado por `Batalha` em
-  `atualizar`/`desenhar`/`limparEfeitos`): **só primitivas que
-  `testes/cena.js` rasteriza** — `fillRect`, `strokeRect` (com
-  `strokeStyle`/`lineWidth`), `ellipse`+`fill`, **`rect`+`fill`**
-  (caminho da UI — `fill()` rasteriza retângulo pendente desde a spec
-  `visual-ui`), `translate`/`scale`/`setTransform` e `globalAlpha`.
-  `arc`/`stroke()`/gradiente **quebram o screenshot** (o `stroke()`
-  do rasterizador é no-op; gradiente cai no fallback sólido). O dano do missil vive no callback
-  que a `Batalha` passa, não no Efeitos. Em teste, para zerar efeitos
-  pendentes use `Batalha.limparEfeitos()` (limpa também `nums`): só
-  `Efeitos.limpar()` deixa texto flutuando por 1,4s e dá falso-positivo
-  em conf de "efeito apareceu".
+- Efeitos visuais em `js/efeitos.js` (spec `visual-efeitos` — dono
+  único do feedback, base `Docs/efeitos.md`): **pools com teto**
+  (`parts 380 · nums 50 · aneis 24 · raios 8 · arcos 10` via
+  `limitar`), **receitas com valores exatos** (`impacto`/crítico,
+  `impactoHeroi`/fatal, `morte`/chefe, `nivelUp`, `reviver`,
+  `bossChegou`, `corte` 16 segmentos, `raio` vertical + `raioRadial`)
+  e **game feel**: `sacudir` (fórmula do doc; `shakeOffset()` inteiro
+  — `Batalha.desenhar` traduz), **`parar`/`congelar` = hit-stop** no
+  topo de `atualizar` **após a pausa** (congela mundo E partículas;
+  o tempo de jogo não corre), `flashTela` (fraco nunca substitui o
+  forte), `bordaTela` e `perigo` (<35% pisca vermelho, chamado todo
+  frame). **3 camadas**: `desenharBaixo` (anéis no chão, antes das
+  entidades) · `desenharTopo` (aditiva `lighter` → sólida → fumaça →
+  números) · `desenharTela(ctx, vx, vy, vw, vh)` (**espaço de
+  janela**, depois do `restore` — desvio documentado: flash/vinheta
+  têm que cobrir a janela, não o mundo com câmera) · `auraBoss`
+  atrás do sprite do chefe (`en.tipo.boss`). **Números moram aqui**:
+  `nota(x, y, txt, cor, estilo)` em 3 estilos (normal/crit com tremor
+  e halo dourado/big com pulso — `Batalha.numero` é fachada e o
+  booleano legado `true` = 'big'; só o dano crítico virou 'crit').
+  **`silenciar`** bloqueia os spawns DECORATIVOS e zera pools —
+  **`missil` é exceção** (leva dano na chegada: a simulação offline
+  precisa que ele voe; `voltaAusencia` envolve junto do
+  `Cutscene.silenciar`). Glow/anel = sprites offscreen gerados 1×
+  (fillRect 1×1 com alpha — funciona em todo ctx do harness) e
+  desenhados com `drawImage` (o rasterizador multiplica
+  `globalAlpha`). **Só primitivas que `testes/cena.js` rasteriza** —
+  `fillRect`, `strokeRect`, `ellipse`+`fill`, `rect`+`fill`,
+  `drawImage`, `translate`/`scale`/`setTransform`, `globalAlpha`;
+  `arc`/`stroke()`/gradiente **quebram o screenshot** (`stroke()` é
+  no-op; gradiente cai no fallback sólido) e `lighter` só soma no
+  navegador. O dano do missil vive no callback que a `Batalha`
+  passa. Em teste, para zerar TUDO use `Batalha.limparEfeitos()` (=
+  `Efeitos.limpar()` — cobre nums/parts/anéis/shake/hit-stop/flash
+  desde esta spec). Fumaça seção 49.
 
 ## Testes — peculiaridades
 

@@ -216,7 +216,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 663 asserções: sprites, status, UI visual, idle, toque, ranking, mundos, cutscenes, árvore, IA (monstros + herói)
+node testes/fumaca.js     # 681 asserções: sprites, status, UI visual, idle, toque, ranking, mundos, cutscenes, árvore, IA (monstros + herói)
 node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -248,8 +248,9 @@ e medo) — **8 por classe**, com **ramos** (variantes por skill) e
 distância** do mago/ladino/clérigo (projétil do golpe básico) e os
 **gatilhos de fuga** (Empurrão, Teleporte, Esquiva e Amedronta quando o
 bando se fecha) — tudo com **efeitos visuais** (projétil teleguiado, arco
-de corte, anel de impacto, respingos de veneno, motes de cura e marcador
-de medo), a **IA tática** (**Behavior Tree do herói** com evasão de
+de corte, anéis de impacto, **hit-stop com peso de golpe**, crítico com
+tremor dourado, flash/vinheta de evento, respingos de veneno, motes de
+cura e marcador de medo), a **IA tática** (**Behavior Tree do herói** com evasão de
 cerco, **matilha com separação e influence map** — cerco/antecipação/
 esquiva dos monstros — e rotas por A*), a **câmera sobre o
 mundo 384×268** com o **renascimento em local aleatório**, o **toque no

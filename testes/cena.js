@@ -168,7 +168,7 @@ function novoCtxRGBA(cv) {
           const ix = Math.min(sw - 1, Math.floor(X * sw / DW));
           const iy = Math.min(sh - 1, Math.floor(Y * sh / DH));
           const so = (iy * sw + ix) * 4;
-          const a = src._data[so + 3] / 255;
+          const a = src._data[so + 3] / 255 * st.alpha;
           if (a <= 0) continue;
           put(cv, X0 + X, Y0 + Y,
             src._data[so], src._data[so + 1], src._data[so + 2], a);

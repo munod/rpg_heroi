@@ -12,6 +12,44 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Visual efeitos: pools, receitas, hit-stop e camadas (spec
+  `visual-efeitos`, 2ª frente da série visual — base:
+  `Docs/efeitos.md`; a maior da série)** — `js/efeitos.js` reescrito
+  (196 → ~850 linhas) como **dono único do feedback**: pools com
+  teto (`parts 380 · nums 50 · anéis 24 · raios 8 · arcos 10`),
+  catálogo do doc (faisca com rastro+glow, caco que esfria, brasa
+  cintilante, fumaca/poeira crescendo, confete com vento, estrela em
+  cruz, brilho, mote, relâmpago vertical + raio radial) e as
+  **receitas com valores exatos** (`impacto`/crítico,
+  `impactoHeroi`/fatal, `morte`/chefe, `nivelUp`, `reviver`,
+  `bossChegou`, `corte` de16 segmentos). **Game feel novo**:
+  **hit-stop** (`parar`/`congelar` no topo do update — o golpe
+  congela mundo e partículas), shake com a fórmula do doc
+  (`sacudir` + offset inteiro), **flash de evento** (fraco nunca
+  apaga o forte), vinheta de evento e **perigo de vida** (HP<35%
+  pisca vermelho). **3 camadas** de desenho (anéis no chão /
+  aditiva→sólida→fumaça→números / flash+vinheta+perigo em espaço de
+  janela — desvio documentado: tem câmera) + **aura do chefe** atrás
+  do sprite. **Números migraram para cá** em 3 estilos (normal/crit
+  com tremor halo dourado/big com pulso — `Batalha.numero` é fachada,
+  booleano legado `true`='big'; só o dano crítico mudou de estilo) e
+  **`silenciar`** torna a simulação offline barata — **com exceção
+  documentada do missil** (ele leva dano na chegada: sem ele voando,
+  classes à distância ganhariam menos offline). `voltaAusencia`
+  envolve o mudo junto do `Cutscene.silenciar`. `Batalha` enxugou:
+  shake/tFlash/parts/nums locais morreram (fachadas `numero`/
+  `limparEfeitos` intactas); glow/anel são sprites offscreen
+  cacheados 1× (fillRect 1×1 com alpha) + `drawImage` (rasterizador
+  agora multiplica `globalAlpha`). Testes: **seção 49 (18 confs)**
+  — tetos, 3 estilos, hit-stop (máximo + expiração), offset inteiro,
+  flash guard, missil sobrevive ao mudo, receitas, glow cache no
+  desenho, `limparEfeitos` zera tudo. Gate 3× = **694 confs** ·
+  sanidade 2×: mapa 1 em **30,7/32,6min** (hit-stop custa <2%).
+  **Ajuste pós-feedback**: shake suavizado antes do push — senóide
+  com fase por impacto (sem salto aleatório por frame), duração
+  0,14+f×0,16 e amplitude 0,6+f×1,2, forças maiores reduzidas
+  (crítico 0,9→0,6 · fatal 1,1→0,8 · chefe 1,4→1,0): hit normal
+  ±1px, crítico/fatal ±2 no máximo.
 - **Visual cutscene: letterbox, datilografado e dica piscando (spec
   `visual-cutscene`, 3ª e última frente da série visual — base:
   `Docs/cutscenes.md`; gatilhos intocados)** — os overlays de

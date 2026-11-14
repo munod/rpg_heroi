@@ -158,8 +158,14 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 9. ✅ **`visual-cutscene`** — letterbox (52px/0,35s), datilografado
    (55 c/s + pausa 0,8), dicas piscando, `avancar()` 3 estágios
    (clique fora do botão; `Enter`/botão intactos). **Seção 48** ·
-   gate 3× = **676 confs** · mapa 1 **34,3min**. **Série visual
-   completa (7-9).**
+   gate 3× = **676 confs** · mapa 1 **34,3min**.
+8. ✅ **`visual-efeitos`** — `efeitos.js` reescrito como dono único:
+   pools com teto, receitas com valores exatos do doc, **hit-stop**,
+   shake com fórmula, flash/vinheta/perigo, 3 camadas, aura do chefe,
+   números em 3 estilos (migração por fachada) e `silenciar` com
+   **exceção do missil** (dano offline). **Seção 49 (18 confs)** ·
+   gate 3× = **694 confs** · sanidade 2× mapa 1 **30,7/32,6min**
+   (hit-stop <2%). **Série visual completa (7-9 + 7b).**
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,

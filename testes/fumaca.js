@@ -4988,6 +4988,130 @@ console.log('48) Visual cutscene: letterbox, datilografado e avançar');
   conf(!Cutscene.ativa(), 'clique no botão fecha direto');
 }
 
+console.log('49) Visual efeitos: pools, receitas, game feel e camadas');
+{
+  const Efeitos = sandbox.Efeitos;
+  const Batalha = sandbox.Batalha;
+
+  Efeitos.limpar();
+
+  // --- 1) pools com teto (doc §2)
+  for (let i = 0; i < 30; i++) Efeitos.faiscaMuita(50, 50, ['#ffffff'], 40, 1);
+  conf(Efeitos.info().parts === 380,
+    'pool de partículas com teto 380 (' + Efeitos.info().parts + ')');
+
+  // --- 2) nota nos 3 estilos + teto de números
+  Efeitos.limpar();
+  Efeitos.nota(10, 10, '1', '#ffffff', false);
+  Efeitos.nota(10, 20, '2', '#ffd866', 'crit');
+  Efeitos.nota(10, 30, '3', '#ffd866', true);   // booleano legado = big
+  conf(Efeitos.info().numEstilos.join(',') === 'normal,crit,big',
+    'nota nos 3 estilos (normal/crit/big-legado)');
+  for (let i = 0; i < 60; i++) Efeitos.nota(0, 0, 'x', '#ffffff', false);
+  conf(Efeitos.info().nums === 50,
+    'pool de números com teto 50 (' + Efeitos.info().nums + ')');
+
+  // --- 3) hit-stop: parar guarda o máximo; congelar consome e expira
+  Efeitos.limpar();
+  Efeitos.parar(0.05);
+  Efeitos.parar(0.02);
+  conf(Efeitos.info().hitStop === 0.05,
+    'parar guarda o MÁXIMO (0,05, não soma)');
+  // quantização por frame: o frame em que HÁ hitstop congela (true)
+  // mesmo que dt passe do saldo — depois disso expira
+  const c1 = Efeitos.congelar(0.06);
+  const c2 = Efeitos.congelar(0.01);
+  conf(c1 === true && c2 === false,
+    'congelar congela o frame com saldo e expira depois (0,05)');
+
+  // --- 4) shake: fórmula do doc, offset inteiro
+  Efeitos.limpar();
+  conf(Efeitos.shakeOffset() === null, 'sem sacudir = sem offset');
+  Efeitos.sacudir(1);
+  const so = Efeitos.shakeOffset();
+  conf(!!so && Number.isInteger(so.x) && Number.isInteger(so.y) &&
+       Math.abs(so.x) <= 2 && Math.abs(so.y) <= 2,
+    'sacudir(1): offset inteiro e limitado (±2px — suavizado)');
+  // ajuste pós-feedback: o salto ALEATÓRIO por frame era a
+  // "tremedeira bruta" — agora é senóide estável no mesmo frame
+  const soB = Efeitos.shakeOffset();
+  conf(!!soB && so.x === soB.x && so.y === soB.y,
+    'offset estável no mesmo frame (sem salto aleatório)');
+
+  // --- 5) flash fraco nunca apaga o forte em curso
+  Efeitos.limpar();
+  Efeitos.flashTela('#ffd866', 0.9, 0.5);
+  Efeitos.flashTela('#ffffff', 0.1, 0.5);
+  const infF = Efeitos.info();
+  conf(!!infF.flash && infF.flash.cor === '#ffd866' && infF.flash.a === 0.9,
+    'flash fraco não substitui o forte em curso');
+
+  // --- 6) silenciar: decorativo bloqueado, missil (lógica) sobrevive
+  Efeitos.limpar();
+  Efeitos.silenciar(true);
+  Efeitos.impacto(10, 10, '#ffffff', true);
+  Efeitos.nota(10, 10, 'x', '#ffffff', false);
+  Efeitos.sacudir(1);
+  Efeitos.parar(0.1);
+  Efeitos.missil({ x: 0, y: 0 }, { x: 30, y: 0 }, '#ff8800', 1, null);
+  const infM = Efeitos.info();
+  conf(infM.mudo && infM.qtd === 1 && infM.parts === 1 &&
+       infM.shake === 0 && infM.hitStop === 0,
+    'mudo: só o missil (dano offline) sobrevive (qtd ' + infM.qtd + ')');
+  Efeitos.silenciar(false);
+
+  // --- 7) receitas do doc gastam os pools certos
+  Efeitos.limpar();
+  Efeitos.impacto(50, 50, '#ffffff', false);
+  conf(Efeitos.info().aneis >= 1 && Efeitos.info().parts > 0,
+    'impacto normal: anel + faíscas');
+  Efeitos.limpar();
+  Efeitos.impacto(50, 50, '#ffd866', true);
+  const infC = Efeitos.info();
+  conf(infC.aneis >= 1 && !!infC.flash && infC.borda,
+    'impacto crítico: anel + flash + vinheta dourados');
+  Efeitos.limpar();
+  Efeitos.morte(60, 60, '#8ac040', true);
+  conf(Efeitos.info().aneis >= 2 && Efeitos.info().parts > 0,
+    'morte de chefe: anéis duplos + cacos/brasas');
+  Efeitos.limpar();
+  Efeitos.nivelUp(60, 60);
+  conf(Efeitos.info().raios >= 1,
+    'nivelUp: raios radiais (' + Efeitos.info().raios + ')');
+  Efeitos.limpar();
+  Efeitos.reviver(60, 60);
+  conf(Efeitos.info().aneis >= 2, 'reviver: dois anéis + brilho/motes');
+  Efeitos.limpar();
+  Efeitos.bossChegou(60, 60);
+  const infB = Efeitos.info();
+  conf(infB.raios >= 1 && infB.aneis >= 1 && infB.hitStop > 0,
+    'bossChegou: relâmpago + anéis + hit-stop');
+
+  // --- 8) perigo + glow cache criado no DESENHO
+  Efeitos.limpar();
+  Efeitos.perigo(0.2);
+  conf(Efeitos.info().perigo === 0.2, 'perigo reflete a fração de vida');
+  Efeitos.perigo(1);
+  const g0 = Efeitos.info().glowCache;
+  Efeitos.brasas(100, 100, '#12ab34', 4, 60, 50);   // cor nunca usada
+  frame(2);                                    // renderiza a arena
+  conf(Efeitos.info().glowCache > g0,
+    'glow cache cresce no desenho (' + g0 + ' → ' +
+    Efeitos.info().glowCache + ')');
+  Efeitos.limpar();
+
+  // --- 9) limparEfeitos zera tudo (contrato das 7 seções)
+  Efeitos.impacto(1, 1, '#ffffff', true);
+  Efeitos.nota(1, 1, 'n', '#ffffff', false);
+  Efeitos.sacudir(1);
+  Efeitos.parar(0.1);
+  Batalha.limparEfeitos();
+  const infL = Efeitos.info();
+  conf(infL.qtd === 0 && infL.shake === 0 && infL.hitStop === 0 &&
+       !infL.flash && !infL.borda,
+    'limparEfeitos zera pools + shake + hit-stop + flash + vinheta');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');
