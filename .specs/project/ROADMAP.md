@@ -5,6 +5,17 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Entregue
 
+### v0.4.0 — 2026-11-14 (ver `CHANGELOG.md`)
+- `ranking` · `velocidade` · `ajustes` · `progressao` ·
+  `gestao-atributos` (19 commits desde a v0.3.0)
+- `mundos` — campanha 10×10×100, vitória no mundo 10 + modo infinito
+- `monstros-novos` · `cutscenes` · `arvore-skills`
+- IA: `ia-monstros` (flocking + influence map) · `ia-heroi`
+  (Behavior Tree + evasão de cerco)
+- série visual: `visual-ui` · `ajustes-playtest-3` ·
+  `visual-cutscene` · `visual-efeitos` · `cutscene-estetica`
+- **release v0.4.0** (tag + gh release + Pages, 2026-11-14)
+
 ### v0.1.0 — 2026-11-08 (ver `CHANGELOG.md`)
 - `core-idle` — núcleo idle, save/progresso, UX dos pontos, ritmo medido
 - `arena-camera` — câmera, mundo 2×, renascimento aleatório
