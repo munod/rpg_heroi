@@ -16,6 +16,17 @@ vive em `.specs/features/`.
   ajuste **direto do mantenedor** — pedido explícito de commit
   **sem medição**; o `ritmo.js` não roda nesta leva. Se a sim
   estolar, o comentário do código manda subir o número de novo).
+- **Cutscene sem botão e caixa transparente (spec
+  `cutscene-estetica`)** — pelo print de referência do outro projeto:
+  miolo da caixa de `rgba(8,6,14,0.90)` → **`0,60`** (a arena dá pra
+  ver por trás) e os botões "Continuar"/"Entrar no Mundo" **saíram**:
+  `info().botao` virou `null`, o check de retângulo saiu do
+  `Jogo.update` e **todo clique avança** (3 estágios; o último
+  encerra) junto do `Espaço` (`Enter` fecha direto; eventos seguem
+  com auto-dismiss 3,5s; a fronteira continua esperando o jogador
+  por clique). Seções 42/48 migraram dos asserts de botão para as
+  **dicas piscantes** + laço de cliques até fechar · gate 3× = **701
+  confs**.
 
 ### Fixed
 

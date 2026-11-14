@@ -4180,8 +4180,8 @@ console.log('42) cutscenes: fronteiras de mundo, eventos e mapa do universo');
   const te = jogoCanvas._textos;
   conf(te.some(x => x.indexOf('AÇOUGUEIRO') >= 0),
     'cutscene de evento renderiza o título');
-  conf(te.some(x => x.indexOf('Continuar') >= 0),
-    'cutscene de evento tem botão Continuar');
+  conf(te.some(x => x.indexOf('some sozinho') >= 0),
+    'dica do evento sem botão ("some sozinho…") na tela');
   // narração DATILOGRAFADA (spec visual-cutscene): espera a linha
   // revelar — teto de frames p/ não travar se o texto crescer
   let narrou = false;
@@ -4219,8 +4219,8 @@ console.log('42) cutscenes: fronteiras de mundo, eventos e mapa do universo');
     'nome do mundo na tela');
   conf(t42.some(x => x.indexOf('Morcego Ancião') >= 0),
     'chefe do novo mundo na tela');
-  conf(t42.some(x => x.indexOf('Entrar no Mundo 2') >= 0),
-    'botão Entrar na tela');
+  conf(t42.some(x => x.indexOf('clique para avançar') >= 0),
+    'dica "clique para avançar" na tela (sem botão)');
   conf(t42.some(x => x.indexOf('conquistado') >= 0),
     'legenda do mapa do universo na tela');
   // narração DATILOGRAFADA (spec visual-cutscene): linha 1 completa +
@@ -4245,11 +4245,15 @@ console.log('42) cutscenes: fronteiras de mundo, eventos e mapa do universo');
   tecla('keyup', 'Enter', 'Enter');
   frame(1);
   conf(!Cutscene.ativa(), 'Enter fecha a cutscene');
-  Cutscene.mundo(1, 2);                   // reabre p/ testar o botão
-  const b = Cutscene.info().botao;
-  clique(b.x + b.w / 2, b.y + b.h / 2);
-  frame(1);
-  conf(!Cutscene.ativa(), 'clique no botão fecha a cutscene');
+  Cutscene.mundo(1, 2);                   // reabre p/ testar os cliques
+  conf(Cutscene.info().botao === null, 'sem botão (info().botao null)');
+  let fechou42 = false;
+  for (let i = 0; i < 6 && !fechou42; i++) {
+    clique(300, 250);                     // sem botão: todo clique avança
+    frame(1);
+    fechou42 = !Cutscene.ativa();
+  }
+  conf(fechou42, 'cliques avançam e encerram a cena (sem botão)');
   clique(722, 92);
   frame(1);
   conf(p.atributos.for > for0 && p.pontos < 5,
@@ -4969,23 +4973,27 @@ console.log('48) Visual cutscene: letterbox, datilografado e avançar');
     oculto + '/60)');
   conf(Cutscene.ativa(), 'evento segue vivo após 1s (auto-dismiss 3,5s)');
 
-  // --- 5) clique FORA do botão avança (integração Jogo.update)
+  // --- 5) clique em qualquer ponto avança (integração Jogo.update)
   Cutscene.fecha();
   Cutscene.mundo(1, 2);
   frame(1);
   const antes = Cutscene.info().revela;
-  clique(100, 200);                        // fora do retângulo do botão
+  clique(100, 200);                        // sem botão: todo clique avança
   frame(1);
   const depois = Cutscene.info().revela;
   conf(depois.chars > antes.chars || depois.linha > antes.linha,
-    'clique fora do botão avança a narração (' +
+    'clique em qualquer ponto avança a narração (' +
     JSON.stringify(antes) + ' → ' + JSON.stringify(depois) + ')');
 
-  // --- 6) clique NO botão fecha direto
-  const bt = Cutscene.info().botao;
-  clique(bt.x + bt.w / 2, bt.y + bt.h / 2);
-  frame(1);
-  conf(!Cutscene.ativa(), 'clique no botão fecha direto');
+  // --- 6) sem botão: cliques avançam e a última etapa fecha
+  conf(Cutscene.info().botao === null, 'sem botão (info().botao null)');
+  let fechou = false;
+  for (let i = 0; i < 6 && !fechou; i++) {
+    clique(300, 250);
+    frame(1);
+    fechou = !Cutscene.ativa();
+  }
+  conf(fechou, 'cliques avançam e encerram a cena sem botão');
 }
 
 console.log('49) Visual efeitos: pools, receitas, game feel e camadas');

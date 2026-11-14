@@ -439,6 +439,20 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   solução do original). A lição do `stroke()` no-op (já registrada
   na `visual-ui`) voltou na prática: borda por duplo preenchimento.
 
+- **Cutscene sem botão e caixa transparente** (ajuste do mantenedor
+  pelo print de referência do outro projeto): miolo da caixa 0,90 →
+  **0,60** (a arena dá pra ver por trás) e os botões
+  "Continuar"/"Entrar" **saíram** — `info().botao = null`, o check de
+  retângulo saiu do `Jogo.update` e TODO clique avança (3 estágios;
+  o último encerra). Enter fecha direto; eventos mantêm auto-dismiss
+  3,5s; a fronteira continua "esperando o jogador" — por clique.
+  Testes 42/48 migraram de asserts de botão para as dicas
+  piscantes + laço de cliques (o retângulo era o contrato, não o
+  texto).
+- **ESPERA_BASE 8→4 sem medição** — pedido explícito do mantenedor
+  ("commitar sem teste"): registrado no CHANGELOG; se a sim estolar,
+  o comentário do código manda subir o número.
+
 ## Bloqueios
 
 - Nenhum.

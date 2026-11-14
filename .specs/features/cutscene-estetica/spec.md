@@ -65,6 +65,16 @@ barras e caixa) · **só o estilo** (geometria intocada).
   cena `universo` e overlay de vitória (continuam com `UI.panel`/
   véu próprios) · gatilhos/comportamento · som.
 
+## Ajuste pós-avaliação 2 (mantenedor)
+
+- **Caixa transparente + SEM botão** (print de referência do outro
+  projeto): miolo `rgba(8,6,14,0.90)` → **`0,60`**; botões
+  "Continuar"/"Entrar no Mundo" removidos — `botao()` some,
+  `info().botao = null`, `Jogo.update` avança com **todo clique**
+  (sem check de retângulo) + `Espaço`. Contratos migrados: 42
+  (botão → dicas piscantes + laço de cliques) e 48 (retângulo →
+  `botao === null` + cliques encerram).
+
 ## Verificação
 
 Gate 3× + `ritmo 60` · QA no navegador (sem véu, caixa preta com fio

@@ -156,18 +156,10 @@ var Cutscene = (function () {
     fecha();
   }
 
-  // retângulo do botão do overlay (fonte única: desenhar + testes)
-  function botao() {
-    if (atual && atual.tipo === 'evento') {
-      var px = Math.round((Game.W - EV_PW) / 2);
-      var py = Math.round((432 - EV_PH) / 2);
-      return { x: px + EV_PW / 2 - 90, y: py + 152, w: 180, h: 36 };
-    }
-    var mx = Math.round((Game.W - MUNDO_PW) / 2);
-    return { x: mx + MUNDO_PW / 2 - 130, y: MUNDO_PY + 240, w: 260, h: 36 };
-  }
-
-  // sonda p/ testes (seção 42)
+  // sonda p/ testes (seção 42) — sem botão desde o ajuste do
+  // mantenedor (caixa transparente + clique/Espaço/Enter)
+  // (spec cutscene-estetica): info().botao é null e todo clique
+  // avança
   function info() {
     if (!atual) return null;
     return {
@@ -179,7 +171,7 @@ var Cutscene = (function () {
       mudo: mudo,
       barras: atual.barras,
       revela: { linha: atual.linha, chars: Math.round(atual.chars) },
-      botao: botao()
+      botao: null
     };
   }
 
@@ -249,7 +241,9 @@ var Cutscene = (function () {
   // lição da spec visual-ui)
   function caixaCorte(ctx, x, y, w, h, r) {
     UI.caixa(x, y, w, h, r, 'rgba(232, 200, 106, 0.45)');
-    UI.caixa(x + 1, y + 1, w - 2, h - 2, r - 1, 'rgba(8, 6, 14, 0.90)');
+    // miolo TRANSPARENTE (ajuste do mantenedor — print de referência):
+    // a arena dá pra ver por trás da caixa
+    UI.caixa(x + 1, y + 1, w - 2, h - 2, r - 1, 'rgba(8, 6, 14, 0.60)');
   }
 
   function desenhaMundo(ctx, W) {
@@ -278,8 +272,8 @@ var Cutscene = (function () {
       UI.text('clique para avançar', px + pw / 2, py + 218,
         { align: 'center', color: '#6f678a', font: '13px monospace' });
     }
-    var b = botao();
-    if (UI.button(b.x, b.y, b.w, b.h, 'Entrar no Mundo ' + para)) fecha();
+    // SEM botão (ajuste do mantenedor): o clique em qualquer ponto
+    // avança (3 estágios — o último encerra) e o Enter fecha
   }
 
   function desenhaEvento(ctx, W) {
@@ -303,8 +297,8 @@ var Cutscene = (function () {
         px + pw / 2, py + 128,
         { align: 'center', color: '#6f678a', font: '12px monospace' });
     }
-    var b = botao();
-    if (UI.button(b.x, b.y, b.w, b.h, 'Continuar')) fecha();
+    // SEM botão (ajuste do mantenedor): clique/Espaço avança, o
+    // cronômetro de 3,5s encerra sozinho
   }
 
   function desenhar(ctx) {
