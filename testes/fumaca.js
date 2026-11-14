@@ -5112,6 +5112,55 @@ console.log('49) Visual efeitos: pools, receitas, game feel e camadas');
     'limparEfeitos zera pools + shake + hit-stop + flash + vinheta');
 }
 
+console.log('50) Virada do herói: facing aplica o espelho para o alvo');
+{
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // cena limpa (mesmo padrão da 45) — ninguém morre no teste
+  p.vitoria = false;
+  if (typeof Cutscene !== 'undefined') Cutscene.fecha();
+  Salvar.salvarEstado(p.id, 1, Date.now(), false, 1);
+  Game.setScene('jogo');
+  frame(2);
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  p.nivel = 1;
+  p.atributos.for = 1;
+  p.atributos.int = 1;
+  p.atributos.des = 1;
+  p.atributos.con = 9999;
+  p.equip.arma = null;
+  p.equip.armadura = null;
+  p.autoApr = false;
+  p.loadout = null;
+  p.ramos = null;
+  Batalha.restaurarOnda(2);
+  const hb = Batalha.info().heroi;
+  const en = Batalha.spawn({ tipo: 'slime' });
+  en.hp = en.hpMax = 9999;
+  conf(hb.facing === 1, 'facing nasce virado pra direita (= 1)');
+
+  // alvo À ESPERDA → o herói vira (-1)
+  en.x = hb.x - 70;
+  en.y = hb.y;
+  let esq = false;
+  for (let i = 0; i < 90 && !esq; i++) {
+    frame(1);
+    esq = Batalha.info().heroi.facing === -1;
+  }
+  conf(esq, 'alvo à esquerda → herói vira (facing -1)');
+
+  // alvo À DIREITA → volta pra 1 (entre golpes o ramo !atacando re-vira)
+  en.x = Batalha.info().heroi.x + 70;
+  en.y = Batalha.info().heroi.y;
+  let dir = false;
+  for (let i = 0; i < 90 && !dir; i++) {
+    frame(1);
+    dir = Batalha.info().heroi.facing === 1;
+  }
+  conf(dir, 'alvo à direita → herói volta (facing 1)');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');

@@ -10,6 +10,23 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Herói vira para o lado que está batendo (spec `virada-ataque`)** —
+  `h.facing` era um campo **morto**: escrito em 3 lugares e nunca
+  lido no desenho (`desenhaHeroi` fazia `drawImage` direto) → o
+  herói sempre olhava/batia pra direita. Agora `facing === -1`
+  **espelha o sprite** (sombra e alpha de invulnerável fora do
+  `save/restore`) e as 3 chamadas de `Efeitos.corte` passam
+  `heroi.facing` (o arco já sabia espelhar, ninguém informava).
+  Rasterizador `cena.js` ganhou **`drawImage` com escala negativa**
+  (antes `DW = max(1, round(dw·sx))` viraria 1px — o herói virado
+  viraria uma coluna nas screenshots) + **auto-check sintético**
+  pixel a pixel que derruba o gate se o espelho errar. Testes:
+  **seção 50 (3 confs)** — alvo à esquerda → `facing −1`, à direita →
+  `1`; sonda `info().heroi.facing`. Gate 3× = **699 confs** ·
+  sanidade: mapa 1 **36,4min**.
+
 ## [0.4.0] — 2026-11-14
 
 ### Added

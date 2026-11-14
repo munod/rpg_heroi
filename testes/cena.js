@@ -158,15 +158,21 @@ function novoCtxRGBA(cv) {
       if (!src || !src._data) return;
       if (dw === undefined) { dw = src.width; dh = src.height; }
       const sw = src.width, sh = src.height;
-      // itera em pixels de dispositivo: escala vira bloco nítido (nearest)
-      const DW = Math.max(1, Math.round(dw * st.sx));
-      const DH = Math.max(1, Math.round(dh * st.sy));
-      const X0 = st.tx + dx * st.sx;
-      const Y0 = st.ty + dy * st.sy;
+      // itera em pixels de dispositivo: escala vira bloco nítido
+      // (nearest); escala NEGATIVA espelha (virada do herói —
+      // spec virada-ataque): origem na borda da extensão e índice
+      // da fonte invertido por eixo
+      const flipX = st.sx < 0, flipY = st.sy < 0;
+      const DW = Math.max(1, Math.round(Math.abs(dw * st.sx)));
+      const DH = Math.max(1, Math.round(Math.abs(dh * st.sy)));
+      const X0 = st.tx + (flipX ? (dx + dw) * st.sx : dx * st.sx);
+      const Y0 = st.ty + (flipY ? (dy + dh) * st.sy : dy * st.sy);
       for (let Y = 0; Y < DH; Y++) {
         for (let X = 0; X < DW; X++) {
-          const ix = Math.min(sw - 1, Math.floor(X * sw / DW));
-          const iy = Math.min(sh - 1, Math.floor(Y * sh / DH));
+          const ix = Math.min(sw - 1,
+            Math.floor((flipX ? DW - 1 - X : X) * sw / DW));
+          const iy = Math.min(sh - 1,
+            Math.floor((flipY ? DH - 1 - Y : Y) * sh / DH));
           const so = (iy * sw + ix) * 4;
           const a = src._data[so + 3] / 255 * st.alpha;
           if (a <= 0) continue;
@@ -416,3 +422,33 @@ sandbox.Game.personagem.ramos = null;
 
 console.log('cena atual: ' + sandbox.Game.cena);
 console.log('batalha: ' + JSON.stringify(sandbox.Batalha.info()));
+
+// ---- auto-check do rasterizador: drawImage espelha com escala
+// negativa (spec virada-ataque) — 4 cores distintas, pixel a pixel;
+// THROW derruba o gate se a conta do espelho errar em 1px
+{
+  const fonte = { width: 4, height: 1, _data: Buffer.alloc(16) };
+  [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0]].forEach((c, i) => {
+    fonte._data.set([c[0], c[1], c[2], 255], i * 4);
+  });
+  const alvo = { width: 6, height: 1, _data: Buffer.alloc(24) };
+  const cx = novoCtxRGBA(alvo);
+  cx.save();
+  cx.translate(6, 0);
+  cx.scale(-1, 1);
+  cx.drawImage(fonte, 1, 0, 4, 1);
+  cx.restore();
+  // extensão espelhada da imagem em [1..5]: px1=Y, px2=B, px3=G, px4=R
+  const esperado = [
+    [0, 0, 0, 0], [255, 255, 0, 255], [0, 0, 255, 255],
+    [0, 255, 0, 255], [255, 0, 0, 255], [0, 0, 0, 0]
+  ];
+  for (let i = 0; i < 6; i++) {
+    const p = Array.from(alvo._data.slice(i * 4, i * 4 + 4));
+    if (p.some((v, j) => v !== esperado[i][j])) {
+      throw new Error('virada-ataque: px ' + i + ' = [' + p +
+        '] esperado [' + esperado[i] + ']');
+    }
+  }
+  console.log('  ok  drawImage espelha com escala negativa (auto-check)');
+}

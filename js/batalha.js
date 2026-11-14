@@ -1191,7 +1191,8 @@ var Batalha = (function () {
   function varredura(mg) {
     var st = heroi.stats;
     numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
-    Efeitos.corte(heroi.x, heroi.y - 10, mg.cor, 1 + (mg.mult - 1) * 0.8);
+    Efeitos.corte(heroi.x, heroi.y - 10, mg.cor,
+      1 + (mg.mult - 1) * 0.8, heroi.facing);
     Efeitos.sacudir(0.1 + (mg.mult - 1) * 0.15);
     for (var i = inimigos.length - 1; i >= 0; i--) {
       var en = inimigos[i];
@@ -1256,7 +1257,7 @@ var Batalha = (function () {
   // o inimigo empurrado não reage à IA durante o voo.
   function empurra(sk) {
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
-    Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 1.5);
+    Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 1.5, heroi.facing);
     Efeitos.sacudir(0.25);
     var r2 = sk.alcance * sk.alcance;
     for (var i = 0; i < inimigos.length; i++) {
@@ -1297,7 +1298,7 @@ var Batalha = (function () {
       // esquiva: rajada curta — corre por sk.distancia em 0,18s
       heroi.fuga = { t: 0.18, vx: ux * sk.distancia / 0.18,
                      vy: uy * sk.distancia / 0.18 };
-      Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 0.9);
+      Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 0.9, heroi.facing);
     }
   }
 
@@ -1762,7 +1763,19 @@ var Batalha = (function () {
     sombra(ctx, heroi.x, heroi.y - 1, 8);
     if (heroi.morto) return;
     if (heroi.inv > 0 && Math.floor(heroi.inv * 16) % 2 === 0) ctx.globalAlpha = 0.45;
-    ctx.drawImage(c.canvas, Math.round(heroi.x - 8), Math.round(heroi.y - 20), c.w, c.h);
+    var x0 = Math.round(heroi.x - 8), y0 = Math.round(heroi.y - 20);
+    if (heroi.facing === -1) {
+      // espelha o sprite (desenhado olhando pra direita) — alvo à
+      // esquerda (spec virada-ataque); só o drawImage vira: a sombra
+      // e o alpha do inv ficam fora do save/restore
+      ctx.save();
+      ctx.translate(x0 + c.w, y0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(c.canvas, 0, 0, c.w, c.h);
+      ctx.restore();
+    } else {
+      ctx.drawImage(c.canvas, x0, y0, c.w, c.h);
+    }
     ctx.globalAlpha = 1;
   }
 
@@ -1975,7 +1988,8 @@ var Batalha = (function () {
                agu: (heroi && heroi.ia && typeof heroi.ia.agu === 'number')
                  ? Math.round(heroi.ia.agu * 100) / 100 : 0,
                prof: (heroi && heroi.ia && typeof heroi.ia.prof === 'number')
-                 ? heroi.ia.prof : 0 },
+                 ? heroi.ia.prof : 0,
+               facing: heroi ? heroi.facing : 1 },
       inimigos: inimigos.length,
       // diagnóstico p/ teste (seções 32): distância do inimigo mais
       // perto, se o golpe está em animação e o destino de fuga atual

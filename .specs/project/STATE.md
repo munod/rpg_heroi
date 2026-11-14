@@ -459,6 +459,14 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 
 ## Lições
 
+- **Estado escrito e nunca lido = campo morto** (spec
+  `virada-ataque`): `h.facing` existia desde sempre (3 atribuições)
+  e ninguém lia no desenho — o bug "só bate pra um lado" era um
+  campo órfão, não uma lógica errada. Ao ADICIONAR estado, grep nas
+  leituras na hora; ao RECEBER bug visual, procurar primeiro se o
+  campo existe mas ninguém consome. Bônus: campos espelháveis testam
+  bem com sonda em `info()` (vira−1/direita1 em fixtures).
+
 - **Consolidar > duplicar** (leva visual-efeitos): o game feel vivia
   espalhado (shake/tFlash/parts/nums/vinheta no `batalha`) e o doc
   descrevia um sistema único — a migração inteira passou o gate de

@@ -113,6 +113,13 @@
   `cutscene.js`; nome/chefe dos mundos saem de `Mapas.LISTA` (fonte
   única). Só primitivas do rasterizador (fillRect/strokeRect/text).
   Fumaça seção 48 (a 42 espera a narração revelar).
+- **Virada do herói (spec `virada-ataque`)** — `h.facing` (1/−1) é
+  aplicado NO DESENHO: `desenhaHeroi` espelha o sprite com
+  `save → translate(x0+c.w) → scale(-1,1) → drawImage → restore`
+  (sombra/alpha fora do save); `Efeitos.corte` recebe `heroi.facing`
+  nas 3 chamadas; sonda `info().heroi.facing`. O campo era **morto**
+  (escrito em 3 lugares, nunca lido) — o golpe é por distância e
+  batia dos dois lados, só o visual estava preso pra direita.
 - **Curvas de status com teto (spec `gestao-atributos`)** — auditoria
   revelou "teto onde pensaram, sem teto onde não pensaram" (crítico 45
   e recarga 0,08 têm; vel/XP/HP não tinham). Hoje: **velocidade =
@@ -458,8 +465,9 @@
   `fillRect`, `strokeRect`, `ellipse`+`fill`, `rect`+`fill`,
   `drawImage`, `translate`/`scale`/`setTransform`, `globalAlpha`;
   `arc`/`stroke()`/gradiente **quebram o screenshot** (`stroke()` é
-  no-op; gradiente cai no fallback sólido) e `lighter` só soma no
-  navegador. O dano do missil vive no callback que a `Batalha`
+  no-op; gradiente cai no fallback sólido), `lighter` só soma no
+  navegador; **`drawImage` com escala negativa espelha** (auto-check
+  no `cena.js`, spec `virada-ataque`). O dano do missil vive no callback que a `Batalha`
   passa. Em teste, para zerar TUDO use `Batalha.limparEfeitos()` (=
   `Efeitos.limpar()` — cobre nums/parts/anéis/shake/hit-stop/flash
   desde esta spec). Fumaça seção 49.
