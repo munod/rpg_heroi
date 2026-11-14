@@ -451,6 +451,8 @@ var Personagem = (function () {
   }
 
   // Look pronto pra desenhar (arma equipada sobrepõe a da classe).
+  // `classe` e `rar` são DERIVADOS (só pro desenho — o save não muda:
+  // p.look segue com skin/hair/estilo/cloth).
   function lookDe(p) {
     var c = CLASSES[p.classe] || CLASSES.guerreiro;
     var armaEq = p.equip && p.equip.arma && p.equip.arma.arma;
@@ -459,6 +461,8 @@ var Personagem = (function () {
       hair: p.look.hair,
       estilo: p.look.estilo,
       cloth: p.look.cloth,
+      classe: CLASSES[p.classe] ? p.classe : 'guerreiro',
+      rar: (p.equip && p.equip.arma && p.equip.arma.rar) || 1,
       weapon: armaEq || c.arma
     };
   }

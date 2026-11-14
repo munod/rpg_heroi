@@ -217,7 +217,7 @@ Tudo roda no Node, sem navegador:
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
 node testes/fumaca.js     # 687 asserções: sprites, status, UI visual, idle, toque, ranking, mundos, cutscenes, árvore, IA (monstros + herói)
-node testes/grade.js      # grade do sprite em ASCII + 13 asserções de pixel
+node testes/grade.js      # grade do sprite em ASCII + 17 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
 node testes/mapa.js X.png # converte screenshot em mapa ASCII (layout)

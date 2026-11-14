@@ -8,7 +8,10 @@ var Anim = (function () {
   var rockCache = null;
 
   function hero(look, anim, frame) {
-    var k = [look.skin, look.hair, look.estilo, look.cloth, look.weapon, anim, frame].join('|');
+    // classe e rar entram na chave: sem elas, trocar de classe/equipar
+    // item melhor deixaria o sprite velho no cache (spec visual-heroi-arma)
+    var k = [look.skin, look.hair, look.estilo, look.cloth, look.classe,
+      look.rar, look.weapon, anim, frame].join('|');
     if (!heroCache[k]) heroCache[k] = Sprite.heroCanvas(look, anim, frame);
     return heroCache[k];
   }

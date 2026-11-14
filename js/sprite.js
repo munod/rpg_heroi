@@ -1,7 +1,16 @@
 // Geração procedural de pixel art.
 // Grade de pixels -> canvas pequeno, escalado depois com imageSmoothing desligado.
+//
+// Herói (spec visual-heroi-arma): as poses são AUTORADAS em texto (faixas de
+// linhas de 20 colunas, '.' = vazio) e compostas por partes — corpo, pernas,
+// braços, cabelo (5 estilos) e classe (4) —, tudo sob uma única fonte de luz
+// top-esquerda. A cor vem da paleta por material, em rampas HSL com hue-shift
+// (sombra desloca o matiz pro azul e satura; luz desloca pro amarelo).
 var Sprite = (function () {
 
+  // ---- cor ------------------------------------------------------------
+  // Escurecimento por multiplicação (legado — monstros/cenário e legenda
+  // dos testes continuam usando).
   function shade(hex, f) {
     var n = parseInt(hex.slice(1), 16);
     var r = Math.min(255, Math.max(0, Math.round(((n >> 16) & 255) * f)));
@@ -10,34 +19,144 @@ var Sprite = (function () {
     return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
   }
 
-  // ---- paleta do herói -------------------------------------------------
-  // 0 vazio | 1 contorno | 2 pele | 3 pele sombra | 4 cabelo | 5 cabelo sombra
-  // 6 roupa | 7 roupa sombra | 8 detalhe (cinto/bota) | 9 metal | 10 metal sombra
-  // 11 madeira | 12 olho branco | 13 pupila | 14 dourado
+  function rgbDe(hex) {
+    var n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  // [matiz 0..360, saturação 0..1, luminosidade 0..1]
+  function hslDe(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var l = (max + min) / 2, h = 0, s = 0, d = max - min;
+    if (d !== 0) {
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return [h, s, l];
+  }
+
+  function doisHexa(v) {
+    var t = Math.round(v * 255);
+    if (t < 0) t = 0;
+    if (t > 255) t = 255;
+    return (t < 16 ? '0' : '') + t.toString(16);
+  }
+
+  function hexDe(h, s, l) {
+    h = ((h % 360) + 360) % 360;
+    s = s < 0 ? 0 : s > 1 ? 1 : s;
+    l = l < 0 ? 0 : l > 1 ? 1 : l;
+    var c = (1 - Math.abs(2 * l - 1)) * s;
+    var x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    var m = l - c / 2;
+    var r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; }
+    else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; }
+    else { r = c; b = x; }
+    return '#' + doisHexa(r + m) + doisHexa(g + m) + doisHexa(b + m);
+  }
+
+  // Rampas de 4 tons com hue-shift (Slynyrd nº 1 / nº 6): a sombra anda o
+  // matiz pro azul e satura, a luz anda pro amarelo e clareia — sem isso os
+  // escuros ficam acinzentados (o problema do `shade` puro).
+  function rampa(base) {
+    var c = rgbDe(base);
+    var t = hslDe(c[0], c[1], c[2]);
+    return {
+      base: base,
+      luz: hexDe(t[0] + 7, t[1] * 0.86 + 0.03, t[2] + 0.15),
+      som: hexDe(t[0] - 11, t[1] * 1.12 + 0.04, t[2] - 0.13),
+      som2: hexDe(t[0] - 17, t[1] * 1.2 + 0.06, t[2] - 0.25)
+    };
+  }
+
+  // ---- índices da paleta do herói --------------------------------------
+  var V = 0, LINHA = 1;
+  var PELE = 2, PELE_L = 3, PELE_S = 4, PELE_S2 = 5;
+  var CAB = 6, CAB_L = 7, CAB_S = 8, CAB_S2 = 9;
+  var TEC = 10, TEC_L = 11, TEC_S = 12, TEC_S2 = 13;
+  var COURO = 14, COURO_L = 15, COURO_S = 16;
+  var META = 17, META_L = 18, META_S = 19;
+  var OURO = 20, OURO_L = 21, OURO_S = 22;
+  var OLHO = 23, PUPILA = 24;
+  var MADE = 25, MADE_S = 26;
+  var ACC = 27, ACC_L = 28, ACC_S = 29;
+
+  // caractere -> índice (fonte única; a legenda do teste lê daqui)
+  var PALETA_TXT = [
+    ['.', V], ['#', LINHA],
+    ['S', PELE], ['W', PELE_L], ['s', PELE_S], ['x', PELE_S2],
+    ['h', CAB], ['i', CAB_L], ['H', CAB_S], ['j', CAB_S2],
+    ['c', TEC], ['k', TEC_L], ['C', TEC_S], ['K', TEC_S2],
+    ['b', COURO], ['n', COURO_L], ['B', COURO_S],
+    ['m', META], ['M', META_L], ['N', META_S],
+    ['g', OURO], ['G', OURO_L], ['q', OURO_S],
+    ['e', OLHO], ['p', PUPILA],
+    ['w', MADE], ['v', MADE_S],
+    ['a', ACC], ['A', ACC_L], ['d', ACC_S]
+  ];
+  var CH = {};
+  for (var ic = 0; ic < PALETA_TXT.length; ic++) CH[PALETA_TXT[ic][0]] = PALETA_TXT[ic][1];
+
+  var COR_COURO = '#6b4a2e';
+  var COR_METAL = '#a8b8cc';
+  var COR_OURO = '#d9a62a';
+  var COR_MADEIRA = '#8a5a2e';
+  var COR_CONTORNO = '#1b1424';
+
+  // cor do acento da arma por raridade do item equipado (1 = ouro, que
+  // preserva o visual/clássico da espada de classe)
+  function corArma(rar) {
+    if (rar === 2) return '#4fc3ff';
+    if (rar === 3) return '#b06bff';
+    if (rar === 4) return '#ff5566';
+    return COR_OURO;
+  }
+
+  // 0 vazio | 1 contorno | 2-5 pele | 6-9 cabelo | 10-13 tecido | 14-16 couro
+  // 17-19 metal | 20-22 dourado | 23-24 olho | 25-26 madeira | 27-29 acento
   function heroPalette(look) {
-    return [
-      null,
-      '#1b1424',
-      look.skin,
-      shade(look.skin, 0.76),
-      look.hair,
-      shade(look.hair, 0.70),
-      look.cloth,
-      shade(look.cloth, 0.72),
-      shade(look.cloth, 0.45),
-      '#a8b8cc',
-      '#78889c',
-      '#8a5a2e',
-      '#ffffff',
-      '#20182a',
-      '#d9a62a'
-    ];
+    var pele = rampa(look.skin);
+    var cabelo = rampa(look.hair);
+    var tecido = rampa(look.cloth);
+    var couro = rampa(COR_COURO);
+    var metal = rampa(COR_METAL);
+    var ouro = rampa(COR_OURO);
+    var madeira = rampa(COR_MADEIRA);
+    var acento = rampa(corArma(look && look.rar));
+    var pal = [];
+    pal[V] = null;
+    pal[LINHA] = COR_CONTORNO;
+    pal[PELE] = pele.base; pal[PELE_L] = pele.luz;
+    pal[PELE_S] = pele.som; pal[PELE_S2] = pele.som2;
+    pal[CAB] = cabelo.base; pal[CAB_L] = cabelo.luz;
+    pal[CAB_S] = cabelo.som; pal[CAB_S2] = cabelo.som2;
+    pal[TEC] = tecido.base; pal[TEC_L] = tecido.luz;
+    pal[TEC_S] = tecido.som; pal[TEC_S2] = tecido.som2;
+    pal[COURO] = couro.base; pal[COURO_L] = couro.luz; pal[COURO_S] = couro.som;
+    pal[META] = metal.base; pal[META_L] = metal.luz; pal[META_S] = metal.som;
+    pal[OURO] = ouro.base; pal[OURO_L] = ouro.luz; pal[OURO_S] = ouro.som;
+    pal[OLHO] = '#ffffff';
+    pal[PUPILA] = '#20182a';
+    pal[MADE] = madeira.base; pal[MADE_S] = madeira.som;
+    pal[ACC] = acento.base; pal[ACC_L] = acento.luz; pal[ACC_S] = acento.som;
+    return pal;
+  }
+
+  function txtPaleta() {
+    var out = [];
+    for (var i = 0; i < PALETA_TXT.length; i++) out.push(PALETA_TXT[i][0]);
+    return out;
   }
 
   // ---- primitivas --------------------------------------------------------
-  // Todas recebem um "pintor" (x, y, valor) pra poder registrar os pixels
-  // desenhados (usado pelo contorno dos elementos finos).
-
   function pintorDireto(g, W, H) {
     return function (x, y, v) {
       x = Math.round(x);
@@ -94,7 +213,7 @@ var Sprite = (function () {
           (x < W - 1 && src[i + 1] === 0) ||
           (y > 0 && src[i - W] === 0) ||
           (y < H - 1 && src[i + W] === 0);
-        if (borda) g[i] = 1;
+        if (borda) g[i] = LINHA;
       }
     }
   }
@@ -105,10 +224,10 @@ var Sprite = (function () {
     for (var k = 0; k < destaque.length; k++) {
       var i = destaque[k];
       var x = i % W, y = (i / W) | 0;
-      if (x > 0 && g[i - 1] === 0) g[i - 1] = 1;
-      if (x < W - 1 && g[i + 1] === 0) g[i + 1] = 1;
-      if (y > 0 && g[i - W] === 0) g[i - W] = 1;
-      if (y < H - 1 && g[i + W] === 0) g[i + W] = 1;
+      if (x > 0 && g[i - 1] === 0) g[i - 1] = LINHA;
+      if (x < W - 1 && g[i + 1] === 0) g[i + 1] = LINHA;
+      if (y > 0 && g[i - W] === 0) g[i - W] = LINHA;
+      if (y < H - 1 && g[i + W] === 0) g[i + W] = LINHA;
     }
   }
 
@@ -128,52 +247,358 @@ var Sprite = (function () {
     return { canvas: cv, w: W, h: H };
   }
 
+  // ---- autoria em texto ---------------------------------------------------
+  // Desenha uma faixa de linhas (todas com W colunas) no grid, deslocada em
+  // dy (o "bob" do frame). '.' = vazio = não toca no que já estava.
+  function desenhaFaixa(g, W, H, linhas, y0, dy, nome) {
+    for (var i = 0; i < linhas.length; i++) {
+      var linha = linhas[i];
+      if (linha.length !== W) {
+        throw new Error('sprite ' + nome + ': linha ' + i + ' com ' +
+          linha.length + ' colunas (esperado ' + W + ')');
+      }
+      var y = y0 + i + dy;
+      if (y < 0 || y >= H) continue;
+      for (var x = 0; x < W; x++) {
+        var ch = linha.charAt(x);
+        if (ch === '.') continue;
+        var v = CH[ch];
+        if (v === undefined) {
+          throw new Error('sprite ' + nome + ': caractere desconhecido "' + ch + '"');
+        }
+        g[y * W + x] = v;
+      }
+    }
+  }
+
+  // ---- herói: partes autoradas -------------------------------------------
+  // Corpo (cabeça, rosto, pescoço, torso, cinto) — sem braços (vêm à parte).
+  // A borda vira contorno sozinha: x4/x11 da face e o pescoço são silhueta.
+  var CORPO = [
+    '....................',
+    '.....SSSSSS.........',
+    '....SSSSSSSS........',
+    '....SSSSShSS........',   // sobrancelha em (9,3)
+    '....SSSSSepS........',   // olho branco (9,4) / pupila (10,4)
+    '....ssSSSSSs........',   // orelha (5,5) + nariz (11,5)
+    '.....SSSSsS.........',   // boca (9,6)
+    '......ssss..........',   // pescoço
+    '....ccccccccc.......',   // ombros
+    '.....ccccccc........',
+    '.....kcccccc........',   // peito pega a luz da esquerda
+    '.....ccccccc........',
+    '.....bbbgbbb........',   // cinto + fivela dourada (8,12)
+    '.....CCCCCCC........'    // quadril na sombra
+  ];
+
+  var PERNAS = {
+    // parado (e nos frames de ataque): pernas juntas, linha de contorno no meio
+    parado: [
+      '.....CCK#ccC........',
+      '.....CCK#ccC........',
+      '.....KKK#CCC........',
+      '.....KKK#CCC........',
+      '.....bbb#bbb........',
+      '.....BBB#BBB........'
+    ],
+    // passo aberto (contato): traseira recua, dianteira avança
+    A: [
+      '....CCC...ccc.......',
+      '....CCC...ccc.......',
+      '....KKK...CCC.......',
+      '....KKK...CCC.......',
+      '....bbb...bbb.......',
+      '....BBB...BBB.......'
+    ],
+    // passo aberto invertido: a perna da frente está atrás (troca de luz)
+    B: [
+      '....ccc...CCC.......',
+      '....ccc...CCC.......',
+      '....CCC...KKK.......',
+      '....CCC...KKK.......',
+      '....bbb...bbb.......',
+      '....BBB...BBB.......'
+    ]
+  };
+
+  // Braço traseiro (fileira 9..12) — some atrás de cabelo longo/capa.
+  var BRACO_TRAS = {
+    baixo: [
+      '...CC...............',
+      '...CC...............',
+      '...CC...............',
+      '...CC...............'
+    ],
+    tras: [
+      '...CC...............',
+      '..CC................',
+      '..CC................',
+      '..CC................'
+    ],
+    frente: [
+      '...CC...............',
+      '....CK..............',
+      '....CK..............',
+      '....CK..............'
+    ]
+  };
+
+  // Braço dianteiro (fileira 8..13) — o da frente segura a arma.
+  var BRACO_FRENTE = {
+    baixo: [
+      '....................',
+      '............CC......',
+      '............CC......',
+      '............CC......',
+      '............CC......',
+      '....................'
+    ],
+    wind: [
+      '............C.......',
+      '...........C........',
+      '..........C.........',
+      '....................',
+      '....................',
+      '....................'
+    ],
+    slash: [
+      '....................',
+      '....................',
+      '...........ccc......',
+      '..........CCCC......',
+      '....................',
+      '....................'
+    ],
+    recover: [
+      '....................',
+      '....................',
+      '..........C.........',
+      '...........C........',
+      '............C.......',
+      '............C.......'
+    ]
+  };
+
+  // Cabelos (fileira 0..) — âncora na cabeça, acompanha o bob. A franja
+  // cobre x4..x8 e deixa x9/x10 livres: olho e pupila sobrevivem ao bob=1.
+  var CABELOS = {
+    curto: [
+      '.....iiiiii.........',
+      '....ihhhhhhh........',
+      '....hhhhhhhH........',
+      '....hhhhh...........',
+      '....H...............',
+      '....H...............'
+    ],
+    longo: [
+      '.....iiiiii.........',
+      '....ihhhhhhh........',
+      '....hhhhhhhH........',
+      '...hhhhhh...........',
+      '..hhH...............',
+      '..hhH...............',
+      '..hhH...............',
+      '..hHH...............',
+      '..HH................',
+      '..H.................'
+    ],
+    rabo: [
+      '.....iiiiii.........',
+      '....ihhhhhhh........',
+      '....hhhhhhhH........',
+      '....hhhhh...........',
+      '....H...............',
+      '.hHH................',
+      '.hHH................',
+      '..HH................'
+    ],
+    moicana: [
+      '......iii...........',
+      '......hhh...........',
+      '.....hhhhH..........',
+      '......H.H...........'
+    ],
+    careca: [
+      '....................',
+      '....................',
+      '....bbbbbbbb........',
+      '...bBbbbbbbb........'
+    ]
+  };
+
+  // Classes (fileira 5..13) — faixa desenhada DEPOIS do braço traseiro
+  // (capa/hood cobrem) e ANTES do dianteiro (nunca invade x12..13).
+  var CLASSES = {
+    guerreiro: [
+      '....................',
+      '....................',
+      '....................',
+      '.....mMcccmN........',   // ombreiras
+      '.....mmcccmN........',
+      '......mMmN..........',   // peitoral
+      '......mmN...........',
+      '....................',
+      '....................'
+    ],
+    mago: [
+      '....................',
+      '..KCC...............',   // capuz atrás do pescoço (fileira 6)
+      '..KCC...............',
+      '..KCC.ggggg.........',   // capuz + gola dourada
+      '........g...........',   // ornamento
+      '........g...........',
+      '.......gg...........',
+      '....................',
+      '....................'
+    ],
+    ladino: [
+      '....................',
+      '....................',
+      '....................',
+      '....BbbbbbbB........',   // colete
+      '....BnbbbbbB........',
+      '....BnbbbbbB........',
+      '....BbbbbbbB........',
+      '.......n............',   // fivela do cinto
+      '....................'
+    ],
+    clerigo: [
+      '....................',
+      '....................',
+      '....................',
+      '..CC.ggggg..........',   // capa fina no ombro + gola dourada
+      '.CCCK.g.............',   // capa em sombra (atrás do corpo) + estola
+      '.CCCK.g.............',
+      '.CCCK.g.............',
+      '.CCCK.G.............',
+      '.CCCK...............'
+    ]
+  };
+
+  // Frames: bob desloca cabeça/torso/cabelo/classe; braços acompanham fora do
+  // ataque (mesma lógica do código antigo). mao = punho, tipa = ponta da arma.
+  function montaFrame(anim, frame) {
+    if (anim === 'walk') {
+      var w = [
+        { pernas: 'A', braT: 'tras', bob: 0 },
+        { pernas: 'parado', braT: 'baixo', bob: 1 },
+        { pernas: 'B', braT: 'frente', bob: 0 },
+        { pernas: 'parado', braT: 'baixo', bob: 1 }
+      ][frame] || { pernas: 'parado', braT: 'baixo', bob: 0 };
+      w.braF = 'baixo';
+      w.mao = [12, 13 + w.bob];
+      w.tipa = [17, 18];
+      return w;
+    }
+    if (anim === 'attack') {
+      var a = [
+        { braF: 'wind', bob: 0, mao: [12, 8], tipa: [17, 3] },
+        { braF: 'slash', bob: 1, mao: [14, 11], tipa: [19, 11] },
+        { braF: 'recover', bob: 0, mao: [13, 13], tipa: [18, 16] }
+      ][frame] || { braF: 'slash', bob: 1, mao: [14, 11], tipa: [19, 11] };
+      a.pernas = 'parado';
+      a.braT = 'baixo';
+      return a;
+    }
+    var bob = frame % 2;
+    return {
+      pernas: 'parado', braT: 'baixo', braF: 'baixo', bob: bob,
+      mao: [12, 13 + bob], tipa: [17, 18]
+    };
+  }
+
   // ---- armas ------------------------------------------------------------
-  // Desenha a arma a partir da mão (hx, hy) em direção à ponta (tx, ty).
+  // Desenha a arma a partir do punho (hx, hy) em direção à ponta (tx, ty),
+  // com largura: cabo, guarda perpendicular, lâmina de 2px (fio claro +
+  // corpo) e ponta. `q` é a perpendicular apontando pra cima (luz de cima).
   function armaDesenhar(pintor, type, hx, hy, tx, ty) {
     var dx = tx - hx, dy = ty - hy;
     var d = Math.sqrt(dx * dx + dy * dy) || 1;
-    var len = type === 'cajado' ? d + 1
-            : type === 'adaga' ? Math.max(3, d - 2)
-            : d;
-    var ex = hx + (dx / d) * len;
-    var ey = hy + (dy / d) * len;
-    var pts = linhaPts(hx, hy, Math.round(ex), Math.round(ey));
-    var i, j;
+    var ux = dx / d, uy = dy / d;
+    // perpendicular apontando pra cima (fonte de luz no topo-esquerda)
+    var qx = -uy, qy = ux;
+    if (qy > 0 || (qy === 0 && qx > 0)) { qx = -qx; qy = -qy; }
+    // largura em passo INTEIRO: q arredondado em diagonal pula a diagonal
+    // anti e deixa furo no meio do metal (o contorno pintaria de escuro)
+    var ox = 0, oy = 0;
+    if (Math.abs(qx) >= Math.abs(qy)) ox = qx >= 0 ? 1 : -1;
+    else oy = qy >= 0 ? 1 : -1;
+
+    // P = ao longo de q (float) — serve pras linhas (guarda)
+    function P(k, o) {
+      return [Math.round(hx + ux * k + qx * o), Math.round(hy + uy * k + qy * o)];
+    }
+    // W = ao longo do inteiro (ox, oy) — sólido, serve pras larguras
+    function W(k, l) {
+      return [Math.round(hx + ux * k + ox * l), Math.round(hy + uy * k + oy * l)];
+    }
+    function pintaP(k, o, v) {
+      var p = P(k, o);
+      pintor(p[0], p[1], v);
+    }
+    function pintaW(k, l, v) {
+      var p = W(k, l);
+      pintor(p[0], p[1], v);
+    }
+
+    if (type === 'adaga') d = Math.max(4, d - 1.5);   // lâmina curta
 
     if (type === 'cajado') {
-      for (i = 0; i < pts.length; i++) pintor(pts[i][0], pts[i][1], 11);
-      var topo = pts[pts.length - 1];
-      elipse(pintor, topo[0], topo[1], 1.6, 1.6, 14);
-      pintor(topo[0], topo[1] - 1, 12);
+      var kCabo = Math.max(1, Math.floor(d - 2));
+      for (var kc = 0; kc <= kCabo; kc++) {
+        pintaW(kc, 0, MADE);
+        pintaW(kc, -1, MADE_S);
+      }
+      // cristal na ponta: 2 fileiras × 3 = gema sólida
+      var kg0 = Math.max(2, kCabo + 1);
+      for (var kg = kg0; kg <= Math.ceil(d); kg++) {
+        pintaW(kg, 1, ACC_L);
+        pintaW(kg, 0, ACC);
+        pintaW(kg, -1, ACC_S);
+      }
+      pintaW(Math.ceil(d), 1, ACC_L);
       return;
     }
 
     if (type === 'martelo') {
-      for (i = 0; i < pts.length; i++) pintor(pts[i][0], pts[i][1], 11);
-      var ponta = pts[pts.length - 1];
-      var antes = pts[Math.max(0, pts.length - 2)];
-      var dhx = Math.abs(ponta[0] - antes[0]);
-      var dhy = Math.abs(ponta[1] - antes[1]);
-      var bx, by, bw, bh;
-      if (dhx >= dhy) { bx = ponta[0] - 1; by = ponta[1] - 2; bw = 3; bh = 5; }
-      else { bx = ponta[0] - 2; by = ponta[1] - 1; bw = 5; bh = 3; }
-      for (j = 0; j < bh; j++) {
-        for (i = 0; i < bw; i++) pintor(bx + i, by + j, 9);
+      for (var km = 0; km <= Math.min(2, d - 1); km++) {
+        pintaW(km, 0, MADE);
+        pintaW(km, -1, MADE_S);
       }
-      for (i = 0; i < bw; i++) pintor(bx + i, by, 10);
+      // cabeça: bloco perpendicular fixo em k=3..5, com faixa do acento
+      // (a raridade do item aparece em TODA arma, não só na guarda)
+      for (var a = 3; a <= 5; a++) {
+        for (var o = -2; o <= 2; o++) {
+          var v = META;
+          if (o === 2) v = META_L;
+          else if (o === -2) v = META_S;
+          if (a === 5 && o >= 1) v = META_L;      // face de impacto na luz
+          if (a === 3 && o <= -1) v = META_S;
+          if (a === 4) v = o === 2 ? ACC_L : (o <= -1 ? ACC_S : ACC);
+          pintaW(a, o, v);
+        }
+      }
+      pintaW(5, 2, META_L);
       return;
     }
 
-    // espada / adaga: lâmina + guarda perto da mão
-    for (i = 0; i < pts.length; i++) pintor(pts[i][0], pts[i][1], 9);
-    var guarda = pts[Math.min(1, pts.length - 1)];
-    var perpx = Math.round(-dy / d), perpy = Math.round(dx / d);
-    pintor(guarda[0], guarda[1], 14);
-    pintor(guarda[0] + perpx, guarda[1] + perpy, 14);
-    pintor(guarda[0] - perpx, guarda[1] - perpy, 14);
-    var pontaEsp = pts[pts.length - 1];
-    pintor(pontaEsp[0], pontaEsp[1], 10);
+    // espada (e adaga): cabo, lâmina de 2px e guarda por ÚLTIMO (o ângulo
+    // da lâmina pode invadir a guarda — a cruz tem que ficar completa)
+    var guardaO = type === 'adaga' ? 1 : 2;
+    for (var kc2 = 0; kc2 <= 1; kc2++) {
+      pintaW(kc2, 0, COURO);
+      pintaW(kc2, -1, COURO_S);
+    }
+    var fim = Math.max(3, d);
+    for (var kb = 3; kb <= fim; kb++) {
+      pintaW(kb, 0, META);
+      pintaW(kb, 1, META_L);      // fio de cima pega a luz
+    }
+    pintaW(Math.round(fim), 0, META_L);
+    pintaW(Math.round(fim), 1, META_L);
+    for (var kgz = -guardaO; kgz <= guardaO; kgz++) {
+      pintaP(2, kgz, kgz < 0 ? ACC_S : ACC);
+    }
   }
 
   // ---- herói -------------------------------------------------------------
@@ -183,84 +608,21 @@ var Sprite = (function () {
     var W = 20, H = 20;
     var g = new Uint8Array(W * H);
     var pal = heroPalette(look);
-    var px = pintorDireto(g, W, H);
+    var fr = montaFrame(anim, frame);
+    var bob = fr.bob || 0;
+    var braB = (anim === 'attack') ? 0 : bob;
 
-    var SKIN = 2, SKINS = 3, HAIR = 4, HAIRS = 5;
-    var CLOTH = 6, CLOTHS = 7, ACC = 8;
-    var EYEW = 12, EYED = 13;
-
-    var bob = 0, legF = 0, legB = 0, pose = 'rest';
-    if (anim === 'idle') {
-      bob = frame % 2;
-    } else if (anim === 'walk') {
-      legF = [0, 1, 0, 0][frame] || 0;   // perna da frente avança
-      legB = [0, 0, 0, -1][frame] || 0;  // perna de trás recua
-      bob = frame % 2;
-    } else if (anim === 'attack') {
-      pose = ['wind', 'slash', 'recover'][frame] || 'slash';
-      bob = pose === 'slash' ? 1 : 0;
-    }
-
-    // pernas (no chão, sem bob); a da frente é 4px pra compensar o contorno
-    retangulo(px, 5 + legB, 14, 3, 5, CLOTHS);
-    retangulo(px, 8 + legF, 14, 4, 5, CLOTH);
-    retangulo(px, 5 + legB, 19, 3, 1, ACC);
-    retangulo(px, 8 + legF, 19, 4, 1, ACC);
-    // em pé parado as pernas se tocam: uma linha de contorno separa
-    if (legF === 0 && legB === 0) {
-      for (var py2 = 14; py2 <= 19; py2++) px(8, py2, 1);
-    }
-
-    // torso
-    retangulo(px, 5, 8 + bob, 7, 5, CLOTH);
-    retangulo(px, 4, 9 + bob, 9, 3, CLOTH);   // ombros
-    retangulo(px, 5, 12 + bob, 7, 1, ACC);    // cinto
-    retangulo(px, 5, 13 + bob, 7, 1, CLOTHS);
-
-    // braço de trás
-    if (pose === 'rest') retangulo(px, 4, 9 + bob, 1, 4, CLOTHS);
-
-    // pescoço e cabeça
-    retangulo(px, 7, 7 + bob, 2, 1, SKINS);
-    elipse(px, 7.5, 4 + bob, 4.5, 3.5, SKIN);
-
-    // cabelo (estilos)
-    var estilo = look.estilo || 'curto';
-    if (estilo === 'curto') {
-      elipse(px, 7.5, 3.1 + bob, 4.6, 2.9, HAIR);
-    } else if (estilo === 'longo') {
-      elipse(px, 7.5, 3.1 + bob, 4.6, 2.9, HAIR);
-      retangulo(px, 3, 4 + bob, 2, 6, HAIR);
-      retangulo(px, 3, 9 + bob, 2, 1, HAIRS);
-    } else if (estilo === 'rabo') {
-      elipse(px, 7.5, 3.1 + bob, 4.6, 2.9, HAIR);
-      retangulo(px, 2, 4 + bob, 2, 3, HAIR);
-      px(1, 6 + bob, HAIR);
-      px(1, 7 + bob, HAIRS);
-    } else if (estilo === 'moicana') {
-      retangulo(px, 6, 0 + bob, 3, 3, HAIR);
-      px(6, 3 + bob, HAIRS);
-      px(8, 3 + bob, HAIRS);
-    } else if (estilo === 'careca') {
-      retangulo(px, 3, 3 + bob, 9, 1, ACC); // bandana
-    }
-
-    // rosto (frente = direita)
-    elipse(px, 8.6, 5.4 + bob, 3.1, 2.1, SKIN);
-
-    // sobrancelha, olhos e boca
-    px(9, 3 + bob, HAIRS);
-    px(9, 4 + bob, EYEW);
-    px(10, 4 + bob, EYED);
-    px(10, 6 + bob, 1);
-
-    // braço da frente (repouso)
-    if (pose === 'rest') retangulo(px, 12, 9 + bob, 1, 4, CLOTHS);
+    desenhaFaixa(g, W, H, CORPO, 0, bob, 'corpo');
+    desenhaFaixa(g, W, H, PERNAS[fr.pernas] || PERNAS.parado, 14, 0, 'pernas');
+    desenhaFaixa(g, W, H, BRACO_TRAS[fr.braT] || BRACO_TRAS.baixo, 9, braB, 'braco traseiro');
+    desenhaFaixa(g, W, H, CABELOS[look.estilo] || CABELOS.curto, 0, bob, 'cabelo');
+    desenhaFaixa(g, W, H, CLASSES[look.classe] || CLASSES.guerreiro, 5, bob, 'classe');
+    desenhaFaixa(g, W, H, BRACO_FRENTE[fr.braF] || BRACO_FRENTE.baixo, 8, braB, 'braco dianteiro');
 
     // contorno do corpo
     contorna(g, W, H);
 
-    // --- por cima do contorno: braço do golpe, mãos e arma
+    // --- por cima do contorno: mão e arma (contorno próprio dos destacados)
     var destaque = [];
     function pinta(x, y, v) {
       x = Math.round(x);
@@ -272,27 +634,10 @@ var Sprite = (function () {
     }
 
     var arma = look.weapon || 'espada';
-    if (pose === 'wind') {
-      linha(pinta, 10, 10 + bob, 12, 8 + bob, CLOTH);
-      armaDesenhar(pinta, arma, 13, 8 + bob, 17, 3 + bob);
-      pinta(12, 8 + bob, SKIN);
-    } else if (pose === 'slash') {
-      for (var ax = 10; ax <= 13; ax++) {
-        pinta(ax, 10, CLOTH);
-        pinta(ax, 11, CLOTH);
-      }
-      armaDesenhar(pinta, arma, 15, 11, 19, 11);
-      pinta(14, 11, SKIN);
-    } else if (pose === 'recover') {
-      linha(pinta, 10, 10, 13, 13, CLOTH);
-      armaDesenhar(pinta, arma, 14, 13, 18, 16);
-      pinta(13, 13, SKIN);
-    } else {
-      pinta(12, 13 + bob, SKIN); // mão
-      armaDesenhar(pinta, arma, 13, 14 + bob, 17, 18 + bob);
-    }
+    armaDesenhar(pinta, arma, fr.mao[0], fr.mao[1], fr.tipa[0], fr.tipa[1]);
+    pinta(fr.mao[0], fr.mao[1], PELE);            // punho por cima do cabo
+    pinta(fr.mao[0], fr.mao[1] + 1, PELE_S);
 
-    // contorno próprio dos elementos destacados
     contornaDestaque(g, W, H, destaque);
 
     return { grid: g, W: W, H: H, palette: pal };
@@ -308,7 +653,7 @@ var Sprite = (function () {
   function slimeCanvas(cor, frame) {
     var W = 14, H = 12;
     var g = new Uint8Array(W * H);
-    var pal = [null, '#1b1424', cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
+    var pal = [null, COR_CONTORNO, cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
     var px = pintorDireto(g, W, H);
 
     var sq = frame === 1;
@@ -337,7 +682,7 @@ var Sprite = (function () {
   function morcegoCanvas(cor, frame) {
     var W = 14, H = 12;
     var g = new Uint8Array(W * H);
-    var pal = [null, '#1b1424', cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
+    var pal = [null, COR_CONTORNO, cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
     var px = pintorDireto(g, W, H);
 
     var asaCima = frame === 1;
@@ -372,7 +717,7 @@ var Sprite = (function () {
   function aranhaCanvas(cor, frame) {
     var W = 14, H = 12;
     var g = new Uint8Array(W * H);
-    var pal = [null, '#1b1424', cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
+    var pal = [null, COR_CONTORNO, cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
     var px = pintorDireto(g, W, H);
 
     var sobe = frame === 1;
@@ -402,7 +747,7 @@ var Sprite = (function () {
   function treeCanvas() {
     var W = 20, H = 26;
     var g = new Uint8Array(W * H);
-    var pal = [null, '#1b1424', '#2f6a3c', '#3f8a4a', '#6b4a2e', '#54391f', '#7fae55'];
+    var pal = [null, COR_CONTORNO, '#2f6a3c', '#3f8a4a', '#6b4a2e', '#54391f', '#7fae55'];
     var px = pintorDireto(g, W, H);
 
     retangulo(px, 8, 16, 4, 9, 4);
@@ -418,7 +763,7 @@ var Sprite = (function () {
   function rockCanvas() {
     var W = 14, H = 11;
     var g = new Uint8Array(W * H);
-    var pal = [null, '#1b1424', '#7a7a86', '#9494a2', '#5e5e6a'];
+    var pal = [null, COR_CONTORNO, '#7a7a86', '#9494a2', '#5e5e6a'];
     var px = pintorDireto(g, W, H);
 
     elipse(px, 7, 6.5, 6, 4, 2);
@@ -430,6 +775,13 @@ var Sprite = (function () {
 
   return {
     shade: shade,
+    rampa: rampa,
+    cores: {
+      contorno: COR_CONTORNO, couro: COR_COURO, metal: COR_METAL,
+      ouro: COR_OURO, madeira: COR_MADEIRA
+    },
+    heroPaleta: heroPalette,
+    txtPaleta: txtPaleta,
     heroCanvas: heroCanvas,
     slimeCanvas: slimeCanvas,
     morcegoCanvas: morcegoCanvas,

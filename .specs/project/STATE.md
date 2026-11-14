@@ -452,6 +452,29 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 - **ESPERA_BASE 8→4 sem medição** — pedido explícito do mantenedor
   ("commitar sem teste"): registrado no CHANGELOG; se a sim estolar,
   o comentário do código manda subir o número.
+- **Arte do herói autorada em GRID DE TEXTO** (`visual-heroi-arma`):
+  cada pose é uma faixa de linhas de 20 colunas (char = índice de
+  paleta) e as partes se compõem (corpo + pernas + braços + cabelo
+  ×5 + classe ×4 com âncora no bob); `desenhaFaixa` **throwa** se uma
+  linha não tiver 20 colunas — a mesma grade ASCII que o `grade.js`
+  imprime é a fonte do desenho. Descartado asset PNG externo: quebraria
+  o harness (que lê os pixels gerados) e a regra "sem dependências,
+  sem build". Iteração visual = rodar `previa.js`/`cena.js` e **olhar
+  o PNG** (asserção verde não é opinião de arte).
+- **Rampas HSL com hue-shift em vez de multiplicação** (mesma leva) —
+  `shade(hex, f)` só escurece os canais → escuros acinzentados (era o
+  "visual tosco"). Luz única topo-esquerda em todo sprite; contorno
+  externo `#1b1424` mantido (legibilidade na arena escura). Duas
+  consequências não óbvias: a borda de cada forma perde a cor sozinha
+  na passagem `contorna()` (o "canto de fora" é silhueta) e a franja
+  do cabelo **para em x8** — se cobrisse x9/x10 o olho sumiria no
+  frame com bob=1.
+- **Raridade visível na mão** (mesma leva) — guarda/cristal/faixa do
+  martelo saem de `look.rar` (ouro → azul → roxo → vermelho);
+  `lookDe()` passou a expor **`classe`** e **`rar`** como campos
+  DERIVADOS (o save segue só com skin/hair/estilo/cloth, formato
+  intocado) e a cache key do `Anim.hero` inclui os dois — sem isso a
+  troca de classe/equipamento ficava com o sprite velho em cache.
 
 ## Bloqueios
 

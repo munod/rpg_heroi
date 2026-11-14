@@ -10,6 +10,32 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Visual do herói e das armas — pixel art 16-bit (spec
+  `visual-heroi-arma`)** — redesenho completo a partir do diagnóstico
+  *"visual tosco e muito simples"*: **motor de cor novo** em
+  `sprite.js` (rampas HSL de 4 tons com **hue-shift** — sombra desloca
+  o matiz pro azul e satura, luz pro amarelo — e **luz única
+  top-esquerda**; antes era `shade()` puro = escuros acinzentados) e
+  **herói autorado em grids de texto** (corpo, pernas e braços por
+  pose + **5 estilos de cabelo** e **4 classes** como overlays com
+  âncora no bob — franja cobre a testa mas deixa olho/pupila livres
+  em qualquer frame). Identidade visual: **guerreiro** ombreiras +
+  peitoral, **mago** capuz + gola/ornamento dourado, **ladino**
+  colete, **clérigo** capa + estola. **Armas com largura**: cabo,
+  guarda em cruz, lâmina de 2px (fio claro + corpo, deslocamento
+  **inteiro** pra não furar no meio), cabeça de martelo chanfrada e
+  cristal de cajado — com **acento por raridade do item equipado**
+  (ouro → azul → roxo → vermelho). `lookDe()` ganha **`classe`** e
+  **`rar`** (derivados — **save intacto**) e a cache do `Anim.hero`
+  passa a incluir os dois (senão trocar de classe/equipar deixava o
+  sprite velho). Grade continua **20×20** → âncoras de `batalha.js`,
+  limites da `fumaca` (80-400 px) e screenshots intactos; `grade.js`
+  com legenda nova (`heroPaleta`/`txtPaleta` exportados) e asserções
+  reposicionadas — as do rosto (olho `(9,4)`, pupila `(10,4)`) e mão
+  `(12,13)` seguem as mesmas.
+
 ## [0.4.1] — 2026-11-14
 
 ### Changed

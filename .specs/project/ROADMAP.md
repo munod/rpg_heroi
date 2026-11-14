@@ -188,6 +188,18 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    `#000`, caixa preta + fio dourado (duplo preenchimento) nos 2
    overlays, título único, **Espaço** avança. Gate 3× = **695
    confs** · 42/48 intactas · mapa 1 **34,0/37,4min**.
+10. ✅ **`visual-heroi-arma`** *(não liberado — em `Unreleased`)* —
+    *"visual tosco e muito simples"* (pedido direto do mantenedor +
+    pesquisa: Lospec · Slynyrd · Wikipedia). **Motor de cor**: rampas
+    HSL de 4 tons com **hue-shift** + luz única topo-esquerda (o
+    `shade()` só multiplicava RGB → escuros acinzentados). **Herói
+    em grids de texto** (9 poses × 5 cabelos × 4 classes como
+    overlay), **armas com largura** (cabo/guarda/lâmina de 2px/
+    cristal) e **acento por raridade**; `lookDe` ganha `classe`/`rar`
+    (derivados, save intacto) + cache key do `Anim.hero`. Grade
+    20×20 intacta (âncoras/fumaca sem mudança). **Gate = 704 confs**
+    (687 fumaça + 17 grade) · arte iterada nos PNGs de
+    `previa.js`/`cena.js`.
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,
