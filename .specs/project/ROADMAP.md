@@ -149,6 +149,12 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    gate 3× = **658 confs** · sanidade: A/B ritmo prova que a variação
    31→37min do mapa 1 é de SESSÃO, não da leva (antigo hoje:
    37,7/34,6min).
+7b. ✅ **`ajustes-playtest-3`** — achados do playtest: **backing =
+   exibição** (esc fracionário — texto nítido em qualquer escala),
+   **Vel inteira** na tela, **valores da aba Stats à esquerda da
+   scrollbar** (x744, trilho intacto). **Seção 47** · gate 3× =
+   **664 confs** · mapa 1 **31,5min** · sondas fixas do rodapé
+   viraram varredura (layout recentra).
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,

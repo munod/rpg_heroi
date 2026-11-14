@@ -44,8 +44,15 @@ var Game = (function () {
   // Escala responsiva em duas camadas:
   //  - CSS: escala fracionária que PREENCHE a tela (paisagem no celular
   //    aproveita tudo; antes só escala inteira e o jogo ficava miúdo);
-  //  - backing: pixels inteiros (floor de escala × devicePixelRatio) para
-  //    o pixel art e o texto nascerem nítidos, sem reamostragem.
+  //  - backing: resolução da EXIBIÇÃO — esc = escala × dpr
+  //    FRACIONÁRIO (spec ajustes-playtest-3): o texto e os vetores
+  //    nascem no tamanho final da tela (nítidos em qualquer escala) e
+  //    o buffer fica 1:1 com o CSS, sem reamostragem. Antes o floor
+  //    deixava o buffer em 1× e o CSS esticava com pixelated (1,67×
+  //    = glyph blocky — "resolução baixa" no playtest). O pixel art
+  //    não perde nada: o desenho usa nearest (imageSmoothing off por
+  //    frame) e escala fracionária deixa o pixel do sprite irregular,
+  //    que é exatamente o que o CSS pixelated já fazia.
   // O retângulo real vem do getBoundingClientRect no Input, então qualquer
   // divergência entre CSS e backing continua mapeando clique certinho.
   function resize() {
@@ -60,10 +67,11 @@ var Game = (function () {
     W = Math.max(768, Math.min(1728, Math.round(432 * pw / ph)));
     var escala = Math.min(pw / W, ph / H);
     if (!(escala > 0)) escala = 1;
-    esc = Math.max(1, Math.floor(escala * dpr));
+    esc = escala * dpr;             // fracionário: backing = exibição
     canvas.style.width = Math.round(W * escala) + 'px';
     canvas.style.height = Math.round(H * escala) + 'px';
-    var bw = W * esc, bh = H * esc;
+    var bw = Math.max(1, Math.round(W * esc));
+    var bh = Math.max(1, Math.round(H * esc));
     if (canvas.width !== bw) canvas.width = bw;
     if (canvas.height !== bh) canvas.height = bh;
     Input.ajusta(W, H);      // ponteiro mapeia na largura vigente

@@ -1176,8 +1176,12 @@ console.log('18) toque, resolução e escala responsiva');
   const p = Game.personagem;
 
   // --- resolução nova + escala fracionária que preenche a janela
-  conf(jogoCanvas.width === 768 && jogoCanvas.height === 432,
-    'backing store 768×432');
+  // backing = exibição (spec ajustes-playtest-3: esc fracionário —
+  // o texto nasce no tamanho final, sem esticar pelo CSS)
+  conf(jogoCanvas.width === parseInt(jogoCanvas.style.width, 10) &&
+       jogoCanvas.height === parseInt(jogoCanvas.style.height, 10),
+    'backing store = exibição CSS 1:1 (' + jogoCanvas.width + '×' +
+    jogoCanvas.height + ') — texto nítido, sem reamostragem');
   conf(jogoCanvas.style.width === '1280px' &&
        jogoCanvas.style.height === '720px',
     'CSS preenche a janela do harness (escala fracionária 1.67×, ' +
@@ -1255,8 +1259,10 @@ console.log('19) viewport larga: layout ancorado e preenchido (celular)');
   conf(jogoCanvas.style.width === '1280px' &&
        jogoCanvas.style.height === '400px',
     'CSS preenche a viewport inteira (1280×400, sem barra lateral)');
-  conf(jogoCanvas.width === 1382 && jogoCanvas.height === 432,
-    'backing store 1382×432 (esc=1)');
+  conf(jogoCanvas.width === parseInt(jogoCanvas.style.width, 10) &&
+       jogoCanvas.height === parseInt(jogoCanvas.style.height, 10),
+    'backing = exibição também em escala <1 (' + jogoCanvas.width +
+    '×' + jogoCanvas.height + ' — antes era 1382×432 esticado)');
 
   const Batalha = sandbox.Batalha;
   const p = Game.personagem;
@@ -1291,9 +1297,10 @@ console.log('19) viewport larga: layout ancorado e preenchido (celular)');
   sandbox.window.innerWidth = 1280;
   sandbox.window.innerHeight = 720;
   (ouvintesJanela.resize || []).forEach(fn => fn({}));
-  conf(Game.W === 768 && jogoCanvas.width === 768 &&
+  conf(Game.W === 768 &&
+       jogoCanvas.width === parseInt(jogoCanvas.style.width, 10) &&
        jogoCanvas.style.width === '1280px',
-    'restaurou 768×432 em 16:9');
+    'restaurou 16:9 (W 768, backing = exibição 1280px)');
 }
 
 console.log('20) cenário procedural: Perlin Noise com semente do mapa');
@@ -2533,7 +2540,10 @@ console.log('30) tooltips: breakdown do rodapé, atributos e item');
 
   // --- rodapé segmentado: hover abre o breakdown (varre segmentos)
   let tooltip = false, acheiDps = false;
-  for (const x of [150, 240, 330, 430, 520, 610]) {
+  // varredura fina: o rodapé recentra conforme o tamanho dos textos
+  // (o 'Vel' encurtou na spec ajustes-playtest-3) e há intervalos de
+  // ~26px (' · ') sem tooltip — xs fixos caíam neles
+  for (let x = 40; x <= 660 && !acheiDps; x += 20) {
     jogoCanvas._textos = [];
     clique(x, 356);                 // y do rodapé (sem botão ali)
     for (let i = 0; i < 25; i++) frame(1);
@@ -2565,7 +2575,9 @@ console.log('30) tooltips: breakdown do rodapé, atributos e item');
   // --- long-press: prende 500ms, solta e o ponteiro SAI sem clicar →
   // a caixa retida continua (só um clique fora fecha)
   jogoCanvas._textos = [];
-  pressionar(240, 356);             // mouse down sobre um segmento
+  // alvo = linha do INT (dica de painel, coordenada fixa): o rodapé
+  // recentra com o tamanho do texto e xs fixos caíam fora dos retângulos
+  pressionar(500, 180);             // mouse down sobre a linha da INT
   for (let i = 0; i < 40; i++) frame(1);   // ~670ms: hover + prensa
   soltar();
   for (let i = 0; i < 3; i++) frame(1);
@@ -4826,6 +4838,54 @@ console.log('46) UI visual: paleta, primitivas com fallback e cromo');
   UI.button(40, 288, 120, 36, 'OFF', { disabled: true });
   conf(jogoCanvas._chamadas > a3,
     'botão: 4 estados desenham sem exceção');
+}
+
+console.log('47) Ajustes playtest: resolução nítida, Vel inteira e scrollbar');
+{
+  const UI = sandbox.UI;
+  const Batalha = sandbox.Batalha;
+  const Gestao = sandbox.Gestao;
+  const p = Game.personagem;
+
+  // --- 1) backing = exibição (contrato de nitidez da spec)
+  const dpr = sandbox.window.devicePixelRatio || 1;
+  conf(jogoCanvas.width === parseInt(jogoCanvas.style.width, 10) * dpr &&
+       jogoCanvas.height === parseInt(jogoCanvas.style.height, 10) * dpr,
+    'backing store = exibição × dpr (' + jogoCanvas.width + '×' +
+    jogoCanvas.height + ' vs CSS ' + jogoCanvas.style.width + ')');
+  conf(Game.W === 768, 'largura lógica 768 intacta em 16:9 (layout)');
+
+  // --- 2) Vel sem casas decimais (rodapé + aba Stats)
+  const salvDes = p.atributos.des;
+  p.atributos.des = 9;              // vel fracionária: 46+24×(9/8)^0,35
+  const velBruta = Personagem.status(p).vel;
+  conf(velBruta % 1 !== 0,
+    'fixture: DES 9 gera vel fracionária (' + velBruta.toFixed(3) + ')');
+  // cena em jogo, sem vitória/cutscene travando a gestão
+  p.vitoria = false;
+  if (typeof Cutscene !== 'undefined') Cutscene.fecha();
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  jogoCanvas._textos = [];
+  frame(2);
+  const txtRodape = jogoCanvas._textos || [];
+  conf(txtRodape.some(t => /^Vel \d+$/.test(t)),
+    'rodapé mostra Vel inteira (' +
+    (txtRodape.find(t => /^Vel /.test(t)) || '?') + ')');
+
+  // aba Stats (clique no seletor) — bloco Base → total
+  clique(412 + 4 * 70 + 33, 54);
+  jogoCanvas._textos = [];
+  frame(2);
+  const txts = jogoCanvas._textos || [];
+  conf(!txts.some(t => /Vel \d+\./.test(t)),
+    'nenhum texto com Vel decimal após render (rodapé + aba Stats)');
+  p.atributos.des = salvDes;
+
+  // --- 3) scrollbar da aba Stats não cobre os valores
+  const sg = Gestao.statsGeom();
+  conf(sg.valX + 2 <= sg.trilho.x,
+    'valores à esquerda da scrollbar (x ' + sg.valX + ' + 2 ≤ trilho ' +
+    sg.trilho.x + ')');
 }
 
 console.log('');

@@ -158,7 +158,9 @@
   (dx = W − 768) e `Gestao.update` desconta dx do ponteiro (retângulos
   são locais ao painel). × escala de exibição: `resize()` também calcula
   escala fracionária que preenche a janela (CSS) e
-  `esc = floor(escala × devicePixelRatio)` para o backing store —
+  `esc = escala × devicePixelRatio` (**fracionário** — o backing
+  nasce na resolução da exibição: texto/vetores nítidos em qualquer
+  escala, sem reamostragem CSS; spec `ajustes-playtest-3`) —
   `ctx.setTransform(esc,...)` por frame. **Nunca** desenhar em
   coordenadas de tela cheia: tudo é coordenada de jogo (W × 432).
 - Mundo × janela: `VW/VH` (192×134, janela do painel — o layout NÃO muda)

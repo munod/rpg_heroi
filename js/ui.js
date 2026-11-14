@@ -322,7 +322,7 @@ var UI = (function () {
       ['Dano ' + s.dano, 'dano', 'Dano por golpe'],
       ['DPS ' + (det ? det.dps.total : 0), 'dps',
         'DPS básico (sem skills)'],
-      ['Vel ' + s.vel, 'vel', 'Velocidade'],
+      ['Vel ' + Math.round(s.vel), 'vel', 'Velocidade'],
       ['Crít ' + s.crit + '%', 'crit', 'Chance de crítico (×2)'],
       ['Alc ' + s.alcance, 'alcance', 'Alcance do golpe']
     ];

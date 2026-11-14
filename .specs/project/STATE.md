@@ -375,6 +375,20 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   delas. **Regra: A/B (stash) antes de culpar uma leva pela medição**;
   critério de estol do mantenedor (>40min) segue como porto seguro.
 
+- **Backing = exibição, não escala inteira** (spec
+  `ajustes-playtest-3` — "resolução da UI baixa" no playtest): o
+  `floor(escala×dpr)` deixava o buffer em 1× e o CSS esticava com
+  `pixelated` (1,67× = glyph blocky). Agora `esc` é fracionário e o
+  buffer nasce no tamanho da tela — texto/vetores nítidos; pixel art
+  não perde (nearest = a mesma irregularidade que o CSS já produzia).
+  O §1 do `Docs/ui.md` recomenda escala inteira + letterbox —
+  **REJEITADO**: deixaria margem na tela (o jogo já preenche por
+  design); o princípio "backing = exibição" é o equivalente nosso.
+- **Exibição de float cru é bug de UI** (mesma spec): a Vel é
+  fracionária por construção (curva 46+24×(DES/8)^0,35) e saía como
+  "81.25361691040177" no rodapé/Stats. Arredondar NO RENDER, nunca
+  em `statusDetalhado` (os testes somam as partes numéricas).
+
 ## Bloqueios
 
 - Nenhum.
@@ -395,6 +409,13 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 
 ## Lições
 
+- **Sondas de coordenada fixa em layout que recentra** (leva
+  ajustes-playtest-3): encurtar o 'Vel' recentrou o rodapé e as
+  sondas fixas (`[150..610]` e `pressionar(240,356)`) caíram nos
+  intervalos ` · ` (que NÃO têm retângulo de tooltip) — 2 testes
+  "quebraram" sem bug nenhum. Fix: varredura fina + alvo em
+  retângulo de posição fixa. **Teste que aponta um ponto deve
+  varrer ou saber a geometria; nunca assumir layout centrado.**
 - **Receita de doc externo × rasterizador de teste** (leva
   visual-ui): a receita "caminho + fill" faria painéis/botões
   sumirem das screenshots — o `fill()` do `cena.js` só tratava

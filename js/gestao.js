@@ -613,6 +613,10 @@ var Gestao = (function () {
   var statsAlt = 0;         // base do conteúdo (medida no último render)
   var ST_TOPO = 116, ST_BASE = 334;              // faixa rolável
   var ST_TRILHO = { x: 746, y: 112, w: 8, h: 222 };
+  // valores alinhados à direita ficam à ESQUERDA do trilho (2px de
+  // folga) — spec ajustes-playtest-3: antes em 752 o thumb cobria os
+  // últimos dígitos dos números
+  var ST_VAL_X = 744;
 
   function statsMax() {
     return Math.max(0, statsAlt - ST_BASE);
@@ -702,7 +706,7 @@ var Gestao = (function () {
     linhas.forEach(function (l, i) {
       em(116 + i * 15, function (y) {
         UI.text(l[0], 416, y, { color: '#c9c2dd', font: '13px monospace' });
-        UI.text(l[1], 752, y, { align: 'right', color: '#e8c86a',
+        UI.text(l[1], ST_VAL_X, y, { align: 'right', color: '#e8c86a',
           font: '13px monospace' });
         UI.dica({ x: 416, y: y - 7, w: 340, h: 14 },
           [[l[0] + ': ' + (DESC_STATS[l[0]] || '—'), '#e8c86a']]);
@@ -716,6 +720,10 @@ var Gestao = (function () {
     var ef = Personagem.status(p).atributos;   // efetivos (c/ classe)
     var bi = p.atributos;                      // investido
     function par(rot, base, tot) {
+      // só a Vel é fracionária por construção (46+24×(DES/8)^0,35) —
+      // na tela sai inteira; os demais valores são crus (os testes
+      // parseiam 'Dano base→total' com o número exato)
+      if (rot === 'Vel') { base = Math.round(base); tot = Math.round(tot); }
       return rot + ' ' + base + (base === tot ? '' : '→' + tot);
     }
     var yB = 116 + linhas.length * 15 + 4;
@@ -762,7 +770,7 @@ var Gestao = (function () {
           416, y, { color: cor, font: '13px monospace' });
         // bloqueada: só o nível (a referência de cd fica no tooltip)
         UI.text(aberta ? txtCooldown(sk, p, agu) : 'nv ' + sk.nivel,
-          752, y, { align: 'right',
+          ST_VAL_X, y, { align: 'right',
             color: aberta ? '#e8c86a' : '#6f678a', font: '13px monospace' });
         UI.dica({ x: 416, y: y - 7, w: 340, h: 14 },
           Skills.dicas(sk, Skills.ramoDe(p, sk)));
@@ -785,6 +793,12 @@ var Gestao = (function () {
       ctx.fillStyle = '#5a4f78';
       ctx.fillRect(t.x, t.y, t.w, t.h);
     }
+  }
+
+  // geometria p/ teste (spec ajustes-playtest-3): os valores da aba
+  // Stats têm que caber à esquerda do trilho da rolagem
+  function statsGeom() {
+    return { valX: ST_VAL_X, trilho: ST_TRILHO };
   }
 
   // Desenha o painel direito completo (painel + abas + conteúdo).
@@ -811,6 +825,7 @@ var Gestao = (function () {
   return {
     desenhar: desenhar,
     update: update,
-    quebra: quebra
+    quebra: quebra,
+    statsGeom: statsGeom
   };
 })();

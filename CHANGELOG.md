@@ -12,6 +12,25 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Ajustes do playtest: resolução nítida, Vel inteira, scrollbar
+  (spec `ajustes-playtest-3`)** — 3 achados da captura do mantenedor:
+  1) **"resolução da UI baixa"** → `resize()` passa a usar
+  `esc = escala × dpr` **fracionário**: o backing nasce na resolução
+  da exibição (buffer 1:1 com o CSS — texto/vetores renderizados no
+  tamanho final, sem esticar com `pixelated`; antes o `floor` deixava
+  em 1× e o CSS esticava 1,67× por vizinho mais próximo = glyph
+  blocky). Pixel art não perde nada (nearest por frame = a mesma
+  irregularidade que o CSS já produzia). 2) **Vel com casas decimais**
+  → arredondada só na exibição (rodapé + bloco `Base → total`;
+  `statusDetalhado` segue com os floats crus — os testes somam as
+  partes). 3) **Scrollbar da aba Stats cobrindo os números** → valores
+  em `x=744` (2px antes do trilho; o trilho não anda — o teste de
+  arrasto clica em x=750). Contratos da **seção 18** atualizados para
+  o invariante novo (backing = exibição) + **seção 47 (6 confs)**;
+  sondas fixas do rodapé viraram **varredura** (o `Vel` encurtou,
+  o rodapé recentrou e os probes caíam nos intervalos ` · ` — nenhum
+  bug, só fragilidade). Gate 3× = **664 confs** · sanidade: mapa 1
+  **31,5min**. PNGs agora nascem em 1280×720 (= tela real).
 - **UI visual: paleta, gradientes e cantos arredondados (spec
   `visual-ui`, 1ª de 3 frentes visuais — base: `Docs/ui.md`)** —
   `js/ui.js` ganha **`UI.PALETA`** (fonte única do cromo com os hex
