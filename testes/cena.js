@@ -374,14 +374,23 @@ salvar('tela-stats.png');
 
 // cutscene de fronteira de mundo (spec cutscenes): mapa do universo +
 // narração — o 2º mundo entra com 1 conquistado e o atual destacado
+// 25 frames: letterbox completo (0,35s); avancar×3: as 2 linhas
+// datilografadas reveladas (spec visual-cutscene — sem isso o PNG
+// sairia com texto vazio e barras fechando)
 sandbox.Cutscene.mundo(1, 2);
-for (let i = 0; i < 4; i++) frame(1);
+for (let i = 0; i < 25; i++) frame(1);
+sandbox.Cutscene.avancar();
+sandbox.Cutscene.avancar();
+sandbox.Cutscene.avancar();
 salvar('tela-cutscene.png');
 sandbox.Cutscene.fecha();
 
 // cutscene de evento (auto-dismiss ~3,5s — captura no ar)
 sandbox.Cutscene.evento('acougueiro');
-for (let i = 0; i < 4; i++) frame(1);
+for (let i = 0; i < 25; i++) frame(1);
+sandbox.Cutscene.avancar();
+sandbox.Cutscene.avancar();
+sandbox.Cutscene.avancar();
 salvar('tela-cutscene-evento.png');
 sandbox.Cutscene.fecha();
 

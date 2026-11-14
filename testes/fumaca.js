@@ -4180,10 +4180,17 @@ console.log('42) cutscenes: fronteiras de mundo, eventos e mapa do universo');
   const te = jogoCanvas._textos;
   conf(te.some(x => x.indexOf('AÇOUGUEIRO') >= 0),
     'cutscene de evento renderiza o título');
-  conf(te.some(x => x.indexOf('fareja o seu rastro') >= 0),
-    'narração do evento na tela');
   conf(te.some(x => x.indexOf('Continuar') >= 0),
     'cutscene de evento tem botão Continuar');
+  // narração DATILOGRAFADA (spec visual-cutscene): espera a linha
+  // revelar — teto de frames p/ não travar se o texto crescer
+  let narrou = false;
+  for (let i = 0; i < 300 && !narrou; i++) {
+    frame(1);
+    narrou = (jogoCanvas._textos || [])
+      .some(x => x.indexOf('fareja o seu rastro') >= 0);
+  }
+  conf(narrou, 'narração do evento datilografada na tela');
   frame(60);                              // ~1s
   const inf3 = Cutscene.info();
   conf(inf3 && inf3.restante < rest0,
@@ -4214,10 +4221,17 @@ console.log('42) cutscenes: fronteiras de mundo, eventos e mapa do universo');
     'chefe do novo mundo na tela');
   conf(t42.some(x => x.indexOf('Entrar no Mundo 2') >= 0),
     'botão Entrar na tela');
-  conf(t42.some(x => x.indexOf('O gelo cobre tudo') >= 0),
-    'narração da fronteira na tela');
   conf(t42.some(x => x.indexOf('conquistado') >= 0),
     'legenda do mapa do universo na tela');
+  // narração DATILOGRAFADA (spec visual-cutscene): linha 1 completa +
+  // pausa 0,8s + linha 2 ≈ 2,5s — espera com teto de frames
+  let narrouM = false;
+  for (let i = 0; i < 400 && !narrouM; i++) {
+    frame(1);
+    narrouM = (jogoCanvas._textos || [])
+      .some(x => x.indexOf('O gelo cobre tudo') >= 0);
+  }
+  conf(narrouM, 'narração da fronteira datilografada na tela');
 
   // --- 6) bloqueio da gestão + fechar (Enter e botão)
   p.xp = 0;                               // sem level-up no meio do teste
@@ -4886,6 +4900,92 @@ console.log('47) Ajustes playtest: resolução nítida, Vel inteira e scrollbar'
   conf(sg.valX + 2 <= sg.trilho.x,
     'valores à esquerda da scrollbar (x ' + sg.valX + ' + 2 ≤ trilho ' +
     sg.trilho.x + ')');
+}
+
+console.log('48) Visual cutscene: letterbox, datilografado e avançar');
+{
+  const Cutscene = sandbox.Cutscene;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  Cutscene.fecha();
+  Salvar.salvarEstado(p.id, 1, Date.now(), false, 1);
+  Game.setScene('jogo');
+  frame(2);
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- 1) avancar nos estágios do doc (complete → próxima → encerra)
+  Cutscene.mundo(1, 2);
+  let inf = Cutscene.info();
+  conf(inf.tipo === 'mundo' && inf.revela.linha === 0 &&
+       inf.revela.chars === 0,
+    'cutscene nasce com a linha 0 não revelada');
+  Cutscene.avancar();
+  inf = Cutscene.info();
+  conf(inf.revela.linha === 0 && inf.revela.chars > 0,
+    'estágio 1: avançar completa a linha atual (' +
+    inf.revela.chars + ' chars)');
+  Cutscene.avancar();
+  inf = Cutscene.info();
+  conf(inf.revela.linha === 1 && inf.revela.chars === 0,
+    'estágio 2: avançar passa para a próxima linha');
+  Cutscene.avancar();
+  inf = Cutscene.info();
+  conf(inf.revela.linha === 1 && inf.revela.chars > 0,
+    'estágio 3: completa a última linha');
+  Cutscene.avancar();
+  conf(!Cutscene.ativa(),
+    'última linha completa → avançar encerra a cena');
+
+  // --- 2) letterbox desliza até o cap (0,35s)
+  Cutscene.mundo(1, 2);
+  conf(Cutscene.info().barras === 0, 'letterbox nasce recolhido');
+  for (let i = 0; i < 30; i++) frame(1);      // ~0,5s > 0,35s
+  inf = Cutscene.info();
+  conf(!!inf && inf.barras >= 0.35,
+    'letterbox desliza até a altura final (' +
+    (inf ? inf.barras : '?') + 's ≥ 0,35)');
+
+  // --- 3) datilografado progride sozinho (REVELA 55 chars/s)
+  let passou = false;
+  for (let i = 0; i < 200 && !passou; i++) {
+    frame(1);
+    passou = Cutscene.info().revela.linha > 0;   // linha 0 completa
+  }
+  conf(passou, 'linha 0 se revela sozinha e avança (typewriter)');
+
+  // --- 4) dica pisca (presença E ausência em 1s de frames)
+  Cutscene.fecha();
+  Cutscene.evento('cofre');
+  let viu = 0, oculto = 0;
+  for (let i = 0; i < 60; i++) {
+    jogoCanvas._textos = [];
+    frame(1);
+    if ((jogoCanvas._textos || [])
+      .some(t => t.indexOf('some sozinho') >= 0)) viu++; else oculto++;
+  }
+  conf(viu > 0 && oculto > 0,
+    'dica do evento pisca (visível ' + viu + '/60, oculto ' +
+    oculto + '/60)');
+  conf(Cutscene.ativa(), 'evento segue vivo após 1s (auto-dismiss 3,5s)');
+
+  // --- 5) clique FORA do botão avança (integração Jogo.update)
+  Cutscene.fecha();
+  Cutscene.mundo(1, 2);
+  frame(1);
+  const antes = Cutscene.info().revela;
+  clique(100, 200);                        // fora do retângulo do botão
+  frame(1);
+  const depois = Cutscene.info().revela;
+  conf(depois.chars > antes.chars || depois.linha > antes.linha,
+    'clique fora do botão avança a narração (' +
+    JSON.stringify(antes) + ' → ' + JSON.stringify(depois) + ')');
+
+  // --- 6) clique NO botão fecha direto
+  const bt = Cutscene.info().botao;
+  clique(bt.x + bt.w / 2, bt.y + bt.h / 2);
+  frame(1);
+  conf(!Cutscene.ativa(), 'clique no botão fecha direto');
 }
 
 console.log('');

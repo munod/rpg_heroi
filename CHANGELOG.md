@@ -12,6 +12,27 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Visual cutscene: letterbox, datilografado e dica piscando (spec
+  `visual-cutscene`, 3ª e última frente da série visual — base:
+  `Docs/cutscenes.md`; gatilhos intocados)** — os overlays de
+  fronteira/evento ganham **letterbox** (barras pretas de 52px
+  deslizando em 0,35s), **narração datilografada** (55 chars/s por
+  linha com pausa 0,8s — `update` passou a rodar também para o
+  mundo, que antes só esperava) e **dicas piscando**
+  (`floor(relogio*2)%2`). Um **clique fora do botão agora avança a
+  narração** em 3 estágios (linha → próxima → fecha) via
+  `Cutscene.avancar()` no `Jogo.update` — a dica "clique para
+  seguir" deixou de ser mentira; o clique dentro de `info().botao`
+  continua sendo do botão e o `Enter` segue fechando direto
+  (contrato da seção 42 intacto). `info()` ganhou `barras` e
+  `revela {linha, chars}`. Testes: **seção 48 (12 confs)** —
+  estágios, letterbox até o cap, typewriter sozinho, piscar (30/60
+  visível), clique fora avança / no botão fecha; **seção 42** só
+  ganhou esperas nos 2 asserts de narração (o timing mudou por
+  design — título e botões continuam no frame 1); PNGs da cutscene
+  capturam com barras abertas e narração revelada. Gate 3× = **676
+  confs** · sanidade: mapa 1 **34,3min** (variância de sessão já
+  mapeada). **Série visual completa (levas 7-9).**
 - **Ajustes do playtest: resolução nítida, Vel inteira, scrollbar
   (spec `ajustes-playtest-3`)** — 3 achados da captura do mantenedor:
   1) **"resolução da UI baixa"** → `resize()` passa a usar

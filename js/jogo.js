@@ -141,6 +141,15 @@ var Jogo = (function () {
     // Enter fecha a cutscene (o botão fecha no render); sem cutscene,
     // Enter continua salvando como sempre
     if (Cutscene.ativa() && Input.pressed('Enter')) Cutscene.fecha();
+    // clique fora do botão AVANÇA a narração (3 estágios do doc) — o
+    // clique dentro do retângulo é deixado para o UI.button do render
+    if (Cutscene.ativa() && Input.mouse.clicked) {
+      var bc = Cutscene.info().botao;
+      var foraBt = !bc || Input.mouse.x < bc.x ||
+        Input.mouse.x >= bc.x + bc.w ||
+        Input.mouse.y < bc.y || Input.mouse.y >= bc.y + bc.h;
+      if (foraBt) Cutscene.avancar();
+    }
 
     if (Input.pressed('Enter')) Gravacao.salvarPersonagem(Game.personagem, true);
   }

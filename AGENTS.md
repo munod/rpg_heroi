@@ -92,13 +92,22 @@
   herda) e `voltaAusencia` envolve a simulação em
   `Cutscene.silenciar(true/false)` (eventos offline não viram cutscene;
   a de MUNDO continua = resumo da ausência). Prioridade no render:
-  **vitória > cutscene**. Sondas: `Cutscene.info()` →
-  `{tipo,de,para,chave,restante,mudo,botao}`; fecha por botão ou
-  `Enter`. Cena `universo`: lê `Salvar.lerEstado(p.id).mapa` (funciona
+  **vitória > cutscene**. **Visual (spec `visual-cutscene`)**:
+  **letterbox** deslizante (barras de 52px em 0,35s —
+  `info().barras`), **datilografado** 55 chars/s com pausa 0,8s
+  entre linhas (`update` roda para os **2 tipos**; `info().revela =
+  {linha, chars}`), **dicas piscando** (`floor(relogio*2)%2`) e
+  **`avancar()` em 3 estágios** (linha → próxima → fecha) disparado
+  por **clique fora do botão** no `Jogo.update` (o clique dentro de
+  `info().botao` é do `UI.button`; `Enter` segue fechando direto).
+  Sondas: `Cutscene.info()` →
+  `{tipo,de,para,chave,restante,mudo,barras,revela,botao}`. Cena
+  `universo`: lê `Salvar.lerEstado(p.id).mapa` (funciona
   fora da jogatina); botão "Universo" na seleção em (132,306,120,26).
   Narração (9 fronteiras + 4 eventos) em dados puros no próprio
   `cutscene.js`; nome/chefe dos mundos saem de `Mapas.LISTA` (fonte
   única). Só primitivas do rasterizador (fillRect/strokeRect/text).
+  Fumaça seção 48 (a 42 espera a narração revelar).
 - **Curvas de status com teto (spec `gestao-atributos`)** — auditoria
   revelou "teto onde pensaram, sem teto onde não pensaram" (crítico 45
   e recarga 0,08 têm; vel/XP/HP não tinham). Hoje: **velocidade =

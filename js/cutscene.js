@@ -12,6 +12,11 @@ var Cutscene = (function () {
   var atual = null;      // {tipo:'mundo'|'evento', ...} ou null (nunca 2)
   var mudo = false;      // eventos silenciados (simulação offline)
   var AUTO_EVENTO = 3.5; // segundos até um evento sumir sozinho
+  // timeline visual (Docs/cutscenes.md — spec visual-cutscene)
+  var REVELA = 55;      // caracteres por segundo (datilografado/linha)
+  var PAUSA = 0.8;      // espera com a linha completa na tela
+  var ABERTURA = 0.35;  // slide das barras letterbox
+  var BARRA_ALT = 52;   // altura final (26 em 216 do doc ×2 = 432)
 
   // geometria dos overlays (fonte única: desenhar + info().botao)
   var MUNDO_PW = 640, MUNDO_PH = 300, MUNDO_PY = 66;
@@ -69,7 +74,8 @@ var Cutscene = (function () {
   // Fronteira de mundo (campanha): SUBSTITUI qualquer cutscene no ar
   // (mundo > evento — o marco é mais raro e mais importante).
   function mundo(de, para) {
-    atual = { tipo: 'mundo', de: de, para: para };
+    atual = { tipo: 'mundo', de: de, para: para,
+              linha: 0, chars: 0, pausa: 0, barras: 0, relogio: 0 };
   }
 
   // Evento aleatório: teto 1 — se já há cutscene no ar, não interrompe
@@ -77,7 +83,8 @@ var Cutscene = (function () {
   function evento(chave) {
     if (mudo || atual) return;
     if (!EVENTOS[chave]) return;
-    atual = { tipo: 'evento', chave: chave, t: AUTO_EVENTO };
+    atual = { tipo: 'evento', chave: chave, t: AUTO_EVENTO,
+              linha: 0, chars: 0, pausa: 0, barras: 0, relogio: 0 };
   }
 
   function fecha() { atual = null; }
@@ -85,10 +92,68 @@ var Cutscene = (function () {
   function silenciar(v) { mudo = !!v; }
 
   // auto-dismiss só dos eventos (fronteira espera o jogador)
+  // linhas da narração vigente (dados puros — FRONTEIRAS/EVENTOS)
+  function linhasAtuais() {
+    if (!atual) return [];
+    if (atual.tipo === 'mundo') return FRONTEIRAS[atual.para] || [];
+    var e = EVENTOS[atual.chave];
+    return e ? e.linhas : [];
+  }
+
+  // fração da linha i revelada pelo datilografado: passadas ficam
+  // completas, futuras vazias, a vigente cresce por REVELA chars/s
+  function fatiada(i, txt) {
+    if (!atual || !txt) return '';
+    if (atual.linha > i) return txt;
+    if (atual.linha < i) return '';
+    return txt.slice(0, Math.floor(atual.chars));
+  }
+
   function update(dt) {
-    if (!atual || atual.tipo !== 'evento') return;
-    atual.t -= dt;
-    if (atual.t <= 0) atual = null;
+    if (!atual) return;
+    atual.relogio += dt;
+    if (atual.barras < ABERTURA) {
+      atual.barras = Math.min(ABERTURA, atual.barras + dt);
+    }
+    // datilografado — roda para os 2 tipos (o mundo também narra)
+    var linhas = linhasAtuais();
+    if (atual.pausa > 0) {
+      atual.pausa -= dt;
+    } else {
+      var txt = linhas[atual.linha];
+      if (txt !== undefined && atual.chars < txt.length) {
+        atual.chars = Math.min(txt.length, atual.chars + REVELA * dt);
+      } else if (atual.linha < linhas.length - 1) {
+        atual.linha++;
+        atual.chars = 0;
+        atual.pausa = PAUSA;
+      }
+    }
+    // auto-dismiss só dos eventos (a fronteira espera o jogador)
+    if (atual.tipo === 'evento') {
+      atual.t -= dt;
+      if (atual.t <= 0) atual = null;
+    }
+  }
+
+  // 3 estágios por clique (Docs/cutscenes.md): completa a linha atual
+  // → próxima linha → encerra (Enter/botão continuam fechando direto)
+  function avancar() {
+    if (!atual) return;
+    var linhas = linhasAtuais();
+    var txt = linhas[atual.linha];
+    if (txt !== undefined && atual.chars < txt.length) {
+      atual.chars = txt.length;
+      atual.pausa = 0;
+      return;
+    }
+    if (atual.linha < linhas.length - 1) {
+      atual.linha++;
+      atual.chars = 0;
+      atual.pausa = 0;
+      return;
+    }
+    fecha();
   }
 
   // retângulo do botão do overlay (fonte única: desenhar + testes)
@@ -112,6 +177,8 @@ var Cutscene = (function () {
       restante: atual.tipo === 'evento'
         ? Math.round(atual.t * 100) / 100 : null,
       mudo: mudo,
+      barras: atual.barras,
+      revela: { linha: atual.linha, chars: Math.round(atual.chars) },
       botao: botao()
     };
   }
@@ -185,15 +252,21 @@ var Cutscene = (function () {
     mapaUniverso(ctx, px + 28, py + 40, pw - 56, para);
     legenda(ctx, px + 28, py + 100);
     var linhas = FRONTEIRAS[para] || [];
-    UI.text(linhas[0] || '', px + pw / 2, py + 136, {
+    // datilografado: só a fração revelada da linha vigente
+    UI.text(fatiada(0, linhas[0]), px + pw / 2, py + 136, {
       align: 'center', color: '#c9c2dd', font: '15px monospace'
     });
-    UI.text(linhas[1] || '', px + pw / 2, py + 160, {
+    UI.text(fatiada(1, linhas[1]), px + pw / 2, py + 160, {
       align: 'center', color: '#c9c2dd', font: '15px monospace'
     });
     UI.text('Chefe: ' + tema.boss.nome, px + pw / 2, py + 196, {
       align: 'center', color: tema.boss.cor, font: 'bold 15px monospace'
     });
+    // dica piscando (doc): visível só na fase par do relógio
+    if (Math.floor(atual.relogio * 2) % 2 === 0) {
+      UI.text('clique para avançar', px + pw / 2, py + 218,
+        { align: 'center', color: '#6f678a', font: '13px monospace' });
+    }
     var b = botao();
     if (UI.button(b.x, b.y, b.w, b.h, 'Entrar no Mundo ' + para)) fecha();
   }
@@ -206,15 +279,18 @@ var Cutscene = (function () {
     // reescreve o título na cor do evento (o painel nasce dourado)
     UI.text(e.titulo, px + 10, py + 15,
       { color: e.cor, font: 'bold 16px monospace' });
-    UI.text(e.linhas[0], px + pw / 2, py + 64, {
+    UI.text(fatiada(0, e.linhas[0]), px + pw / 2, py + 64, {
       align: 'center', color: '#c9c2dd', font: '15px monospace'
     });
-    UI.text(e.linhas[1], px + pw / 2, py + 92, {
+    UI.text(fatiada(1, e.linhas[1]), px + pw / 2, py + 92, {
       align: 'center', color: '#c9c2dd', font: '15px monospace'
     });
-    UI.text('some sozinho em instantes — ou clique para seguir',
-      px + pw / 2, py + 128,
-      { align: 'center', color: '#6f678a', font: '12px monospace' });
+    // dica piscando (doc): visível só na fase par do relógio
+    if (Math.floor(atual.relogio * 2) % 2 === 0) {
+      UI.text('some sozinho em instantes — ou clique para seguir',
+        px + pw / 2, py + 128,
+        { align: 'center', color: '#6f678a', font: '12px monospace' });
+    }
     var b = botao();
     if (UI.button(b.x, b.y, b.w, b.h, 'Continuar')) fecha();
   }
@@ -226,6 +302,14 @@ var Cutscene = (function () {
     // rasterizador; mesmo rgba do overlay de vitória)
     ctx.fillStyle = 'rgba(8, 6, 16, 0.84)';
     ctx.fillRect(0, 0, W, 432);
+    // letterbox deslizante (Docs/cutscenes.md): barras pretas no topo
+    // e na base subindo em 0,35s — o "quadro" cinematográfico
+    var alt = Math.round(BARRA_ALT * (atual.barras / ABERTURA));
+    if (alt > 0) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.92)';
+      ctx.fillRect(0, 0, W, alt);
+      ctx.fillRect(0, 432 - alt, W, alt);
+    }
     if (atual.tipo === 'mundo') desenhaMundo(ctx, W);
     else desenhaEvento(ctx, W);
     ctx.globalAlpha = 1;   // deixa o contexto limpo p/ o próximo frame
@@ -293,6 +377,7 @@ var Cutscene = (function () {
     silenciar: silenciar,
     desenhar: desenhar,
     info: info,
+    avancar: avancar,
     universo: Universo
   };
 })();

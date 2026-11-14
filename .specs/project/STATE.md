@@ -389,6 +389,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   "81.25361691040177" no rodapé/Stats. Arredondar NO RENDER, nunca
   em `statusDetalhado` (os testes somam as partes numéricas).
 
+- **Cutscene: letterbox + véu juntos** (spec `visual-cutscene`) — o
+  doc tem só as barras (o mundo deles congela); como a nossa batalha
+  **nunca pausa**, manter o véu dá legibilidade do painel sobre arena
+  viva e as barras dão o quadro cinematográfico. Gatilhos e
+  auto-dismiss intocados (spec `cutscenes` = contrato — "só visual"
+  foi decisão explícita do mantenedor).
+- **A dica "clique para seguir" era mentira antes** — só o botão
+  fechava. Agora o clique fora **avança** (3 estágios do doc) e a
+  dica pisca de verdade; `Enter`/botão seguem fechando direto
+  (contrato da 42 preservado).
+
 ## Bloqueios
 
 - Nenhum.
@@ -409,6 +420,11 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
 
 ## Lições
 
+- **Animação × contrato de "está na tela"**: virar texto estático em
+  datilografado derruba asserts que afirmam a linha no frame 1 (42).
+  Correto = **esperar o texto aparecer com teto de frames** (não
+  soltar o assert, não dormir sem teto); título/botão continuam
+  imediatos para os asserts de presença ficarem no frame 1.
 - **Sondas de coordenada fixa em layout que recentra** (leva
   ajustes-playtest-3): encurtar o 'Vel' recentrou o rodapé e as
   sondas fixas (`[150..610]` e `pressionar(240,356)`) caíram nos
