@@ -127,6 +127,16 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     (rede, fora do gate) sonda o que está implantado · limite
     honesto registrado: a 1ª marca por apelido é confiável (sem
     relógio por jogador — `resource` não expõe `createTime`).
+0b. ✅ **`save-assinado`** *(não liberado — em `Unreleased`)* —
+    **HMAC-SHA256 em JS puro** (`js/assinatura.js`; `crypto.subtle` não
+    vale em `file://` e o sandbox tem whitelist — verificado contra o
+    `crypto` do Node) assinando personagens **e** estado de batalha;
+    adulterado/sem `_s` → **rejeitado e PRESERVADO** (nada é apagado);
+    migração **sem janela** (sem marcador → reescreve assinado na
+    hora); export assinado / import com aviso p/ backup antigo;
+    `Salvar.rejeitados()`. **+10 confs = 719** · limite honesto: a
+    chave vai no bundle (barreira p/ edição casual, não segredo) e o
+    placar não depende daqui (é a leva 0a).
 
 0. ✅ **`gestao-atributos`** *(leva de correção, antes dos monstros)* —
    pontos escassos (**1 a cada 3 níveis + compensação 9×**: cada decisão

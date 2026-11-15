@@ -523,6 +523,20 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   (`nivel ≤ 999 && x == nivel) || (nivel ≥ 999 && x == 999)`, que é
   exatamente `min(nivel,999)`), e toda constante de teto vive nomeada
   no arquivo do rules com a fórmula de recalibragem.
+- **Save assinado é BARRERA, não segredo** (`save-assinado`): a chave
+  do HMAC está no bundle e o dono do save é o próprio jogador — a
+  promessa é "mexer no JSON no DevTools deixa de ser silencioso", não
+  "não dá pra editar". Três escolhas que evitaram armadilha: (a)
+  **sem sal por aparelho** — com sal local a transferência do export
+  entre máquinas falharia (assinatura da origem ≠ do destino); (b)
+  **migração re-escreve na hora** — aceitar save antigo sem reescrever
+  deixaria uma janela em que o PRÓPRIO save do jogador viraria
+  rejeitado no boot seguinte (marcador já ativo); (c) **rejeitado é
+  PRESERVADO** — `gravar`/`salvar` re-assinam só o que passou e mantêm
+  o resto intacto, porque apagar num falso positivo = perda de save e
+  re-assinar = aceitar a trapaça na marra. E o placar continua sendo
+  da outra leva: `Ranking.submete()` monta o payload do estado ao
+  vivo, não do save.
 
 ## Bloqueios
 

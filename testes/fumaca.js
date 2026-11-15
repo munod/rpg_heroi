@@ -518,6 +518,88 @@ console.log('8) seleção: novo herói, exclusão em duas etapas e paginação')
     'a página 2 mostra os personagens Pag*');
 }
 
+console.log('8b) save assinado (spec save-assinado)');
+{
+  const crypto = require('crypto');
+  const K = 'rpg_personagens_v1';
+  const KE = 'rpg_estado_v1';
+  const KM = 'rpg_assinatura_v1';
+  const A = sandbox.Assinatura;
+
+  // --- (a) a implementação bate com o crypto de verdade do Node
+  const casos = ['', 'abc', '{"nome":"José","ouro":123}', 'x'.repeat(200),
+                 'unicode çãé 中 \u{1F600}'];
+  let igual = casos.every(m =>
+    A.sha256(m) === crypto.createHash('sha256').update(m, 'utf8').digest('hex'));
+  igual = igual && casos.every(m =>
+    A.hmac(m, A.CHAVE) ===
+      crypto.createHmac('sha256', A.CHAVE).update(m, 'utf8').digest('hex'));
+  conf(igual, 'SHA-256 e HMAC batem com o crypto do Node (' +
+    (casos.length * 2) + ' casos)');
+
+  // --- (b) save sai assinado e volta pela leitura
+  const alvo = Personagem.novo();
+  alvo.nome = 'Teste Assinado';
+  Salvar.salvar(alvo);
+  const bruto0 = JSON.parse(localStorageStub.getItem(K) || '[]');
+  const meu = bruto0.find(e => e && e.id === alvo.id);
+  conf(!!meu && typeof meu._s === 'string' && meu._s.length === 64,
+    'save gravado com _s (assinatura de 64 hex)');
+  conf(Salvar.listar().some(s => s.id === alvo.id),
+    'round-trip: o save assinado volta pela leitura');
+
+  // --- (c) adulteração: o save é rejeitado e NADA é destruído
+  const bruto = JSON.parse(localStorageStub.getItem(K));
+  const mexido = bruto.find(e => e && e.id === alvo.id);
+  const ouro0 = mexido.ouro || 0;
+  mexido.ouro = ouro0 + 999999;
+  localStorageStub.setItem(K, JSON.stringify(bruto));
+  const lista1 = Salvar.listar();
+  conf(!lista1.some(s => s.id === alvo.id) && Salvar.rejeitados() >= 1,
+    'save adulterado é rejeitado (rejeitados=' + Salvar.rejeitados() + ')');
+  conf(lista1.some(s => s.id === Game.personagem.id),
+    'os saves dos outros heróis continuam de pé');
+  const outro = Personagem.novo();
+  outro.nome = 'Teste Vizinho';
+  Salvar.salvar(outro);
+  const depois = JSON.parse(localStorageStub.getItem(K));
+  const preservado = depois.find(e => e && e.id === alvo.id);
+  conf(!!preservado && preservado.ouro === ouro0 + 999999 &&
+    typeof preservado._s === 'string',
+    'o rejeitado é PRESERVADO no storage por outro salvar (sem perda)');
+
+  // --- (d) migração: sem marcador -> aceita e re-assina NA HORA
+  const semMarc = JSON.parse(localStorageStub.getItem(K));
+  semMarc.forEach(e => { if (e && typeof e === 'object') delete e._s; });
+  localStorageStub.setItem(K, JSON.stringify(semMarc));
+  localStorageStub.removeItem(KM);
+  const migrados = Salvar.listar();
+  const brutoMig = JSON.parse(localStorageStub.getItem(K) || '[]');
+  const tudoAssinado = brutoMig.length > 0 && brutoMig.every(e =>
+    e && typeof e === 'object' && typeof e._s === 'string');
+  conf(migrados.some(s => s.id === alvo.id) && tudoAssinado &&
+    localStorageStub.getItem(KM) === '1',
+    'migração: sem marcador aceita tudo e RE-ESCREVE assinado na hora');
+
+  // --- (e) estado da batalha: adulterado vira null na leitura
+  Salvar.salvarEstado(alvo.id, 4, Date.now(), false, 1);
+  const est = JSON.parse(localStorageStub.getItem(KE) || '{}');
+  est[alvo.id]._s = '0'.repeat(64);
+  localStorageStub.setItem(KE, JSON.stringify(est));
+  conf(Salvar.lerEstado(alvo.id) === null,
+    'estado adulterado -> lerEstado devolve null');
+
+  // --- limpeza: não levar heróis de teste pros testes seguintes
+  Salvar.salvarEstado(alvo.id, 1, Date.now(), false, 1);  // re-assina
+  Salvar.apagar(alvo.id);
+  Salvar.apagar(outro.id);
+  conf(!Salvar.listar().some(s => s.id === alvo.id || s.id === outro.id),
+    'heróis de teste apagados (apagar continua valendo)');
+  conf(Salvar.rejeitados() === 0,
+    'após a limpeza nenhuma entrada fica rejeitada (' +
+    Salvar.rejeitados() + ')');
+}
+
 console.log('9) progresso offline (ausência creditada ao reabrir)');
 {
   const pOff = Game.personagem;

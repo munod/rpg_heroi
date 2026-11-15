@@ -124,6 +124,24 @@ vive em `.specs/features/`.
   Limite documentado: a **1ª marca de um apelido é confiável até o
   teto** (eliminar exigiria identidade ou save autoritativo — opção C,
   adiada).
+- **Save assinado: integridade do localStorage (spec `save-assinado`)**
+  — cada entrada de `rpg_personagens_v1` **e** de `rpg_estado_v1` sai
+  com `_s = HMAC-SHA256(JSON sem _s)` (`js/assinatura.js` novo —
+  SHA-256/HMAC **em JS puro**, porque `crypto.subtle` não é confiável
+  em `file://` e o sandbox dos testes tem whitelist; verificado contra
+  o `crypto` do Node em 10 casos). Com o marcador do storage ativo,
+  entrada adulterada **ou sem `_s`** é **rejeitada** — mas o dado
+  rejeitado **nunca é destruído** (fica intacto e todo `salvar`
+  preserva as entradas alheias ⇒ falso positivo não apaga save). Primeira
+  leitura sem marcador **migra re-escritando na hora** (sem janela em
+  que o save aceito vire rejeitado no boot seguinte). Export sai
+  **assinado** (transferência entre aparelhos valida — sem sal por
+  aparelho de propósito); import aceita JSON antigo sem assinatura com
+  aviso. Sonda `Salvar.rejeitados()` + `console.warn` por entrada.
+  **+10 confs = 719**: HMAC×Node, round-trip, adulteração→rejeição,
+  **preservação no storage**, migração, estado→null, limpeza. Limite
+  honesto: a chave vai no bundle (barreira p/ edição casual, não
+  segredo) e **o placar não depende daqui** (é a outra leva).
 
 ## [0.4.1] — 2026-11-14
 
