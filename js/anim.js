@@ -16,21 +16,21 @@ var Anim = (function () {
     return heroCache[k];
   }
 
-  function slime(cor, frame) {
-    var k = cor + '|' + frame;
-    if (!slimeCache[k]) slimeCache[k] = Sprite.slimeCanvas(cor, frame);
+  function slime(cor, frame, chave) {
+    var k = cor + '|' + frame + '|' + (chave || '');
+    if (!slimeCache[k]) slimeCache[k] = Sprite.slimeCanvas(cor, frame, chave);
     return slimeCache[k];
   }
 
-  function morcego(cor, frame) {
-    var k = cor + '|' + frame;
-    if (!morcegoCache[k]) morcegoCache[k] = Sprite.morcegoCanvas(cor, frame);
+  function morcego(cor, frame, chave) {
+    var k = cor + '|' + frame + '|' + (chave || '');
+    if (!morcegoCache[k]) morcegoCache[k] = Sprite.morcegoCanvas(cor, frame, chave);
     return morcegoCache[k];
   }
 
-  function aranha(cor, frame) {
-    var k = cor + '|' + frame;
-    if (!aranhaCache[k]) aranhaCache[k] = Sprite.aranhaCanvas(cor, frame);
+  function aranha(cor, frame, chave) {
+    var k = cor + '|' + frame + '|' + (chave || '');
+    if (!aranhaCache[k]) aranhaCache[k] = Sprite.aranhaCanvas(cor, frame, chave);
     return aranhaCache[k];
   }
 

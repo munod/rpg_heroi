@@ -78,13 +78,22 @@ classes.forEach((cl, li) => {
   });
 });
 
-// linha do cenário
+// linha do cenário (formas base) + espécies (spec visual-monstros)
 colar(Sprite.slimeCanvas('#4aa03a', 0).canvas, 0, 4, ESC);
 colar(Sprite.slimeCanvas('#4aa03a', 1).canvas, 1, 4, ESC);
 colar(Sprite.slimeCanvas('#7a4ac0', 0).canvas, 2, 4, ESC);
 colar(Sprite.slimeCanvas('#7a4ac0', 1).canvas, 3, 4, ESC);
+colar(Sprite.slimeCanvas('#d8a020', 0, 'boss').canvas, 4, 4, ESC);
 colar(Sprite.treeCanvas().canvas, 5, 4, ESC);
+colar(Sprite.slimeCanvas('#ff5a3a', 0, 'acougueiro').canvas, 6, 4, ESC);
 colar(Sprite.rockCanvas().canvas, 7, 4, ESC);
+colar(Sprite.slimeCanvas('#e8c86a', 0, 'gatuno').canvas, 8, 4, ESC);
+colar(Sprite.slimeCanvas('#6a9a6a', 0, 'regenerador').canvas, 9, 4, ESC);
+colar(Sprite.slimeCanvas('#9a5ab8', 0, 'drenador').canvas, 10, 4, ESC);
+colar(Sprite.slimeCanvas('#7a4ac0', 1, 'visgo').canvas, 11, 4, ESC);
+colar(Sprite.morcegoCanvas('#7a5aa8', 0, 'morcego').canvas, 12, 4, ESC);
+colar(Sprite.morcegoCanvas('#7a9ab8', 1, 'atirador').canvas, 13, 4, ESC);
+colar(Sprite.aranhaCanvas('#c84a3a', 0, 'aranha').canvas, 14, 4, ESC);
 
 const saida = path.join(__dirname, 'previa.png');
 escreverPNG(saida, larg, alt, folha);
@@ -92,6 +101,9 @@ console.log('gerado: ' + saida + ' (' + larg + 'x' + alt + ')');
 console.log('linhas: ' + classes.join(', ') + ', cenario');
 console.log('colunas por linha: ' + estilos.map(e =>
   e + ' (idle/andar/atacar)').join(' | '));
+console.log('cenario: slime · visgo · boss · arvore · acougueiro · ' +
+  'pedra · gatuno · regenerador · drenador · visgo2 · morcego · ' +
+  'atirador · aranha');
 
 // ---------------------------------------------------- folha ampliada (x10)
 const ESCZ = 10;

@@ -649,97 +649,204 @@ var Sprite = (function () {
   }
 
   // ---- inimigos ----------------------------------------------------------
-  // 0 vazio | 1 contorno | 2 corpo | 3 corpo sombra | 4 brilho | 5 olho branco | 6 pupila
-  function slimeCanvas(cor, frame) {
+  // 0 vazio | 1 contorno | 2 corpo | 3 corpo sombra | 4 corpo luz |
+  // 5 olho branco | 6 pupila | 7 detalhe | 8 detalhe luz
+  // Mesma fonte de luz do herói (topo-esquerda) e mesmas rampas; índices
+  // 0-6 iguais aos de sempre — `chave` (espécie) só ACRESCENTA desenho.
+  var M_CORPO = 2, M_SOM = 3, M_LUZ = 4, M_OLHO = 5, M_PUPILA = 6,
+    M_DET = 7, M_DET_L = 8;
+
+  // cor do detalhe por espécie: o bicho fica reconhecível na arena sem
+  // depender só do hex do corpo (10 espécies em 3 formas)
+  var DETALHE_ESPECIE = {
+    boss: '#e8c86a',          // coroa
+    acougueiro: '#ffd9b0',    // mandíbula
+    gatuno: '#231d30',        // máscara de ladrão
+    regenerador: '#8ce07a',   // broto
+    drenador: '#e6d2ff',      // presas
+    visgo: '#d7c6ff',         // brilho viscoso
+    atirador: '#e3ecf5'       // chifres
+  };
+
+  function monstroPaleta(cor, chave) {
+    var r = rampa(cor);
+    var d = rampa(DETALHE_ESPECIE[chave] || cor);
+    return [null, COR_CONTORNO, r.base, r.som, r.luz,
+      '#ffffff', '#20182a', d.base, d.luz];
+  }
+
+  // pixel que PODE saltar da silhueta (coroa, broto, chifre) — ganha
+  // contorno próprio no fim, como a arma do herói
+  function pintorDestaque(g, W, H, destaque) {
+    return function (x, y, v) {
+      x = Math.round(x);
+      y = Math.round(y);
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      var i = y * W + x;
+      g[i] = v;
+      destaque.push(i);
+    };
+  }
+
+  // Rosto + detalhe da espécie (por cima do contorno, como o do herói).
+  function rostoSlime(px, pd, chave, olhoY, bocaY, topo) {
+    // máscara do gatuno ANTES dos olhos (a banda fica atrás das pupulas)
+    if (chave === 'gatuno') {
+      for (var xm = 3; xm <= 11; xm++) px(xm, olhoY, M_DET);
+      px(3, olhoY + 1, M_DET);
+      px(11, olhoY + 1, M_DET);
+    }
+    // olhos
+    px(4, olhoY, M_OLHO);
+    px(5, olhoY, M_PUPILA);
+    px(9, olhoY, M_OLHO);
+    px(10, olhoY, M_PUPILA);
+    // boca (2px; visgo torce, acougueiro abre)
+    px(6, bocaY, M_PUPILA);
+    px(7, bocaY, M_PUPILA);
+    if (chave === 'visgo') px(5, bocaY, M_PUPILA);
+    if (chave === 'acougueiro') px(8, bocaY, M_PUPILA);
+    // presas
+    if (chave === 'acougueiro') {
+      px(5, bocaY + 1, M_OLHO);
+      px(9, bocaY + 1, M_OLHO);
+    }
+    if (chave === 'drenador') {
+      px(5, bocaY + 1, M_DET_L);
+      px(9, bocaY + 1, M_DET_L);
+    }
+    // --- detalhes fora da silhueta (pd = destaque) ---
+    if (chave === 'boss') {                 // coroa de 3 pontas
+      pd(5, topo - 1, M_DET);
+      pd(7, topo - 2, M_DET_L);
+      pd(9, topo - 1, M_DET);
+      pd(7, topo - 1, M_DET);
+    }
+    if (chave === 'regenerador') {          // broto
+      pd(7, topo - 1, M_DET);
+      pd(6, topo - 2, M_DET_L);
+      pd(8, topo - 2, M_DET_L);
+    }
+    if (chave === 'visgo') {                // brilho de viscosidade
+      px(9, olhoY + 2, M_DET_L);
+      px(10, olhoY + 3, M_DET_L);
+    }
+  }
+
+  function slimeCanvas(cor, frame, chave) {
     var W = 14, H = 12;
     var g = new Uint8Array(W * H);
-    var pal = [null, COR_CONTORNO, cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
+    var pal = monstroPaleta(cor, chave);
     var px = pintorDireto(g, W, H);
+    var destaque = [];
+    var pd = pintorDestaque(g, W, H, destaque);
 
     var sq = frame === 1;
     var cy = sq ? 7.6 : 7;
     var rx = sq ? 6.5 : 5.8;
     var ry = sq ? 3.6 : 4.4;
 
-    elipse(px, 7, cy, rx, ry, 2);
-    elipse(px, 5, cy - 1.6, 2, 1.2, 4);
-    elipse(px, 7, cy + ry - 1.3, rx - 1, 1.2, 3);
+    elipse(px, 7, cy, rx, ry, M_CORPO);
+    elipse(px, 5, cy - 1.6, 2, 1.2, M_LUZ);
+    elipse(px, 7, cy + ry - 1.3, rx - 1, 1.2, M_SOM);
     contorna(g, W, H);
 
-    // rosto por cima do contorno
-    var olhoY = Math.round(cy - 1);
-    px(4, olhoY, 5);
-    px(5, olhoY, 6);
-    px(9, olhoY, 5);
-    px(10, olhoY, 6);
-    px(7, Math.round(cy + 1), 6);
-    px(6, Math.round(cy + 1), 6);
+    rostoSlime(px, pd, chave, Math.round(cy - 1), Math.round(cy + 1),
+      Math.round(cy - ry));
+    contornaDestaque(g, W, H, destaque);
 
     return paraCanvas(g, W, H, pal);
   }
 
   // Morcego: corpo em pé, asas para cima (frame1) ou abertas (frame0).
-  function morcegoCanvas(cor, frame) {
+  function morcegoCanvas(cor, frame, chave) {
     var W = 14, H = 12;
     var g = new Uint8Array(W * H);
-    var pal = [null, COR_CONTORNO, cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
+    var pal = monstroPaleta(cor, chave);
     var px = pintorDireto(g, W, H);
+    var destaque = [];
+    var pd = pintorDestaque(g, W, H, destaque);
 
     var asaCima = frame === 1;
-    // corpo e cabeça
-    elipse(px, 7, 7, 2.2, 2.6, 2);
-    elipse(px, 7, 9.6, 1.6, 1.4, 3);
-    // orelhas
-    px(5, 3, 2); px(8, 3, 2);
-    px(5, 4, 3); px(8, 4, 3);
-    // asas
-    if (asaCima) {
-      retangulo(px, 1, 3, 4, 2, 2);
-      retangulo(px, 9, 3, 4, 2, 2);
-      retangulo(px, 1, 5, 3, 1, 3);
-      retangulo(px, 10, 5, 3, 1, 3);
-    } else {
-      retangulo(px, 1, 6, 4, 2, 2);
-      retangulo(px, 9, 6, 4, 2, 2);
-      retangulo(px, 2, 8, 3, 1, 3);
-      retangulo(px, 9, 8, 3, 1, 3);
-    }
+    // corpo
+    elipse(px, 7, 7, 2.2, 2.6, M_CORPO);
+    elipse(px, 7, 9.6, 1.6, 1.4, M_SOM);
     contorna(g, W, H);
 
+    // orelhas e asas DEPOIS do contorno: são partes de 1-2px e, se
+    // entrassem antes, virariam todas contorno (bicho virava cruz preta)
+    pd(5, 3, M_CORPO);
+    pd(8, 3, M_CORPO);
+    if (asaCima) {
+      retangulo(pd, 1, 3, 4, 1, M_LUZ);
+      retangulo(pd, 1, 4, 4, 1, M_CORPO);
+      retangulo(pd, 1, 5, 3, 1, M_SOM);
+      retangulo(pd, 9, 3, 4, 1, M_LUZ);
+      retangulo(pd, 9, 4, 4, 1, M_CORPO);
+      retangulo(pd, 10, 5, 3, 1, M_SOM);
+    } else {
+      retangulo(pd, 1, 6, 4, 1, M_LUZ);
+      retangulo(pd, 1, 7, 4, 1, M_CORPO);
+      retangulo(pd, 2, 8, 3, 1, M_SOM);
+      retangulo(pd, 9, 6, 4, 1, M_LUZ);
+      retangulo(pd, 9, 7, 4, 1, M_CORPO);
+      retangulo(pd, 9, 8, 3, 1, M_SOM);
+    }
+
     // rosto por cima do contorno
-    px(6, 6, 5); px(8, 6, 5);      // olhos
-    px(6, 7, 6); px(8, 7, 6);      // pupilas
-    px(7, 9, 5);                   // focinho
+    px(6, 6, M_OLHO); px(8, 6, M_OLHO);      // olhos
+    px(6, 7, M_PUPILA); px(8, 7, M_PUPILA);  // pupilas
+    px(7, 9, M_OLHO);                        // focinho
+    // chifres do atirador (fora da silhueta)
+    if (chave === 'atirador') {
+      pd(5, 2, M_DET_L);
+      pd(8, 2, M_DET_L);
+      pd(5, 1, M_DET);
+      pd(8, 1, M_DET);
+    }
+    contornaDestaque(g, W, H, destaque);
     return paraCanvas(g, W, H, pal);
   }
 
   // Aranha: abdômen à esquerda, cabeça à direita, 8 pernas.
-  function aranhaCanvas(cor, frame) {
+  function aranhaCanvas(cor, frame, chave) {
     var W = 14, H = 12;
     var g = new Uint8Array(W * H);
-    var pal = [null, COR_CONTORNO, cor, shade(cor, 0.68), shade(cor, 1.35), '#ffffff', '#20182a'];
+    var pal = monstroPaleta(cor, chave);
     var px = pintorDireto(g, W, H);
+    var destaque = [];
+    var pd = pintorDestaque(g, W, H, destaque);
 
     var sobe = frame === 1;
     // abdômen + cabeça
-    elipse(px, 4.5, 6, 3, 2.6, 2);
-    elipse(px, 4.5, 6, 1.6, 1.4, 3);
-    elipse(px, 9.5, 6.5, 2, 1.8, 2);
-    // pernas (4 pares; frame alterna a altura)
-    var d = sobe ? -1 : 0;
-    linha(px, 7, 5, 10, 2 + d, 2);
-    linha(px, 6, 5, 8, 1 + d, 2);
-    linha(px, 5, 4, 6, 1 + d, 2);
-    linha(px, 4, 4, 3, 1 + d, 2);
-    linha(px, 7, 8, 10, 10 - d, 2);
-    linha(px, 6, 8, 8, 11 - d, 2);
-    linha(px, 5, 8, 5, 11 - d, 2);
-    linha(px, 3, 8, 2, 10 - d, 2);
+    elipse(px, 4.5, 6, 3, 2.6, M_CORPO);
+    elipse(px, 4.5, 6, 1.6, 1.4, M_SOM);
+    elipse(px, 9.5, 6.5, 2, 1.8, M_CORPO);
     contorna(g, W, H);
 
+    // pernas DEPOIS do contorno (1px: antes virariam todas contorno);
+    // as de cima pegam a luz, as de baixo ficam na sombra
+    var d = sobe ? -1 : 0;
+    linha(pd, 7, 5, 10, 2 + d, M_CORPO);
+    linha(pd, 6, 5, 8, 1 + d, M_CORPO);
+    linha(pd, 5, 4, 6, 1 + d, M_LUZ);
+    linha(pd, 4, 4, 3, 1 + d, M_SOM);
+    linha(pd, 7, 8, 10, 10 - d, M_SOM);
+    linha(pd, 6, 8, 8, 11 - d, M_SOM);
+    linha(pd, 5, 8, 5, 11 - d, M_CORPO);
+    linha(pd, 3, 8, 2, 10 - d, M_SOM);
+
     // olhos na cabeça, por cima do contorno
-    px(10, 6, 5); px(11, 6, 6);
-    px(10, 7, 6);
+    px(10, 6, M_OLHO); px(11, 6, M_PUPILA);
+    px(10, 7, M_PUPILA);
+    // listra no abdômen (a espécie inteira tem padrão)
+    if (chave) {
+      px(3, 5, M_DET);
+      px(4, 5, M_DET_L);
+      px(5, 5, M_DET);
+      px(4, 7, M_DET);
+    }
+    contornaDestaque(g, W, H, destaque);
     return paraCanvas(g, W, H, pal);
   }
 

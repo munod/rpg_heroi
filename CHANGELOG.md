@@ -35,6 +35,21 @@ vive em `.specs/features/`.
   com legenda nova (`heroPaleta`/`txtPaleta` exportados) e asserções
   reposicionadas — as do rosto (olho `(9,4)`, pupila `(10,4)`) e mão
   `(12,13)` seguem as mesmas.
+- **Monstros com rampa e identidade por espécie (spec
+  `visual-monstros`)** — as 3 formas saíram do `shade()` legado e
+  passaram a usar as **mesmas rampas e a mesma luz topo-esquerda** do
+  herói (`2 corpo · 3 sombra · 4 luz`, índices 0-6 intactos) e ganharam
+  **detalhe por espécie** via 3º parâmetro opcional `chave`
+  (`undefined` = forma base, assinatura atual preservada): **coroa**
+  do chefe, **mandíbula com presas** do Açougueiro, **máscara** do
+  Gatuno, **broto** do regenerador, **presas** do drenador, **brilho
+  viscoso** do visgo, **chifres** do atirador e **listra** na aranha.
+  `spriteInimigo` passa `en.chave` e as caches do `Anim` incluem a
+  chave (sem isso a espécie herdaria o sprite da anterior). Achado:
+  **partes de 1px têm que ser pintadas DEPOIS do `contorna()`** —
+  asas, orelhas e pernas entravam como silhueta e viravam tudo
+  contorno (o morcego era uma cruz preta). `previa.js` agora mostra
+  as 10 espécies na linha do cenário (loop de iteração).
 
 ## [0.4.1] — 2026-11-14
 

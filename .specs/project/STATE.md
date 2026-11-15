@@ -475,6 +475,13 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   DERIVADOS (o save segue só com skin/hair/estilo/cloth, formato
   intocado) e a cache key do `Anim.hero` inclui os dois — sem isso a
   troca de classe/equipamento ficava com o sprite velho em cache.
+- **Partes de 1px vão DEPOIS do `contorna()`** (`visual-monstros`) —
+  asas/orelhas/pernas de 1-2px pintadas antes viravam **todas
+  contorno** (o morcego virou uma cruz preta e a aranha um borrão de
+  linhas escuras). A ordem certa no monstro é: corpo grosso →
+  `contorna()` → partes finas via `pintorDestaque` → rosto →
+  `contornaDestaque()`. Mesma lógica da arma do herói — vira regra
+  geral do `sprite.js`.
 
 ## Bloqueios
 

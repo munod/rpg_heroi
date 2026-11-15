@@ -1780,9 +1780,11 @@ var Batalha = (function () {
   }
 
   function spriteInimigo(en) {
-    if (en.forma === 'morcego') return Anim.morcego(en.cor, en.frame);
-    if (en.forma === 'aranha') return Anim.aranha(en.cor, en.frame);
-    return Anim.slime(en.cor, en.frame);
+    // chave = espécie (spec visual-monstros): dá detalhe próprio ao
+    // sprite sem mudar forma/cor — entra também na cache do Anim
+    if (en.forma === 'morcego') return Anim.morcego(en.cor, en.frame, en.chave);
+    if (en.forma === 'aranha') return Anim.aranha(en.cor, en.frame, en.chave);
+    return Anim.slime(en.cor, en.frame, en.chave);
   }
 
   function desenhaInimigo(ctx, en) {

@@ -200,6 +200,15 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     20×20 intacta (âncoras/fumaca sem mudança). **Gate = 704 confs**
     (687 fumaça + 17 grade) · arte iterada nos PNGs de
     `previa.js`/`cena.js`.
+11. ✅ **`visual-monstros`** *(não liberado — em `Unreleased`)* —
+    mesma paleta/luz do herói nas 3 formas + **detalhe por espécie**
+    (3º parâmetro opcional `chave`, assinatura compatível): coroa do
+    chefe, presas do Açougueiro, máscara do Gatuno, broto do
+    regenerador, presas do drenador, brilho do visgo, chifres do
+    atirador, listra na aranha · `Anim` ganha `chave` na cache ·
+    **lição: partes de 1px vão DEPOIS do `contorna()`** (asas/orelhas/
+    pernas viravam contorno e o morcego era uma cruz preta) ·
+    `previa.js` com as 10 espécies.
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,
