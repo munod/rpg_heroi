@@ -149,8 +149,8 @@ js/
   personagem.js     classes, atributos, status derivados, validação, níveis
   salvar.js         localStorage + export/import JSON
   gravacao.js       toast, autosave e save do personagem (compartilhado)
-  mapas.js          cada mundo: tema do chão, obstáculos, monstros e chefe
-                    (mundo()/noMundo() — 10×10, ciclo no infinito)
+  mapas.js          cada tema (ciclo de 10 por mapa): chão, obstáculos,
+                    monstros e chefe (mundo()/noMundo() — 10×10 intacto)
   perlin.js         Perlin Noise com semente do mapa (cenários procedurais)
   itens.js          drops: armas/armaduras, bolsa e auto-equip
   skills.js         skills por classe (procs, ramos e loadout escalonado)
@@ -185,8 +185,9 @@ O layout é **ancorado**: cabeçalho/rodapé/status/toast ocupam a largura
 toda (XP centrado, "Pontos" e o trio de botões à direita), a arena fica
 à esquerda e o painel de gestão à direita. Em 16:9 a largura é 768 e
 tudo cai exatamente nas coordenadas de referência. A arena é uma **janela de 192×134 (unidades de mundo,
-ampliadas ×2 na tela) deslizando sobre um mundo de 384×268** — uma
-câmera suave segue o herói (com trava nas bordas) — e os sprites são
+ampliadas ×2 na tela) sobre um terreno procedural INFINITO por chunks
+de 384×268** — a câmera fica **sempre centralizada no herói** (sem
+bordas de mundo) — e os sprites são
 grades de pixels desenhadas por código e escaladas com `imageSmoothing`
 desligado.
 
@@ -252,8 +253,9 @@ de corte, anéis de impacto, **hit-stop com peso de golpe**, crítico com
 tremor dourado, flash/vinheta de evento, respingos de veneno, motes de
 cura e marcador de medo), a **IA tática** (**Behavior Tree do herói** com evasão de
 cerco, **matilha com separação e influence map** — cerco/antecipação/
-esquiva dos monstros — e rotas por A*), a **câmera sobre o
-mundo 384×268** com o **renascimento em local aleatório**, o **toque no
+esquiva dos monstros — e rotas por A*), a **câmera sempre
+centralizada no herói** sobre o **terreno infinito por chunks** com o
+**renascimento em anel ao redor da queda**, o **toque no
 celular** (clique, arrasto e soltura por dedo, com bloqueio de rolagem),
 a **escala responsiva** e o **layout de largura adaptativa** (768–1728,
 ancorado nas bordas, preenchendo a tela em paisagem), a lista de

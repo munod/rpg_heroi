@@ -33,6 +33,13 @@ vitória + modo infinito em loop** · **teto ~9.500 com re-base das curvas**
   `Mapas.info(n)` passa a resolver **tema por MUNDO**: mundo 1-10 têm
   tema próprio; no modo infinito (mapa 101+) os mundos **ciclam**
   (`mundo 11 → tema do mundo 1`). `FIM_MAPA = 100` intacto.
+  - **Emenda `mapa-infinito` R-INF-9 (2026-11-15)** — o playtest pediu
+    "alternando a cor, textura e mobs conforme vai passando de mapa":
+    `info(n)` passou a resolver **tema por MAPA** (`LISTA[(n−1)%10]`,
+    ciclo de10 — `mundo/noMundo` intactos e continuam exportados).
+    Efeito medido: os primeiros10 mapas varrem os10 temas (mobs mais
+    duros mais cedo — ttk2,48 compensado pelo `balance-dopamina`
+    R-BAL-6). As confs da seção12/41/42 da fumaça acompanham.
 - **R-MUN-2 (fix do chão + 10 temas autorais)**: `Mapas.LISTA` vira **10
   entradas** — cada mundo com paleta de chão própria (base/par/imp/
   mancha/flores/borda), densidade/tipos de obstáculo, inimigos

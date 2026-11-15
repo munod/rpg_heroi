@@ -10,6 +10,34 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Added
+
+- **Mapa procedural infinito (spec `mapa-infinito`)** — playtest:
+  *"esse mapa limitado faz o char sumir da tela, fica só metade dele
+  qnd sobe"*. O herói agora fica **sempre no centro da janela**:
+  câmera sem clamp de bordas (R-INF-1), mundo sem limites — `resolve`/
+  `spawn` sem clamps, renascimento em **anel de 40-120px do herói**
+  (R-INF-2), fuga limitada a **96px do herói** (R-INF-3, era limites
+  do mundo) e gatuno foge por **distância** (240px, era borda — R-INF-4,
+  o clamp antigo o prendia no mundo velho). Terreno **por chunk**
+  384×268 renderizado sob demanda (R-INF-5: manchas do Perlin em
+  coordenada absoluta = contínuo, flores/pedrinhas por chunk, **sem
+  borda desenhada**) e obstáculos por chunk com lista ativa 3×3 em
+  volta do herói (R-INF-6). A* e influence map em **janelas rolantes**
+  ancoradas na entidade/herói (R-INF-7/8 — era grade absoluta que
+  colapsava longe do 0). **Tema por mapa** com ciclo de10 (R-INF-9:
+  cor/textura/mobs alternam a cada mapa — emenda do R-MUN-1).
+  Fumaça seção17 reescrita +45/20/41/42 ajustados · gate727 confs ·
+  medição: IA isolada = neutra no ruído (4 seeds ×240min).
+- **Compensação do estol da sim completa (R-BAL-6)** — a sim de
+  13500min com `ESPERA_TETO45` **estolou no mapa97** (nv para em
+  8.895, ~1.357 mortes): o teto encolheu a janela de cura do fim
+  (45×500 = 22,5k vs 56,5k sem teto). `REGEN_MAX 500→1250` (cura
+  por respiro de volta à janela histórica) + `ESC_DMG 0,045→0,037`
+  (perigo total do fim com k0,75 ≈ baseline) + `ESC_HP 1,55→1,25`
+  (tema por mapa subiu o ttk;4 seeds ×240min: progressão de volta à
+  faixa do baseline). **Sim completa da candidata em curso.**
+
 ### Changed
 
 - **Balance da leva dopamina (spec `balance-dopamina`)** — três

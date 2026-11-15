@@ -548,16 +548,26 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   esponja/densidade) só se decidem medindo; (2) percepção sem mexer em
   balance (countdown + toast de clear + fim do **delay duplo 16s→8s**
   do troco de mapa + overlay de opções com defaults intactos);
-  (3) **balance medido — CONCLUÍDA** (≥4 seeds por decisão:
-  `ESPERA_TETO 45` · ponto/nível V1 neutro validado idêntico · TTK
-  −12% com densidade ↑ e sem estol no mundo 3); (4) **mapa procedural
-  infinito** com spec antes do código. Referência de gênero: D2
+  (3) **balance medido — CONCLUÍDA com uma reviravolta** (≥4 seeds por
+  decisão: `ESPERA_TETO 45` · ponto/nível V1 neutro validado idêntico ·
+  TTK −12% com densidade ↑; **a sim completa de13500min estolou no
+  mapa97** — o teto encolheu a janela de regen do fim (45×500 vs
+  113×500) e o k0,75 subiu o dano: compensação medida =
+  `REGEN_MAX 1250` + `ESC_DMG 0,037` + `ESC_HP 1,25`, sim da
+  candidata em curso); (4) **mapa procedural infinito — FASES A-E
+  COMPLETAS** (câmera centralizada, chunks, janelas rolantes, tema por
+  mapa; fumaça reescrita; IA isolada neutra no ruído) com spec antes
+  do código. Referência de gênero: D2
   Survivors (survivors-like) — nunca deixar tela sem informação e
   transformar pausa em **decisão** (o card por nível), não em espera.
-  Lição de medição da (3): em 240min o teto do respiro é inócuo
-  (mapa 9 ainda < 45s) — efeito de alavanca tardia só aparece em run
-  longo/sim completa; medições locais confirmam não-regressão, a
-  duração só a sim completa fecha.
+  Lições de medição: (a) em240min o teto do respiro é inócuo (mapa9
+  ainda <45s) — alavanca tardia só aparece em run longo; (b) a
+  variança de seed domina (onda14-99, ttk1,77-3,2 entre runs) —
+  ≥4 seeds ou não decidir; (c) **rodar a sim completa SEMPRE que a
+  fronteira mudar** — o estol do mapa97 só aparece em140h+, nenhum
+  teste curto pegaria; (d) isolar a causa com A/B parcial (tema vs
+  IA) antes de "consertar" — o isolamento mostrou que a IA nova era
+  neutra e o conteúdo era o responsável.
 
 ## Bloqueios
 

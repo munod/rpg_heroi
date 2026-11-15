@@ -1,6 +1,12 @@
 # Spec: Mapa procedural infinito (herói sempre no centro da tela)
 
-Status: **em implementação** (Leva 4 da leva "dopamina/viciante") · Data: 2026-11-15 ·
+Status: **código completo (fases A-E) e gate verde** · medição R-INF-10
+(ritmo4 seeds ×240min vs b3): IA nova **neutra dentro do ruído**
+(isolada: ttk2,11 — faixa do baseline) · o ciclo de tema por mapa sobe
+o ttk (mobs mais duros nos mapas iniciais:2,48) compensado pelo
+R-BAL-6 (ESC_HP1,25 →2,32 com progressão na faixa do baseline) ·
+**sim completa da candidata em curso** (R-INF-11/estol do mapa97) ·
+Data: 2026-11-15 ·
 Iniciativa: mantenedor (playtest: "esse mapa limitado faz o char sumir
 da tela... fica só metade dele qnd sobe"; pedido: "fazendo ele
 procedural, sempre vai ficar no meio da tela — o D2 Survivors fez isso

@@ -56,8 +56,9 @@
   (Açougueiro chamará `penalizaMorte(2)`). Escalas reequilibradas na
   Leva 1 (medido): ESC_HP 1,30 · ESC_DMG 0,10; hoje (leva
   `progressao-exponencial`): **ESC_HP 1,90 · ESC_DMG 0,045** — e a leva
-  `balance-dopamina` abaixou o HP p/ **1,55** (TTK de esponja ↓,
-  produto 0,0698 = folga no cliff).
+  `balance-dopamina` (R-BAL-3/6) chegou em **ESC_HP 1,25 · ESC_DMG
+  0,037** (TTK de esponja ↓; produto 0,0463 = folga máxima no cliff;
+  DMG compensa a densidade k0,75: perigo total do fim ≈ baseline).
 - **Monstros com skill própria (spec `monstros-novos`)** — 10 espécies
   em `Batalha.TIPOS` (eram 4): **`atirador`** (`ranged: {alcance 90,
   cd 2,2}` — no loop de inimigos o ramo `en.ranged` fica FORA do
@@ -130,9 +131,13 @@
   ~241 no fim mono-stat) **+ clamp final 250 px/s** aplicado DEPOIS de
   item+keystone (`VEL_MAX`, sem ele o afixo daria +1.968 no mapa 100 e
   contornaria); **afixo `vel` com escala limitada em 5×** (`escalaVel`
-  — o dano mantém escala cheia); **regen com teto 500 hp/s**
+  — o dano mantém escala cheia); **regen com teto 1250 hp/s**
   (`REGEN_MAX` — sem ele, HP late 70k regenerava 2.800/s = invencível;
-  o HP em si não mexe, sustenta a frente); **Carisma → ouro**
+  o HP em si não mexe, sustenta a frente; **500→1250 na leva
+  `balance-dopamina` R-BAL-6**: o `ESPERA_TETO 45s` encolheu a janela
+  de cura do fim e a sim completa estolou no mapa97 — "se a sim
+  estolar, SOBE este número" pagou; cap só pega com HP >31k = late);
+  **Carisma → ouro**
   (`Personagem.multOuroCar`, logarítmico) e **clérigo `danoMod:'car'`**.
   **`xpMult` eliminado** — a renda é exatamente a calibrada.
   **Ritmo de pontos: 1 ponto POR NÍVEL** (`Personagem.PONTOS_CADA/
@@ -152,7 +157,7 @@
   `1,10→1,064`, mantendo o ratio `ln(H)/ln(G)` ≈ 0,916 — o linear
   antigo estolava) e renda em `Batalha.xpAbate`
   (**`12 × 1,064^ondaTotal`**, harmônica com o custo → tempo/nível
-  estável). Combate em `Batalha`: `ESC_HP 1,55 · ESC_DMG 0,045 ·
+  estável). Combate em `Batalha`: `ESC_HP 1,25 · ESC_DMG 0,037 ·
   esperaOnda()` (respiro = regen: alavanca de ritmo que NÃO piora
   clear/survival — ver a linha de Mapas abaixo; **teto `ESPERA_TETO
   45s`** desde a leva `balance-dopamina`) + `HP_POR_NIVEL 6` em
@@ -202,18 +207,21 @@
   Física/câmera/ritmo vivem em unidades de mundo e NÃO mudam com k.
   Câmera `cam` com lerp em `atualizaCamera` (roda até pausada, é
   apresentação; teleporte >96px trava). Obstáculos de `mapas.js` valem
-  na base 192×134 e são escalados em `constroiObst`; inimigos nascem em
+  na base 192×134 e são escalados em `obstChunk`; inimigos nascem em
   anel de 110-132px do herói (fora da janela — mudar isso muda o
-  ritmo); renascimento em `posicaoAleatoriaSegura()` e inimigos miram
-  no local da morte. `info()` expõe `janela`/`mundo`/`cam`/`heroi`
+  ritmo); renascimento em `posicaoAleatoriaSegura()` (**anel de
+  40-120px do herói** desde o mapa-infinito) e inimigos miram
+  no local da morte. `info()` expõe `janela`/`mundo` (**região ativa
+  3×3 chunks = 1152×804** desde o mapa-infinito)/`cam`/`heroi`
   para os testes (seções 17-18).
 - **Mundos (spec `mundos`)**: campanha **10 mundos × 10 mapas × 100
   ondas** (`FIM_MAPA` intacto — a onda 100 é o chefe; vencido,
   `passaMapa()` faz `mapa++` e volta a onda 1). `Mapas.mundo(n)` =
   `ceil(n/10)` e `noMundo(n)` (fonte única, exportados); **tema é do
-  MUNDO** (`info(n)` → `LISTA[(mundo−1)%10]`, **10 temas autorais**,
-  ciclando no infinito — fix do chão que travava no tema 3 do mapa 4 em
-  diante). Dados em `js/mapas.js` (`Mapas.forca(n)` só nos drops de
+  MAPA** (`info(n)` → `LISTA[(n−1)%10]`, **10 temas autorais**
+  ciclando a cada 10 mapas — spec `mapa-infinito` R-INF-9, era por
+  MUNDO: cor/textura/mobs alternam a cada mapa; fix do chão que
+  travava no tema 3 do mapa 4 em diante). Dados em `js/mapas.js` (`Mapas.forca(n)` só nos drops de
   item; dificuldade/XP de combate = escala contínua `ondaTotal()` em
   `batalha.js` — onda 1 do mapa 2 = patamar da onda 100 do mapa 1);
   cenário reconstruído por `garanteCenario()`. **Respiro entre ondas =
@@ -239,9 +247,13 @@
 - Mapas procedurais em `js/perlin.js` (Perlin melhorado + mulberry32):
   a **semente é o número do mapa** (mesmo mapa = mesmo layout, em qualquer
   sessão) e é aplicada em `Batalha.garanteCenario` → `Perlin.definirSemente`;
-  `constroiChao` amostra manchas/flores do campo e `constroiObst` sorteia
-  pontos **filtrados** (clareira do ruído, centro livre ≥36×32 base,
-  ≥30 de base entre vizinhos; densidade/tipos vêm de
+  **desde o mapa-infinito o terreno é POR CHUNK** (384×268): o chão é
+  cache de `chunkDe(cx, cy)` renderizado sob demanda (manchas amostram
+  a coordenada ABSOLUTA do Perlin = contínuo entre chunks) e os
+  obstáculos são `obstChunk(cx, cy)` com semente mapa+chunk, filtrados
+  (clareira do ruído em coord. absoluta, centro livre ≥36×32 base,
+  ≥30 de base entre vizinhos **+ margem [12,176] que garante ≥56 entre
+  chunks**; densidade/tipos vêm de
   `Mapas.info().obst = {tipos, qtd}`). Sorteios usam `Perlin.sorteio(n)`
   **independente** da semente do ruído — trocar o chão não pode mexer nos
   obstáculos. `info().obst` expõe o layout (fumaça seção 20).
@@ -384,8 +396,9 @@
 - Playtest/correções: **medir antes de consertar** — sondas no
   `info()` (`inimigoPerto`, `atacando`, `destino`) existem p/ fixtures
   das seções 32; cada fix de IA/combate vira conf que falhava antes.
-  `clampFuga` em `ia.js` prende destinos de fuga aos limites (384×268,
-  margem 16); em `batalha.js`, destino a <24px = sem espaço → o herói
+  `clampFuga` em `ia.js` limita o destino de fuga a **96px do herói**
+  (era: limites do mundo 384×268 — spec mapa-infinito R-INF-3, sem
+  parede a proteção é a distância); em `batalha.js`, destino a <24px = sem espaço → o herói
   briga em vez de empurrar parede; a animação do golpe é
   `min(0.36, recarga)` (o `atkT` fixo de 0,36s estagnava a DES em ~17
   pontos). Aba Itens: `p.trava.{arma,armadura}` (fixar slot — só o
