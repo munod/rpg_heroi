@@ -5,6 +5,20 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Entregue
 
+### v0.5.0 — 2026-11-15 (ver `CHANGELOG.md`) — série visual, parte 2
+- `visual-heroi-arma` — motor de cor (rampas HSL + luz única), herói
+  autorado em grids de texto e armas com largura/guarda por raridade
+- `visual-monstros` — mesmas rampas nas 3 formas + detalhe por
+  espécie (10 espécies) · lição: partes de 1px vão após o contorno
+- `visual-cenario` — árvore em camadas, pedra facetada, cofre
+  redesenhado, flores em cacho · lição: medir a hipótese antes de
+  consertar (era texto flutuante, não o chão)
+- `preview-heroi` — prévia ao vivo do herói na aba Apar (criação e
+  jogo) com ciclo idle→ataque
+- `icones-itens` — 5 ícones 16×16 com acento de raridade + chip
+  clicável na bolsa
+- gate 708 confs · sanidade `ritmo 60`: mapa 1 em **30,3min**
+
 ### v0.4.1 — 2026-11-14 (ver `CHANGELOG.md`)
 - `virada-ataque` — herói espelha o sprite/corte para o alvo
 - `ajustes` — ESPERA_BASE 8→4s (mantenedor, sem medição)
@@ -188,7 +202,7 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
    `#000`, caixa preta + fio dourado (duplo preenchimento) nos 2
    overlays, título único, **Espaço** avança. Gate 3× = **695
    confs** · 42/48 intactas · mapa 1 **34,0/37,4min**.
-10. ✅ **`visual-heroi-arma`** *(não liberado — em `Unreleased`)* —
+10. ✅ **`visual-heroi-arma`** —
     *"visual tosco e muito simples"* (pedido direto do mantenedor +
     pesquisa: Lospec · Slynyrd · Wikipedia). **Motor de cor**: rampas
     HSL de 4 tons com **hue-shift** + luz única topo-esquerda (o
@@ -200,7 +214,7 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     20×20 intacta (âncoras/fumaca sem mudança). **Gate = 704 confs**
     (687 fumaça + 17 grade) · arte iterada nos PNGs de
     `previa.js`/`cena.js`.
-11. ✅ **`visual-monstros`** *(não liberado — em `Unreleased`)* —
+11. ✅ **`visual-monstros`** —
     mesma paleta/luz do herói nas 3 formas + **detalhe por espécie**
     (3º parâmetro opcional `chave`, assinatura compatível): coroa do
     chefe, presas do Açougueiro, máscara do Gatuno, broto do
@@ -209,7 +223,7 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     **lição: partes de 1px vão DEPOIS do `contorna()`** (asas/orelhas/
     pernas viravam contorno e o morcego era uma cruz preta) ·
     `previa.js` com as 10 espécies.
-12. ✅ **`visual-cenario`** *(não liberado — em `Unreleased`)* —
+12. ✅ **`visual-cenario`** —
     árvore (copa em 3 camadas + bojos na silhueta, tronco com lado
     claro/escuro e raiz) e pedra **facetada** com as mesmas rampas/luz
     do herói; **cofre** redesenhado (tampa em degraus, faixas de
@@ -217,14 +231,14 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     `tela-cofre.png` p/ poder olhá-lo; flores em faixa larga + cacho.
     **Hipótese refutada com medição**: a "linha pontilhada" do chão
     era texto de dano flutuante (66 px → 0 px com `limparEfeitos`).
-13. ✅ **`preview-heroi`** *(não liberado — em `Unreleased`)* —
+13. ✅ **`preview-heroi`** —
     prévia do herói ao vivo na aba Apar (×3 + sombra + ciclo idle/
     ataque de 4s), nos **dois contextos** (criação e jogo), mesma
     fonte do desenho da arena; caixa em `x616,y232` abaixo das 4
     linhas (contrato `(706,96)` intacto), dicas encurtadas p/ caber à
     esquerda. Sonda `Gestao.previa()` + **+2 confs = 706** ·
     screenshot novo `tela-selecao-apar.png`.
-14. ✅ **`icones-itens`** *(não liberado — em `Unreleased`)* —
+14. ✅ **`icones-itens`** —
     **5 ícones 16×16** (espada/adaga/cajado/martelo/armadura) no
     sistema de grid+rampa, acento da **raridade** passado por HEX
     (sprite não depende de itens), cache `Anim.icone`; slots com o

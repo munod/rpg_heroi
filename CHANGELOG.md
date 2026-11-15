@@ -8,7 +8,7 @@ Versionamento [Semantic Versioning](https://semver.org/lang/pt-BR/) em
 As linhas citam os commits (`sha`) e a rastreabilidade requisito→commit
 vive em `.specs/features/`.
 
-## [Unreleased]
+## [0.5.0] — 2026-11-15
 
 ### Added
 
@@ -98,6 +98,8 @@ vive em `.specs/features/`.
   vez de 121). Registro honesto: a "linha pontilhada" que eu atribuí
   ao chão era **texto de dano flutuante** no rasterizador — refutado
   por contagem de px e toggle de camada (lição no `STATE`).
+
+## [Unreleased]
 
 ## [0.4.1] — 2026-11-14
 
@@ -755,7 +757,8 @@ e deploy no GitHub Pages.
 - **Barras laterais no celular**: layout passou a seguir o aspecto da
   viewport (bug reportado por print) (`4c249e4`).
 
-[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/munod/rpg_heroi/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/munod/rpg_heroi/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/munod/rpg_heroi/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/munod/rpg_heroi/compare/v0.2.0...v0.3.0
