@@ -3150,6 +3150,35 @@ console.log('35) ranking: score, apelido, degradação, cena e gatilhos');
   }
   conf(mono, 'score estritamente crescente em todo o espaço (mapa × onda)');
 
+  // --- 1b) identidade que as RULES do Firestore espelham (spec
+  //          ranking-antitrampa): score == mapa*100000 + onda*1000 +
+  //          min(nivel,999). O lado servidor é .specs/features/ranking/
+  //          regras-firestore.rules; se o scoreDe mudar de forma, ESTE
+  //          teste avisa que as regras precisam mudar junto.
+  {
+    const bordas = [
+      { mapa: 1, onda: 1, nivel: 0 },
+      { mapa: 1, onda: 1, nivel: 998 },
+      { mapa: 1, onda: 1, nivel: 999 },
+      { mapa: 1, onda: 1, nivel: 1000 },
+      { mapa: 1, onda: 100, nivel: 9500 },
+      { mapa: 2, onda: 50, nivel: 37 },
+      { mapa: 100, onda: 100, nivel: 999 },
+      { mapa: 100000, onda: 1, nivel: 1 }
+    ];
+    let deriva = '';
+    for (const r of bordas) {
+      const obtido = Ranking.scoreDe(r);
+      const esperado = r.mapa * 100000 + r.onda * 1000 +
+        (r.nivel <= 999 ? r.nivel : 999);
+      if (obtido !== esperado && !deriva) {
+        deriva = JSON.stringify(r) + ' -> ' + obtido + ' != ' + esperado;
+      }
+    }
+    conf(!deriva, 'scoreDe espelha a fórmula das rules' +
+      (deriva ? ' (' + deriva + ')' : ' (8 casos de borda)'));
+  }
+
   // --- 2) apelido: slug, validação e forma do doc
   conf(Ranking.slug('José da Silva') === 'jose-da-silva',
     'slug remove acentos e espaços');

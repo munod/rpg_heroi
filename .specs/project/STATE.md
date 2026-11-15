@@ -505,6 +505,24 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   (asas de 1px virando contorno) voltou nos **ícones**: rodar
   `contorna()` na lâmina de 3px a transformaria toda em contorno;
   o caminho é marcar os pixels e chamar `contornaDestaque()`.
+- **Teto do ranking por TEMPO DO PROJETO, não por jogador**
+  (`ranking-antitrampa`): o `resource` do rules só expõe
+  `data/id/__name__` (**sem `createTime`**) e sem identidade não há
+  relógio por jogador — a 1ª marca de um apelido é indistinguível de
+  um legítimo atrasado. Escolhas conscientes: (a) teto **absoluto**
+  (`30 + min desde 2026-11-01 / 100`) em vez de limite por *delta*,
+  porque delta gera **cascata de rejeição** (um envio recusado aumenta
+  o delta do próximo → bloqueio permanente do jogador); (b) constante
+  folgada (cresce 14,4 mapas/dia vs 10,8 legítimos) p/ nunca travar
+  legítimo — **recalibrar com `ritmo.js` se o ritmo mudar**; (c) a
+  1ª marca segue confiável até o teto (reduz o espaço de 10¹⁰ p/
+  ~10⁷⁻⁸) — eliminar de vez exigiria save/placar autoritativo
+  (opção C, adiada pelo mantenedor).
+- **`min()` não existe nas rules; `math.*` e `request.time.toMillis()`
+  existem** — a paridade do score usa a identidade dos dois ramos
+  (`nivel ≤ 999 && x == nivel) || (nivel ≥ 999 && x == 999)`, que é
+  exatamente `min(nivel,999)`), e toda constante de teto vive nomeada
+  no arquivo do rules com a fórmula de recalibragem.
 
 ## Bloqueios
 

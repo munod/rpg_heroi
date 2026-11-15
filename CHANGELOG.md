@@ -101,6 +101,30 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Security
+
+- **Ranking antitrampa: score e progressão validados no servidor (spec
+  `ranking-antitrampa`)** — auditoria prévia mostrou o buraco real: as
+  regras validavam só a *forma* e **`score` era escolhido pelo cliente**
+  (dá pra postar o score máximo sem jogar) e a key do Firebase é
+  pública **por design** (vai no bundle do jogo — manter o repo privado
+  não a esconde e ainda quebra o Pages no plano gratuito). A leva mexe
+  **só nas rules** (zero mudança no jogo): **paridade exata**
+  `score == mapa×100000 + onda×1000 + min(nivel,999)` (sem `min()` na
+  linguagem — identidade dos dois ramos, espelho de `Ranking.scoreDe`),
+  **teto de progressão por tempo do projeto** (`mapa ≤ 30 +
+  minutosDesde2026-11-01 / 100`, constante nomeada + fórmula de
+  recalibragem no arquivo — sem relógio por jogador: `resource` só
+  expõe `data/id/__name__`), **`at` fresco** (±24h / nunca no futuro)
+  e `nivel ≤ 9500` (teto do jogo). Testes: **conf nova** que trava a
+  identidade rules↔`scoreDe` em 8 casos de borda (se a fórmula mudar,
+  o teste avisa que as rules mudam junto) · **`node testes/regras.js`**
+  (rede, fora do gate) sonda as rules implantadas: leitura 200 ·
+  paridade violada → 403 · envio legítimo → 200 · `--teto` opcional.
+  Limite documentado: a **1ª marca de um apelido é confiável até o
+  teto** (eliminar exigiria identidade ou save autoritativo — opção C,
+  adiada).
+
 ## [0.4.1] — 2026-11-14
 
 ### Changed

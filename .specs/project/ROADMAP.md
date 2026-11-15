@@ -118,6 +118,16 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Série 2026-11 — em curso (ordem aprovada pelo mantenedor)
 
+0a. ✅ **`ranking-antitrampa`** *(não liberado — em `Unreleased`)* —
+    só rules (jogo intocado): **score recalculado no servidor**
+    (espelho exato do `scoreDe`), **teto de progressão por tempo do
+    projeto** (30 + min/100 desde 2026-11-01 — recalibrar com o
+    `ritmo.js` se o ritmo mudar), `at` ±24h e `nivel ≤ 9500`.
+    Conf nova trava a identidade rules↔cliente · **`testes/regras.js`**
+    (rede, fora do gate) sonda o que está implantado · limite
+    honesto registrado: a 1ª marca por apelido é confiável (sem
+    relógio por jogador — `resource` não expõe `createTime`).
+
 0. ✅ **`gestao-atributos`** *(leva de correção, antes dos monstros)* —
    pontos escassos (**1 a cada 3 níveis + compensação 9×**: cada decisão
    vale 9× mais) + soft caps (vel saturante com **teto 250**, regen com

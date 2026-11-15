@@ -1,19 +1,39 @@
-// Regras do Cloud Firestore para o ranking (cole no console:
-// Firestore → Regras). Verbatim em .specs/features/ranking/.
+// Regras do Cloud Firestore para o RANKING (implantação MANUAL:
+// console do Firebase → Firestore → Regras → colar → Publicar; o editor
+// valida a sintaxe antes de publicar). Verbatim em .specs/features/ranking/.
 //
-// O que garantem:
+// O que garantem (spec ranking-antitrampa):
 //   - leitura livre (leaderboard é público);
 //   - escrita só na FORMA esperada (hasOnly dos campos + tipos/tamanhos);
-//   - score crescente: update exige score > anterior — a "melhor marca
-//     por apelido" é imposta no SERVIDOR, não só no cliente;
+//   - SCORE RECALCULADO NO SERVIDOR a partir de mapa/onda/nivel — o
+//     cliente deixa de "escolher" o score (espelho exato de
+//     Ranking.scoreDe; sem min(), que não existe em math);
+//   - TETO DE PROGRESSÃO POR TEMPO DO PROJETO: sem relógio por jogador
+//     (resource só expõe data/id/__name__ — NÃO tem createTime), o teto
+//     é global e absoluto (create E update); absoluto = nunca gera
+//     "cascata de rejeição" como um limite por delta geraria;
+//   - `at` fresco (nada no futuro, nada antigo) — antes era `at > 0`;
+//   - score crescente: update exige score > anterior (a paridade + a
+//     ordem estrita já implicam mapa não-decrescente);
 //   - sem delete (marcas nunca somem).
+//
+// RECALIBRAGEM OBRIGATÓRIA se o ritmo mudar (o `ESPERA_BASE` já foi
+// 8→4s): rode `node testes/ritmo.js <min>` e refaça a conta.
+//   Ritmo medido hoje: campanha ~222h ⇒ ~133 min/mapa em média;
+//   mapa 1 fecha em ~27-30min; ~10,8 mapas/dia no fim.
+//   MIN_POR_MAPA = 100 ⇒ o teto cresce 14,4 mapas/dia (≈ 33% acima
+//   do ritmo legítimo) e MAPAS_BASE = 30 cobre as primeiras marcas.
+//   Deixar MIN_POR_MAPA MAIOR só deixa o teto mais folgado (seguro);
+//   deixar MENOR que o ritmo real TRAVA jogador legítimo.
+//   Limite conhecido: a primeira marca de um apelido é confiável até o
+//   teto (sem identidade não dá pra saber quando o jogador começou).
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /rank/{id} {
       allow read: if true;
-      allow create: if valido() && request.resource.data.score > 0;
-      allow update: if valido() &&
+      allow create: if valido() && scoreCerto() && atFresco() && mapaPossivel();
+      allow update: if valido() && scoreCerto() && atFresco() && mapaPossivel() &&
         request.resource.data.score > resource.data.score;
       allow delete: if false;
 
@@ -24,17 +44,44 @@ service cloud.firestore {
           && d.nick is string
           && d.nick.size() >= 1 && d.nick.size() <= 20
           && d.score is int
-          && d.score >= 0 && d.score <= 10000000000
+          && d.score >= 0 && d.score <= 10000100999
           && d.mapa is int
           && d.mapa >= 1 && d.mapa <= 100000
           && d.onda is int
           && d.onda >= 1 && d.onda <= 100
           && d.nivel is int
-          && d.nivel >= 0 && d.nivel <= 999999
+          && d.nivel >= 0 && d.nivel <= 9500
           && d.classe is string
           && d.classe.size() <= 20
           && d.at is int
           && d.at > 0;
+      }
+
+      // Espelho exato de Ranking.scoreDe:
+      //   score = mapa*100000 + onda*1000 + min(nivel, 999)
+      // math não tem min() → identidade dos dois ramos (o caso
+      // nivel == 999 cai nos dois e dá o mesmo resultado).
+      function scoreCerto() {
+        let d = request.resource.data;
+        let x = d.score - (d.mapa * 100000 + d.onda * 1000);
+        return (d.nivel <= 999 && x == d.nivel) ||
+               (d.nivel >= 999 && x == 999);
+      }
+
+      // `at` é o instante do marco: nada no futuro (>5min) nem antigo
+      // (>24h) — trava retrodatação sem arriscar reenvio legítimo.
+      function atFresco() {
+        let d = request.resource.data;
+        let agora = request.time.toMillis();
+        return d.at <= agora + 300000 && d.at >= agora - 86400000;
+      }
+
+      // Teto absoluto de progressão: 2026-11-01T00:00:00Z = 1793491200000
+      // (época do projeto). mapa <= 30 + minutos/100.
+      function mapaPossivel() {
+        let d = request.resource.data;
+        let minutos = (request.time.toMillis() - 1793491200000) / 60000;
+        return d.mapa <= 30 + math.floor(minutos / 100);
       }
     }
   }
