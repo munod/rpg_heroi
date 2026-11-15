@@ -547,11 +547,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   ttk/marcos/JSON, porque as levas 3-4 (teto do rampa, pontos/level,
   esponja/densidade) só se decidem medindo; (2) percepção sem mexer em
   balance (countdown + toast de clear + fim do **delay duplo 16s→8s**
-  do troco de mapa + overlay de opções com defaults intactos); (3)
-  balance medido (≥4 seeds); (4) **mapa procedural infinito** com
-  spec antes do código. Referência de gênero: D2 Survivors
-  (survivors-like) — nunca deixar tela sem informação e transformar
-  pausa em **decisão** (o card por nível), não em espera.
+  do troco de mapa + overlay de opções com defaults intactos);
+  (3) **balance medido — CONCLUÍDA** (≥4 seeds por decisão:
+  `ESPERA_TETO 45` · ponto/nível V1 neutro validado idêntico · TTK
+  −12% com densidade ↑ e sem estol no mundo 3); (4) **mapa procedural
+  infinito** com spec antes do código. Referência de gênero: D2
+  Survivors (survivors-like) — nunca deixar tela sem informação e
+  transformar pausa em **decisão** (o card por nível), não em espera.
+  Lição de medição da (3): em 240min o teto do respiro é inócuo
+  (mapa 9 ainda < 45s) — efeito de alavanca tardia só aparece em run
+  longo/sim completa; medições locais confirmam não-regressão, a
+  duração só a sim completa fecha.
 
 ## Bloqueios
 

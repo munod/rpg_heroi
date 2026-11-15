@@ -241,7 +241,11 @@ var Gestao = (function () {
     linhas.forEach(function (linha, i) {
       UI.text(linha, 416, 268 + i * 24, { color: '#9a90b8' });
     });
-    UI.text('A cada ' + Personagem.PONTOS_CADA + ' níveis: +' +
+    // rodapé: cadência em singular quando é todo nível (spec
+    // balance-dopamina R-BAL-2: PONTOS_CADA 3→1)
+    UI.text((Personagem.PONTOS_CADA === 1
+      ? 'A cada nível: +'
+      : 'A cada ' + Personagem.PONTOS_CADA + ' níveis: +') +
       Personagem.PONTOS_NIVEL + ' ponto',
       416, 268 + linhas.length * 24 + 12,
       { color: '#6f678a' });

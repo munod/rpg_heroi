@@ -66,12 +66,14 @@ var Batalha = (function () {
   // completa 5 na onda 4 como sempre). k = monstros extras por mundo
   // (calibrado em T8 p/ ~200h de campanha).
   var ESC_MONSTROS = 'mundo';
-  // k = 0,5 (medição: k=1 estolou o mundo 3 em 2 de 2 runs — teto 7
-  // = +40% de dano na fronteira; k=0 saudável em 3/3). Com 0,5 o
-  // mundo 3 fica em teto 6 e o fim da campanha em 9 (escala visível,
-  // impacto suave). k=0 reproduz o teto fixo antigo (floor já garante
-  // teto inteiro para k fracionário).
-  var ESC_MONSTROS_K = 0.5;
+  // História da calibragem: k=1 estolou o mundo 3 em 2 de 2 runs COM
+  // ESC_HP 1,90 (teto 7 = +40% de dano na fronteira); k=0 saudável em
+  // 3/3; k=0,5 foi o escolhido (mundo 3 em teto 6, fim em 9). Leva
+  // balance-dopamina (R-BAL-3): k 0,5 → 0,75 (teto 5 → 11 no fim,
+  // tela mais povoada) EM JUNTO com ESC_HP 1,55 — a esponja cai e a
+  // densidade sobe; medido com ritmo semeado (≥4 seeds). k=0 reproduz
+  // o teto fixo antigo (floor garante teto inteiro para k fracionário).
+  var ESC_MONSTROS_K = 0.75;
 
   // Teto no FIM da campanha (mundo 10 = mapa 100): no modo infinito
   // não segue crescendo (anel de spawn e custo de IA) — a dificuldade
@@ -125,7 +127,10 @@ var Batalha = (function () {
   // estagnação; medido: estol em 4/4 runs). Nota: o alvo antigo de
   // "30-40 mortes/50min" era o SINTOMA do estol (grind) — com economia
   // funcional a morte voltou a ser evento de fronteira/boss (~10/120min).
-  var ESC_HP = 1.90;      // vida do inimigo por onda
+  // Leva balance-dopamina (R-BAL-3): 1,90 → 1,55 — TTK de esponja
+  // (monstro demais pra morrer) e produto do cliff 0,0855 → 0,0698
+  // (folga real: ≤0,086 passa). Medir ttk/mortes/estol p/ mudar.
+  var ESC_HP = 1.55;      // vida do inimigo por onda
   var ESC_DMG = 0.045;    // dano do inimigo por onda
   // Respiro entre ondas — ALAVANCA DE DURAÇÃO da campanha (spec mundos
   // R-MUN-7). Medido (ritmo, 4 configs): o nº de monstros NÃO muda a
@@ -133,13 +138,15 @@ var Batalha = (function () {
   // → 195 mortes), porque o XP extra fortalece o herói e compensa. O
   // ESPERA é linear e seguro (tempo de regen, sem tocar no cliff
   // HP×DMG): 8s → 21 mapas/600min, 40s → 8, 70s → 5.
-  // Por isso ele ESCALA COM A PROFUNDIDADE: o mundo 1 mantém os 8s
-  // medidos (mapa 1 ≈ 33min intacto — alvo aprovado) e cada mapa
-  // seguinte respira +1,1s, até 117s no fim da campanha. Calibração:
-  // 100 mapas × 100 ondas × (clear ~15s + espera média ~62s) ≈ 201h
-  // (R-MUN-7 — o fator é 100 ONDAS por mapa, não 100 mapas).
-  // No modo infinito (mapa > 100) o respiro trava no patamar do mundo
-  // 10 — senão cresceria sem limite (mapa 1000 = 18min/onda).
+  // Por isso ele ESCALA COM A PROFUNDIDADE (e agora TEM TETO — spec
+  // balance-dopamina R-BAL-1): o mundo 1 respira 2s (base do
+  // mantenedor), cada mapa seguinte +1,1s até bater os 45s no mapa ~40
+  // e travar até o fim (sono do mapa 100: 111s → 45s). Calibração
+  // modelo pós-teto: 100 mapas × 100 ondas × (clear ~15s + espera
+  // média ~36s) ≈ 143h — o alvo DEFINITIVO é o da sim completa
+  // pós-teto (R-MUN-7 emendado). No modo infinito (mapa > 100) o
+  // rampa trava no min(mapa, 100) e o teto completa — sem eles
+  // cresceria sem limite (mapa 1000 = 18min/onda).
   // Teto da regen (spec gestao-atributos): 500 hp/s. Early intocado
   // (4-20 hp/s); no late corta 2.800 → 500. Critério: manter mortes
   // como eventos na medição comparativa (T9: 6 mortes em 2400min).
@@ -147,6 +154,14 @@ var Batalha = (function () {
   var REGEN_MAX = 500;
   var ESPERA_BASE = 2.0;      // respiro do mundo 1 (intacto)
   var ESPERA_PASSO = 1.1;     // + por mapa de profundidade
+  // Teto do respiro (spec balance-dopamina R-BAL-1, decisão do
+  // mantenedor 2026-11-15: aceitar campanha mais curta): sem teto o
+  // rampa ia a 111s no mapa 100 (88% do tempo morto naquele ponto).
+  // Com 45s: sono do mapa 100 vira 45s e a janela de full-heal
+  // (4%/s = 25s sem apanhar) continua garantida em qualquer mapa.
+  // O rampa continua sendo a alavanca de duração (R-MUN-7) — o alvo
+  // novo é o medido pela sim completa pós-teto.
+  var ESPERA_TETO = 45.0;
   var ESPERA_TRANSICAO = 8.0; // pós-chefe: a troca de mapa é o seu
                               // próprio tempo (não espera o respiro
                               // escalado — senão a vitória atrasaria
@@ -156,7 +171,7 @@ var Batalha = (function () {
 
   function esperaOnda() {
     var m = Math.min(mapa, MAPA_FIM_CAMPANHA);
-    return ESPERA_BASE + (m - 1) * ESPERA_PASSO;
+    return Math.min(ESPERA_BASE + (m - 1) * ESPERA_PASSO, ESPERA_TETO);
   }
 
   // Renda de XP harmônica com o custo (spec progressao-exponencial):
@@ -676,8 +691,9 @@ var Batalha = (function () {
     while (p.nivel < Personagem.NIVEL_MAX && p.xp >= p.xpProx) {
       p.xp -= p.xpProx;
       p.nivel++;
-      // 1 ponto a cada 3 níveis (spec gestao-atributos — fonte única
-      // em Personagem.PONTOS_CADA/NIVEL): decisão esparso e pesada
+      // 1 ponto por nível quando PONTOS_CADA === 1 (spec
+      // balance-dopamina R-BAL-2 — fonte única em PONTOS_CADA/NIVEL):
+      // decisão a cada nível, na cadência do gênero
       if (p.nivel % Personagem.PONTOS_CADA === 0) {
         p.pontos += Personagem.PONTOS_NIVEL;
       }
@@ -2095,6 +2111,8 @@ var Batalha = (function () {
     ganhaXP: ganhaXP,         // teto de nível testável (seção 36)
     xpAbate: xpAbate,         // renda exponencial testável (seção 38)
     REGEN_MAX: REGEN_MAX,     // teto da regen (spec gestao-atributos)
+    ESPERA_TETO: ESPERA_TETO, // teto do respiro (spec balance-dopamina)
+    esperaOnda: esperaOnda,   // respiro vigente p/ teste (R-BAL-1)
     TIPOS: TIPOS,             // espécies (spec monstros-novos — seção 41)
     spawn: spawn,             // p/ fixtures da seção 41 (skill de espécie)
     regeneraEspecie: regeneraEspecie,  // skill pura (teste sem arena)

@@ -106,6 +106,13 @@ vitória + modo infinito em loop** · **teto ~9.500 com re-base das curvas**
   **sem estol** (chegou ao mapa 101), mapa 1 fechado em **30,9min**
   (alvo ~32-33). O modelo `100×(clear + 8 + 1,1(m−1))s` bateu em ±3%
   nos marcos parciais.
+  - **Emenda `balance-dopamina` (2026-11-15)** — o mantenedor
+    **aceitou campanha mais curta** para matar o "dorme entre as
+    ondas": `ESPERA_BASE 8→2` + **`ESPERA_TETO 45s`** (rampa trava no
+    mapa ~40). O alvo de 200h ±20% fica **substituído pelo valor da
+    sim completa pós-teto** (medido na leva `balance-dopamina` R-BAL-4/5
+    — o número vive no AGENTS e no CHANGELOG da leva). O método
+    permanece: calibrar com `ritmo.js` semeado, ≥4 seeds por decisão.
 - **R-MUN-8 (lendários por mundo)**: `itens.temaDe` passa a resolver por
   MUNDO com **ciclo dos 3 pools existentes**
   (`tema = ((mundo−1) % 3) + 1`) — mundos 1/4/7/10, 2/5/8, 3/6/9.

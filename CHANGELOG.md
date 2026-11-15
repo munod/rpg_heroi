@@ -10,6 +10,28 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Balance da leva dopamina (spec `balance-dopamina`)** — três
+  alavancas medidas com o `ritmo.js` semeado (**≥4 seeds por
+  decisão**):
+  - **`ESPERA_TETO = 45s`** no `esperaOnda()` — o rampa trava no mapa
+    ~40: sono do mapa 100 **111s → 45s** (sem teto, 88% do tempo era
+    morto naquele ponto). Alvo de duração do R-MUN-7 passa a ser o da
+    **sim completa pós-teto** (mantenedor aceitou campanha mais curta).
+    Comportamento exportado e testado (`esperaOnda`: mapa 1 = 2s,
+    mapa 100 = 45s travado).
+  - **Ponto POR NÍVEL (V1 neutro)** — `PONTOS_CADA 3→1` **+**
+    `PONTO_MULT 9→3` (régua: pontos × mult = constante → poder
+    medido idêntico, 3× mais decisões — a "lição do card" do gênero
+    aplicada aos atributos). Medido: nv médio 738→740 (+0,3% =
+    ruído), ttk idêntico, mesmo mapa em 4 seeds × 240min.
+  - **Esponja de dano + densidade** — `ESC_HP 1,90→1,55` (TTK
+    **2,21s → 1,95s = −12%**, produto do cliff 0,0855 → 0,0698 com
+    folga) + `ESC_MONSTROS_K 0,5→0,75` (teto final 9 → 11, tela mais
+    povoada). Medido: sem estol no mundo 3 (900min → mapa 20-23,
+    mortes 0-1) — o cenário do estol histórico do k alto.
+
 ### Added
 
 - **Respiro entre ondas vira beat (spec `respiro`)** — reclamação do

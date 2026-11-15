@@ -55,7 +55,9 @@
   Fênix (fenix) escapa da penalidade. Leva 2: eventos em `js/eventos.js`
   (Açougueiro chamará `penalizaMorte(2)`). Escalas reequilibradas na
   Leva 1 (medido): ESC_HP 1,30 · ESC_DMG 0,10; hoje (leva
-  `progressao-exponencial`): **ESC_HP 1,90 · ESC_DMG 0,045**.
+  `progressao-exponencial`): **ESC_HP 1,90 · ESC_DMG 0,045** — e a leva
+  `balance-dopamina` abaixou o HP p/ **1,55** (TTK de esponja ↓,
+  produto 0,0698 = folga no cliff).
 - **Monstros com skill própria (spec `monstros-novos`)** — 10 espécies
   em `Batalha.TIPOS` (eram 4): **`atirador`** (`ranged: {alcance 90,
   cd 2,2}` — no loop de inimigos o ramo `en.ranged` fica FORA do
@@ -133,13 +135,16 @@
   o HP em si não mexe, sustenta a frente); **Carisma → ouro**
   (`Personagem.multOuroCar`, logarítmico) e **clérigo `danoMod:'car'`**.
   **`xpMult` eliminado** — a renda é exatamente a calibrada.
-  **Ritmo de pontos: 1 a cada 3 níveis** (`Personagem.PONTOS_CADA/
-  NIVEL` — era 3/nível = 6 decisões/min) **+ compensação 9×**
-  (`Personagem.ganhoAtributo`): 1 ponto/3nível = 9× menos pontos, então
-  **cada ponto vale 9× mais** (a progressão de poder fica idêntica à
-  medida — sem a compensação a medição estolou: 223 mortes/1200min).
+  **Ritmo de pontos: 1 ponto POR NÍVEL** (`Personagem.PONTOS_CADA/
+  NIVEL` — era 3/nível, depois 1/3nível na leva `gestao-atributos`,
+  e a leva `balance-dopamina` V1 neutrou para 1/nível: 3× mais
+  decisões, como o card por nível do gênero) **+ compensação 3×**
+  (`Personagem.ganhoAtributo`): a régua é **pontos × mult =
+  constante** (3× pontos ⇒ mult ÷ 3), então o poder MEDIDO fica
+  idêntico — sem compensação a medição estolou (223 mortes/1200min;
+  e sem a de 3× o V1 de pontos estolaria igual).
   Regra: até a **base** (8+bônus de classe) vale o linear antigo
-  (atributo baixo paga penalidade); acima dela, 9×. Metas de sanidade
+  (atributo baixo paga penalidade); acima dela, o mult. Metas de sanidade
   na seção 40 (vel ≤250, sub-passos, afixo, regen, cadência).
 - Curva de progressão com fonte única em `Personagem.custoProximo`
   (**exponencial**: `146 × 1,07^(nv−1)` — leva `progressao-exponencial`
@@ -147,9 +152,10 @@
   `1,10→1,064`, mantendo o ratio `ln(H)/ln(G)` ≈ 0,916 — o linear
   antigo estolava) e renda em `Batalha.xpAbate`
   (**`12 × 1,064^ondaTotal`**, harmônica com o custo → tempo/nível
-  estável). Combate em `Batalha`: `ESC_HP 1,90 · ESC_DMG 0,045 ·
+  estável). Combate em `Batalha`: `ESC_HP 1,55 · ESC_DMG 0,045 ·
   esperaOnda()` (respiro = regen: alavanca de ritmo que NÃO piora
-  clear/survival — ver a linha de Mapas abaixo) + `HP_POR_NIVEL 6` em
+  clear/survival — ver a linha de Mapas abaixo; **teto `ESPERA_TETO
+  45s`** desde a leva `balance-dopamina`) + `HP_POR_NIVEL 6` em
   `personagem.js` (fonte única — NÃO espelhe fórmula em
   `statusDetalhado`). Mudou algum? Meça com
   `node testes/ritmo.js [min] [mundo|mapa] [k] [semente]` (marcos até
@@ -211,13 +217,17 @@
   item; dificuldade/XP de combate = escala contínua `ondaTotal()` em
   `batalha.js` — onda 1 do mapa 2 = patamar da onda 100 do mapa 1);
   cenário reconstruído por `garanteCenario()`. **Respiro entre ondas =
-  `esperaOnda()`** (`8 + (min(mapa,100)−1) × 1,1`s — a **alavanca de
-  duração** da campanha: mundo 1 intacto = 8s / mapa 1 ≈ 33min, fim da
-  campanha = 117s; no infinito trava no patamar do mundo 10; pós-chefe
-  usa `ESPERA_TRANSICAO` fixo 8s). **Escala de monstros**:
-  `qtdMonstros()` = `min(3+tot/2, teto)` com teto **5→9** shipado
-  (`ESC_MONSTROS_K 0,5` — medido: k=1 estolou o mundo 3 em 2 de 2
-  runs; k=0 saudável em 3/3) até o fim da campanha — variantes
+  `esperaOnda()`** (`min(2 + (min(mapa,100)−1) × 1,1, 45)`s — a
+  **alavanca de duração** da campanha: mundo 1 = 2s, +1,1s por mapa até
+  o **`ESPERA_TETO` 45s no mapa ~40** (spec `balance-dopamina` —
+  mantenedor aceitou campanha mais curta; sem teto ia a 111s = 88%
+  morto no ponto); pós-chefe usa `ESPERA_TRANSICAO` fixo 8s e o kill do
+  chefe zera o timer — troca de mapa = 8s únicos, não 16). **Escala de
+  monstros**:
+  `qtdMonstros()` = `min(3+tot/2, teto)` com teto **5→11** shipado
+  (`ESC_MONSTROS_K 0,75` desde a leva `balance-dopamina`; antes 0,5 —
+  medido: k=1 estolou o mundo 3 em 2 de 2 com ESC_HP 1,90; k=0
+  saudável em 3/3) até o fim da campanha — variantes
   `'mundo'` (degraus por fronteira) e `'mapa'` (suave),
   `escalaMonstros(modo, k)` exposta p/ o A/B; `k=0` = teto fixo 5. **Medido: o nº
   de monstros NÃO muda a duração** (só o perigo — XP extra fortalece);

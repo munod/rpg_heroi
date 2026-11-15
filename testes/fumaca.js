@@ -288,9 +288,9 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     'batalha automática limpou a onda 1 (onda=' + info.onda +
     ', xp=' + info.xp + ', hp=' + info.hp + ')');
 
-  // --- progressão: 1 ponto A CADA 3 NÍVEIS (spec gestao-atributos)
-  // posiciona no nv 2 para o próximo nível (3) creditar o ponto — o nv
-  // 1->2 não dá mais nada (era +3 por nível = 6 decisões/min)
+  // --- progressão: 1 ponto POR NÍVEL (spec balance-dopamina R-BAL-2)
+  // posiciona no nv 2 para o próximo nível (3) creditar o ponto — com
+  // a cadência 1 todo nível credita (era 1 a cada 3 = decisão rara)
   const p1 = Game.personagem;
   p1.nivel = 2;
   p1.xpProx = Personagem.custoProximo(2);
@@ -302,7 +302,7 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     if (p1.nivel > nivel0) subiu = true;
   }
   conf(p1.nivel === nivel0 + 1 && p1.pontos === pts1 + 1,
-    'abate dá nível e +1 ponto a cada 3 (nv ' + nivel0 + '->' + p1.nivel +
+    'abate dá nível e +1 ponto (todo nível; nv ' + nivel0 + '->' + p1.nivel +
     ', pts ' + pts1 + '->' + p1.pontos + ')');
 
   // --- abas de gestão
@@ -2190,10 +2190,10 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
   clique(445, 50);                 // aba Atributos (1ª coluna)
   frame(2);
   // literal de propósito: mudança de cadência é decisão de design e
-  // deve estourar este teste (spec gestao-atributos: 1 a cada 3)
+  // deve estourar este teste (spec balance-dopamina R-BAL-2: 1 por nível)
   conf((jogoCanvas._textos || [])
-       .some(t => t.indexOf('A cada 3 níveis: +1 ponto') >= 0),
-    'rodapé da aba Atributos anuncia 1 ponto a cada 3 níveis');
+       .some(t => t.indexOf('A cada nível: +1 ponto') >= 0),
+    'rodapé da aba Atributos anuncia 1 ponto a cada nível');
 
   // fixture: guerreiro de vidro, sem cura e sem fuga — o teste QUER
   // mortes determinísticas (mesma lição das seções 17/21/22)
@@ -4044,9 +4044,24 @@ console.log('40) gestao-atributos: teto da regen, afixo vel e clamp final');
     'em ' + vistos + ' frames medidos)');
 
   // --- 4) cadência dos pontos na fonte única (a seção 4 cobre o fluxo)
-  conf(Personagem.PONTOS_CADA === 3 && Personagem.PONTOS_NIVEL === 1,
-    'fonte única: 1 ponto a cada 3 níveis (' + Personagem.PONTOS_CADA +
+  conf(Personagem.PONTOS_CADA === 1 && Personagem.PONTOS_NIVEL === 1,
+    'fonte única: 1 ponto a cada nível (' + Personagem.PONTOS_CADA +
     '/' + Personagem.PONTOS_NIVEL + ')');
+
+  // --- 5) teto do respiro (spec balance-dopamina R-BAL-1): constante
+  // exportada + comportamento do min() no esperaOnda em 3 profundidades
+  conf(Batalha.ESPERA_TETO === 45,
+    'teto do respiro exportado em 45s (ESPERA_TETO=' +
+    Batalha.ESPERA_TETO + ')');
+  const m0 = Batalha.info().mapa;
+  Batalha.restaurarMapa(1);
+  const espM1 = Batalha.esperaOnda();
+  Batalha.restaurarMapa(100);
+  const espM100 = Batalha.esperaOnda();
+  Batalha.restaurarMapa(m0);
+  conf(espM1 === 2 && espM100 === 45,
+    'esperaOnda: mapa 1 = 2s e mapa 100 = 45s TRAVADO (era 111s; ' +
+    espM1 + 's/' + espM100 + 's)');
 }
 
 console.log('41) monstros novos: espécies com skill, ranged, comum intacto e eventos');

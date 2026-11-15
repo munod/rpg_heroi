@@ -127,19 +127,22 @@ var Personagem = (function () {
   // ---- ritmo dos pontos (spec gestao-atributos) ----------------------
   // ANTES: +3 por nível = 6 decisões por minuto no early valendo ~1%
   // cada → o jogador distribuía no automático (relato: "nem ligam pra
-  // quantidade de pontos"). Agora: +1 a cada 3 níveis = 0,7
-  // decisões/min e ~6% de peso por ponto no nv 30.
-  var PONTOS_CADA = 3;      // níveis entre um ponto e outro
+  // quantidade de pontos"). Depois: +1 a cada 3 níveis (0,7 decisões/
+  // min, ~6% de peso por ponto no nv 30) — e a leva dopamina (spec
+  // balance-dopamina R-BAL-2, V1 NEUTRO) voltou para 1 ponto POR
+  // NÍVEL (3× mais decisões, como o card por nível do gênero) com o
+  // mult caindo junto para manter o poder MEDIDO idêntico.
+  var PONTOS_CADA = 1;      // níveis entre um ponto e outro
   var PONTOS_NIVEL = 1;     // pontos dados nessa cadência
-  // ---- compensação do valor por ponto (9×) ----------------------------
-  // Com 1 ponto a cada 3 níveis o jogador tem 9× MENOS pontos que os
-  // 3/nível antigos (0,33 vs 3,0 por nível). Sem compensar, a medição
+  // ---- compensação do valor por ponto (era 9×, hoje 3×) ---------------
+  // Com 1 ponto a cada 3 níveis o jogador tinha 9× MENOS pontos que os
+  // 3/nível antigos (0,33 vs 3,0 por nível); sem compensar, a medição
   // mediu ESTOL (1200min: mapa 3, 223 mortes, +0,1 nv/min vs referência
-  // no mapa 4 em 120min com 0 mortes). Cada ponto passa a valer 9× mais
-  // — é isso que faz a decisão importar — e só o INVESTIDO escala (a
+  // no mapa 4 em 120min com 0 mortes). A régua é: pontos × mult =
+  // constante (3× pontos ⇒ mult ÷ 3 = 3×) — só o INVESTIDO escala (a
   // base 8 é fixa, então o EARLY fica idêntico ao medido: nv1 = 9 de
   // dano, 50 de HP em qualquer build).
-  var PONTO_MULT = 9;
+  var PONTO_MULT = 3;
   var ATRIB_MAX = 1000000;  // pontos em cada atributo
 
   function novo() {
