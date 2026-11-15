@@ -50,6 +50,20 @@ vive em `.specs/features/`.
   asas, orelhas e pernas entravam como silhueta e viravam tudo
   contorno (o morcego era uma cruz preta). `previa.js` agora mostra
   as 10 espécies na linha do cenário (loop de iteração).
+- **Cenário com as mesmas rampas — árvore, pedra, cofre e flores
+  (spec `visual-cenario`)** — os 2 últimos sprites "fora do sistema"
+  ganharam a luz topo-esquerda do herói: **árvore** com copa em 3
+  camadas e **bojos quebrando a silhueta** (era um círculo perfeito),
+  tronco com lado claro/escuro + raiz; **pedra facetada** (linhas com
+  cantos cortados, cap de luz, sombra de base e fenda) em vez de
+  elipse. **Cofre** redesenhado (tampa em 2 degraus, faixas de latão,
+  fechadura com fechadura escura, contorno `#1b1424`) — continua só
+  `fillRect`/`strokeRect` — com **screenshot novo `tela-cofre.png`**
+  (sem ele dá pra mudar o cofre sem olhar nada). **Flores** em faixa
+  aceita mais larga + 1 vizinho por flor (aceite em ~33 tentativas em
+  vez de 121). Registro honesto: a "linha pontilhada" que eu atribuí
+  ao chão era **texto de dano flutuante** no rasterizador — refutado
+  por contagem de px e toggle de camada (lição no `STATE`).
 
 ## [0.4.1] — 2026-11-14
 

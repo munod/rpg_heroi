@@ -315,6 +315,15 @@ for (let i = 0; i < 150; i++) frame(1);
 salvar('tela-jogo-luta.png');
 console.log('luta: ' + JSON.stringify(sandbox.Batalha.info()));
 
+// cofre abandonado (evento) — prop do cenário redesenhado
+// (spec visual-cenario); posiciona perto do herói e limpa em seguida
+sandbox.Eventos.colocaCofre(
+  Math.round(sandbox.Batalha.info().heroi.x) + 40,
+  Math.round(sandbox.Batalha.info().heroi.y) + 8);
+for (let i = 0; i < 3; i++) frame(1);
+salvar('tela-cofre.png');
+sandbox.Eventos.cofreColetado();
+
 // gestao: aba aparência (âncora direita em tela larga)
 clique(515 + dxL, 50);   // aba Aparência
 frame(4);

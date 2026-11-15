@@ -630,3 +630,14 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   estático (`python3 -m http.server`). E não rodar o gate NO MESMO bloco
   de chamadas que edita os arquivos (corrida: o teste leu o meio da
   edição e acusou falha fantasma).
+- **Medir a hipótese antes de "consertar"** (leva `visual-cenario`):
+  uma linha pontilhada nas screenshots foi atribuída às **flores do
+  chão** (coerente com a faixa estreita do ruído) e a spec prometeu
+  corrigir; a medição **refutou** — as flores já caíam espalhadas (30
+  pontos soltos, medida de posição) e a linha era **texto de dano
+  flutuante** (a cor casava com `#ffd866` a ~40% sobre o chão e ela
+  sumiu com `Efeitos.limparEfeitos()` antes da captura: 66 px → 0 px;
+  o rasterizador de teste desenha glifo como bloco). Duas ferramentas
+  baratas decidiram o caso: **contar px por cor na captura** e
+  **isolar a camada com um toggle** — sem elas teríamos "consertado" o
+  chão sem nada quebrado, e a spec teria uma justificativa falsa.

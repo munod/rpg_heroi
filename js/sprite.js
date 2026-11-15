@@ -851,32 +851,73 @@ var Sprite = (function () {
   }
 
   // ---- cenário -----------------------------------------------------------
+  // 0 vazio | 1 contorno | 2 folha base | 3 folha sombra | 4 folha luz |
+  // 5 folha sombra2 | 6 tronco base | 7 tronco sombra | 8 tronco luz
   function treeCanvas() {
     var W = 20, H = 26;
     var g = new Uint8Array(W * H);
-    var pal = [null, COR_CONTORNO, '#2f6a3c', '#3f8a4a', '#6b4a2e', '#54391f', '#7fae55'];
+    var folha = rampa('#2f6a3c');
+    var casca = rampa('#6b4a2e');
+    var pal = [null, COR_CONTORNO, folha.base, folha.som, folha.luz,
+      folha.som2, casca.base, casca.som, casca.luz];
     var px = pintorDireto(g, W, H);
+    var F_BASE = 2, F_SOM = 3, F_LUZ = 4, F_SOM2 = 5;
+    var T_BASE = 6, T_SOM = 7, T_LUZ = 8;
 
-    retangulo(px, 8, 16, 4, 9, 4);
-    retangulo(px, 11, 17, 1, 7, 5);
-    elipse(px, 10, 8, 8, 7, 2);
-    elipse(px, 10, 6, 6, 4, 6);
-    elipse(px, 12, 5, 3, 2, 6);
+    // copa: corpo + bojos na borda (silhueta de folha, não círculo) +
+    // ilhota iluminada no alto-esquerdo (fonte única)
+    elipse(px, 10, 8, 7.5, 6.5, F_BASE);
+    elipse(px, 3.5, 10, 3, 2.6, F_BASE);
+    elipse(px, 16.5, 9, 3, 2.6, F_BASE);
+    elipse(px, 10, 3, 4, 2.6, F_BASE);
+    elipse(px, 6.5, 5, 4, 3, F_LUZ);
+    elipse(px, 4.5, 4, 2.4, 1.6, F_LUZ);
+    // sombra embaixo da copa (a árvore "pesa" no chão)
+    elipse(px, 10, 13.5, 7, 2.6, F_SOM);
+    elipse(px, 6, 12, 3, 1.6, F_SOM);
+    elipse(px, 10, 14.6, 4, 1.6, F_SOM2);
+    // tronco com lado claro (esquerda) e lado escuro (direita)
+    retangulo(px, 8, 16, 4, 9, T_BASE);
+    retangulo(px, 8, 17, 1, 7, T_LUZ);
+    retangulo(px, 11, 17, 1, 7, T_SOM);
+    // base enraizada
+    retangulo(px, 7, 23, 6, 2, T_BASE);
+    retangulo(px, 11, 23, 2, 2, T_SOM);
     contorna(g, W, H);
-    retangulo(px, 9, 18, 1, 6, 5);
+    // rachadura + raiz por cima do contorno
+    retangulo(px, 9, 18, 1, 6, T_SOM);
+    px(7, 24, T_SOM);
     return paraCanvas(g, W, H, pal);
   }
 
+  // 0 vazio | 1 contorno | 2 pedra base | 3 pedra luz | 4 pedra sombra |
+  // 5 pedra sombra2
   function rockCanvas() {
     var W = 14, H = 11;
     var g = new Uint8Array(W * H);
-    var pal = [null, COR_CONTORNO, '#7a7a86', '#9494a2', '#5e5e6a'];
+    var r = rampa('#7a7a86');
+    var pal = [null, COR_CONTORNO, r.base, r.luz, r.som, r.som2];
     var px = pintorDireto(g, W, H);
 
-    elipse(px, 7, 6.5, 6, 4, 2);
-    elipse(px, 5.5, 4.5, 3, 1.6, 3);
+    // silhueta facetada (pedra não é elipse): linhas com cantos cortados
+    var forma = [
+      [3, 5, 9], [4, 3, 11], [5, 2, 12], [6, 1, 12],
+      [7, 1, 12], [8, 2, 12], [9, 3, 11]
+    ];
+    for (var i = 0; i < forma.length; i++) {
+      retangulo(px, forma[i][1], forma[i][0],
+        forma[i][2] - forma[i][1] + 1, 1, 2);
+    }
+    // face superior acesa: só o "cap" (topo + canto esquerdo)
+    retangulo(px, 5, 3, 5, 1, 3);
+    retangulo(px, 3, 4, 4, 1, 3);
+    // sombra embaixo + base assentando no chão
+    retangulo(px, 2, 8, 11, 1, 4);
+    retangulo(px, 3, 9, 9, 1, 4);
+    retangulo(px, 5, 9, 5, 1, 5);
     contorna(g, W, H);
-    retangulo(px, 3, 8, 8, 1, 4);
+    // fenda curta (interior — não passa pelo contorno)
+    linha(px, 8, 5, 9, 7, 5);
     return paraCanvas(g, W, H, pal);
   }
 

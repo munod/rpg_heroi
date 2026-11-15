@@ -206,7 +206,11 @@ var Batalha = (function () {
       }
     }
 
-    // flores em cachos: aceitas só onde o ruído desenha faixa estreita
+    // flores em cachos: faixa aceita MAIS LARGA (0,45..0,75) + 1 vizinho
+    // por flor — as 30 saem em ~33 tentativas (antes 121) e caem mais
+    // soltas pelo mapa. (Medição da leva: a "linha pontilhada" que
+    // aparecia nas screenshots era TEXTO de dano flutuante — o
+    // rasterizador de teste desenha glifo como bloco — e não o chão.)
     var flores = tema.chao.flores;
     var rng = Perlin.sorteio(semente * 3 + 1);
     var tent = 0;
@@ -214,9 +218,11 @@ var Batalha = (function () {
       var fx = Math.floor(rng() * MW);
       var fy = Math.floor(rng() * MH);
       var fa = Perlin.valor(fx / 40 + 11, fy / 40 + 5);
-      if (fa < 0.55 || fa > 0.67) continue;
+      if (fa < 0.45 || fa > 0.75) continue;
       c.fillStyle = flores[i % flores.length];
       c.fillRect(fx, fy, 2, 2);
+      c.fillRect(fx + (rng() < 0.5 ? -3 : 3), fy + (rng() < 0.5 ? -2 : 2),
+        1, 1);
       i++;
     }
 
@@ -1715,13 +1721,31 @@ var Batalha = (function () {
   // strokeRect: primitivas que o rasterizador de testes entende
   function desenhaCofre(ctx, cof) {
     var cx = Math.round(cof.x), cy = Math.round(cof.y);
-    ctx.fillStyle = '#8a6a2a';
-    ctx.fillRect(cx - 8, cy - 11, 16, 12);
-    ctx.fillStyle = '#e8c86a';
-    ctx.fillRect(cx - 8, cy - 7, 16, 3);
+    var m = Sprite.rampa('#7a5530');      // madeira
+    var o = Sprite.rampa('#d9a62a');      // latão
+    // corpo
+    ctx.fillStyle = m.base;
+    ctx.fillRect(cx - 8, cy - 6, 16, 7);
+    // tampa em 2 degraus (canto arredondado à moda pixel)
+    ctx.fillStyle = m.luz;
+    ctx.fillRect(cx - 8, cy - 9, 16, 3);
+    ctx.fillRect(cx - 7, cy - 11, 14, 2);
+    // sombra embaixo da tampa + base no chão
+    ctx.fillStyle = m.som;
+    ctx.fillRect(cx - 8, cy - 7, 16, 1);
+    ctx.fillRect(cx - 8, cy, 16, 1);
+    // faixas de latão (verticais cruzando tampa e corpo)
+    ctx.fillStyle = o.base;
+    ctx.fillRect(cx - 5, cy - 11, 2, 12);
+    ctx.fillRect(cx + 3, cy - 11, 2, 12);
+    ctx.fillStyle = o.som;
+    ctx.fillRect(cx + 4, cy - 11, 1, 12);
+    // fechadura
+    ctx.fillStyle = o.luz;
+    ctx.fillRect(cx - 1, cy - 6, 3, 4);
     ctx.fillStyle = '#4a3a12';
-    ctx.fillRect(cx - 1, cy - 7, 2, 4);
-    ctx.strokeStyle = '#4a3a12';
+    ctx.fillRect(cx, cy - 5, 1, 2);
+    ctx.strokeStyle = '#1b1424';
     ctx.lineWidth = 1;
     ctx.strokeRect(cx - 8.5, cy - 11.5, 17, 13);
   }

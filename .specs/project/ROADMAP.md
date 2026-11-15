@@ -209,6 +209,14 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     **lição: partes de 1px vão DEPOIS do `contorna()`** (asas/orelhas/
     pernas viravam contorno e o morcego era uma cruz preta) ·
     `previa.js` com as 10 espécies.
+12. ✅ **`visual-cenario`** *(não liberado — em `Unreleased`)* —
+    árvore (copa em 3 camadas + bojos na silhueta, tronco com lado
+    claro/escuro e raiz) e pedra **facetada** com as mesmas rampas/luz
+    do herói; **cofre** redesenhado (tampa em degraus, faixas de
+    latão, fechadura — só `fillRect`/`strokeRect`) + screenshot novo
+    `tela-cofre.png` p/ poder olhá-lo; flores em faixa larga + cacho.
+    **Hipótese refutada com medição**: a "linha pontilhada" do chão
+    era texto de dano flutuante (66 px → 0 px com `limparEfeitos`).
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,
