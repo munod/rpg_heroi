@@ -1,6 +1,6 @@
 # Spec: Opções do jogo (overlay com toggles de apresentação)
 
-Status: **em implementação** (Leva 2 da leva "dopamina/viciante") · Data: 2026-11-15 ·
+Status: **concluída** (gate = 725 confs, 14 delas na seção 52) · Data: 2026-11-15 ·
 Iniciativa: mantenedor ("criar uma aba de opções... opção pra não tremer a tela e etc").
 
 ## Contexto

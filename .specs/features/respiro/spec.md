@@ -1,6 +1,6 @@
 # Spec: Respiro entre ondas — contagem visível, recompensa no clear e fim do delay duplo
 
-Status: **em implementação** (Leva 2 da leva "dopamina/viciante") · Data: 2026-11-15 ·
+Status: **concluída** (gate = 725 confs, 10 delas na seção 51) · Data: 2026-11-15 ·
 Iniciativa: mantenedor (reclamação de tédio: "o personagem dorme entre as ondas").
 
 ## Contexto

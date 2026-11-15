@@ -538,6 +538,21 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   da outra leva: `Ranking.submete()` monta o payload do estado ao
   vivo, não do save.
 
+- **Leva "dopamina/viciante" em 4 levas rápidas primeiro** (reclamação
+  do playtest: tédio nas pausas, "o personagem dorme entre as ondas",
+  esponja de dano no endgame, mapa limitado cortando o herói):
+  (1) **ritmo como instrumento antes de qualquer balance** — a fase 1
+  semeia o RNG (mulberry32, seed fixa = A/B limpo, **eventos
+  aleatórios ATIVOS** por decisão do mantenedor) e ganha espera%/
+  ttk/marcos/JSON, porque as levas 3-4 (teto do rampa, pontos/level,
+  esponja/densidade) só se decidem medindo; (2) percepção sem mexer em
+  balance (countdown + toast de clear + fim do **delay duplo 16s→8s**
+  do troco de mapa + overlay de opções com defaults intactos); (3)
+  balance medido (≥4 seeds); (4) **mapa procedural infinito** com
+  spec antes do código. Referência de gênero: D2 Survivors
+  (survivors-like) — nunca deixar tela sem informação e transformar
+  pausa em **decisão** (o card por nível), não em espera.
+
 ## Bloqueios
 
 - Nenhum.

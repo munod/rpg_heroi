@@ -5,6 +5,21 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Entregue
 
+### Unreleased — 2026-11-15 — leva "ritmo/dopamina" (parte 1 de 4)
+- **`ritmo.js` vira instrumento** (fase 1) — seed mulberry32 (4º arg,
+  padrão 1) = run determinístico com **eventos ATIVOS**, sondas por
+  frame (espera%, inimigos, hpMin, uptime), métricas de combate
+  (kpm/dps/ttk/xpm/gpm/eficiência/mortes-h), marcos nv 10/20/30 +
+  keystone e JSON em `resultados/` (gitignored) com commit
+- `respiro` — countdown `PRÓXIMA ONDA EM Xs` no HUD + `info().espera`,
+  toast `ONDA LIMPA · Xs · +N PONTOS` no clear e fim do **delay duplo
+  do troco de mapa (16s → 8s)**; `ESPERA_BASE` 4→2s (mantenedor)
+- `opcoes` — overlay de 4 toggles de conforto (`rpg_opcoes_v1`):
+  shake · flash/vinheta · números · poeira
+- gate **725 confs** · **pendente na leva**: B3 (teto do rampa) +
+  pontos/level + esponja/densidade (medidos com o ritmo semeado),
+  depois o **mapa procedural infinito** (spec antes do código)
+
 ### v0.5.0 — 2026-11-15 (ver `CHANGELOG.md`) — série visual, parte 2
 - `visual-heroi-arma` — motor de cor (rampas HSL + luz única), herói
   autorado em grids de texto e armas com largura/guarda por raridade
