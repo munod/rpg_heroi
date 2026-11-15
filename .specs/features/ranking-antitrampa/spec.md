@@ -1,6 +1,6 @@
 # Spec: Ranking antitrampa — validação de progresso no servidor
 
-Status: **código concluído** (gate verde = 709 confs); IMPLANTAÇÃO PENDENTE no console do Firebase — confirmar com `node testes/regras.js` · Data: 2026-11-15 · Iniciativa: mantenedor
+Status: **concluída e IMPLANTADA** (gate = 709 confs na leva; sonda `node testes/regras.js --teto` verificou ao vivo: leitura 200 · paridade 403 · legítimo 200 · teto 403) · Data: 2026-11-15 · Iniciativa: mantenedor
 (decisão **D+A** p/ proteger saves/placar; D primeiro).
 
 ## Contexto (auditoria medida)

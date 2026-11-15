@@ -48,7 +48,8 @@ function campos(d) {
 
 async function get(url) {
   const r = await fetch(url);
-  return { status: r.status, corpo: (await r.text()).slice(0, 400) };
+  // corpo COMPLETO: a sonda lê o score atual do doc pra isolar as provas
+  return { status: r.status, corpo: await r.text() };
 }
 
 async function patch(dados) {
@@ -75,38 +76,60 @@ async function main() {
   console.log('sonda das rules · projeto ' + projeto + ' · teto atual: mapa ' +
     teto + ' (' + new Date(agora).toISOString() + ')');
 
-  // [1] leitura
-  const l = await get(`${BASE}/rank?pageSize=3&key=${apiKey}`);
-  const leituraOk = l.status === 200;
-  console.log(`  [1] leitura do placar          -> ${l.status} ` +
+  // estado atual do doc: as provas precisam de score > anterior
+  // (monotonicidade) — sem isso a sonda se reprova sozinha, como
+  // aconteceu na 1ª rodada (escreveu 101001 e depois o controle
+  // reenviou o MESMO score -> 403 indeciso)
+  let scoreAtual = 0;
+  const leitura = await get(`${BASE}/${DOC}?key=${apiKey}`);
+  const leituraOk = leitura.status === 200;
+  console.log(`  [1] leitura do placar          -> ${leitura.status} ` +
     (leituraOk ? '(público por design)' : 'INESPERADO'));
   if (!leituraOk) falhas.push('leitura');
+  try {
+    const doc = JSON.parse(leitura.corpo);
+    if (doc && doc.fields && doc.fields.score) {
+      scoreAtual = parseInt(doc.fields.score.integerValue || '0', 10) || 0;
+    }
+  } catch (e) { /* sem JSON: scoreAtual = 0 */ }
 
-  // [2] P1: paridade violada (score 2 não bate com M1/O1/N1)
+  // [2] P1: paridade VIOLADA com score ainda maior que o atual
+  // (a monotonicidade passa; se voltar 403, quem negou foi a paridade)
+  let s1 = scoreAtual + 1;
+  if (s1 === scoreDe(1, 1, 1)) s1 = scoreAtual + 2;   // não pode coincidir
   const p1 = await patch(Object.assign(base(1, 1, 1), {
-    nick: 'Diagnóstico', classe: 'guerreiro', at: agora, score: 2
+    nick: 'Diagnóstico', classe: 'guerreiro', at: agora, score: s1
   }));
   const paridadeViva = p1.status === 403;
   console.log(`  [2] P1 paridade violada       -> ${p1.status} ` +
-    (paridadeViva ? '(rules novas ativas ✓)'
-      : 'AS RULES NOVAS NÃO ESTÃO PUBLICADAS (score do doc virou 2)'));
+    (paridadeViva ? '(score ' + s1 + ' negado pela paridade ✓)'
+      : 'AS RULES NOVAS NÃO ESTÃO PUBLICADAS (score ' + s1 + ' aceito)'));
   if (!paridadeViva) falhas.push('paridade');
 
-  // [3] P0: envio legítimo tem que passar (regra nova não pode travar o jogo)
-  const s0 = scoreDe(1, 1, 1);
-  const p0 = await patch(Object.assign(base(1, 1, 1), {
-    nick: 'Diagnóstico', classe: 'guerreiro', at: agora, score: s0
-  }));
-  const controleOk = p0.status === 200;
-  console.log(`  [3] P0 envio legítimo         -> ${p0.status} ` +
-    (controleOk ? '(score ' + s0 + ' aceito ✓)'
-      : 'REJEITADO — as rules novas estariam travando o jogo'));
-  if (!controleOk) falhas.push('controle');
+  // [3] P0: envio legítimo MAIOR que o atual (paridade certa)
+  let mapa0 = 1;
+  while (mapa0 < 10 && scoreDe(mapa0, 1, 1) <= scoreAtual) mapa0++;
+  const s0 = scoreDe(mapa0, 1, 1);
+  let controleOk = false;
+  if (mapa0 > teto) {
+    console.log('  [3] P0 CONTROLE PULADO (o doc já está acima do teto)');
+  } else {
+    const p0 = await patch(Object.assign(base(mapa0, 1, 1), {
+      nick: 'Diagnóstico', classe: 'guerreiro', at: agora, score: s0
+    }));
+    controleOk = p0.status === 200;
+    console.log(`  [3] P0 envio legítimo         -> ${p0.status} ` +
+      (controleOk ? '(mapa ' + mapa0 + ', score ' + s0 + ' aceito ✓)'
+        : 'REJEITADO — as rules novas estariam travando o jogo'));
+    if (!controleOk) falhas.push('controle');
+  }
 
-  // [4] teto (opt-in) — só faz sentido se a paridade está viva
+  // [4] teto (opt-in) — só com a paridade E o controle provados, senão
+  // o "sucesso" aqui escreveria ~10^7-10^8 no placar público
   if (process.argv.indexOf('--teto') >= 0) {
-    if (!paridadeViva) {
-      console.log('  [4] --teto PULADO (sem rules novas, evita poluir o placar)');
+    if (!paridadeViva || !controleOk) {
+      console.log('  [4] --teto PULADO (sem prova de que as rules novas ' +
+        'aceitam o legítimo, evita poluir o placar)');
     } else {
       const mapa = teto + 50;
       const p2 = await patch(Object.assign(base(mapa, 1, 1), {
@@ -116,7 +139,7 @@ async function main() {
       const tetoVivo = p2.status === 403;
       console.log(`  [4] --teto mapa ${mapa}          -> ${p2.status} ` +
         (tetoVivo ? '(teto de progressão ativo ✓)'
-          : 'TETO AUSENTE (doc diagnóstico ganhou score grande)'));
+          : 'TETO AUSENTE (doc diagnóstico ganhou score grande!)'));
       if (!tetoVivo) falhas.push('teto');
     }
   }
