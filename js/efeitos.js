@@ -130,6 +130,7 @@ var Efeitos = (function () {
   // impactos encadeados mantêm a MESMA fase (sem salto no meio)
   function sacudir(f) {
     if (mudo) return;
+    if (!Opcoes.liga('shake')) return;   // opções: sem tremedeira
     shakeT = Math.max(shakeT, 0.14 + f * 0.16);
     if (shakeT <= 0.14 + f * 0.16 && shakeFor === 0) {
       shakeFase = Math.random() * Math.PI * 2;  // só no impacto novo
@@ -142,7 +143,7 @@ var Efeitos = (function () {
   // reduzida 0,6+f×1,2 (antes 0,8+f×1,8). Offset inteiro (pixel art);
   // Batalha.desenhar traduz dentro do clip.
   function shakeOffset() {
-    if (shakeT <= 0) return null;
+    if (shakeT <= 0 || !Opcoes.liga('shake')) return null;
     var f = shakeFor * Math.min(1, shakeT / 0.3);
     var amp = 0.6 + f * 1.2;
     return {
@@ -166,17 +167,21 @@ var Efeitos = (function () {
   // flash fraco nunca apaga um flash forte em curso
   function flashTela(cor, a, t) {
     if (mudo) return;
+    if (!Opcoes.liga('flash')) return;   // opções: sem flash de tela
     if (flash && flash.a * (flash.t / flash.tMax) > a) return;
     flash = { cor: cor, a: a, t: t, tMax: t };
   }
 
   function bordaTela(cor, a, t) {
     if (mudo) return;
+    if (!Opcoes.liga('flash')) return;   // opções: sem vinheta de evento
     borda = { cor: cor, a: a, t: t, tMax: t };
   }
 
   function perigo(frac) {
-    perigoFrac = frac;
+    // vinheta vermelha de perigo é o mesmo tipo de estímulo do flash —
+    // desligada, a fração vira 1 (nunca pisca)
+    perigoFrac = Opcoes.liga('flash') ? frac : 1;
   }
 
   // ------------------------------------------------ catálogo (doc §4)
@@ -496,6 +501,10 @@ var Efeitos = (function () {
     if (mudo) return;
     var est = estilo === true ? 'big'
       : (estilo === false || !estilo) ? 'normal' : estilo;
+    // opções: números de dano/XP (normal/crit) podem desligar; o 'big'
+    // (aviso/boss/clear) é sinalização e fica sempre — só some com o
+    // próprio som mudo da simulação offline
+    if (est !== 'big' && !Opcoes.liga('num')) return;
     var cfg = est === 'crit'
       ? { t: 1.15, sobe: 34, font: 'bold 11px monospace' }
       : est === 'big'

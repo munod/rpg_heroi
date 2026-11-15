@@ -511,7 +511,9 @@
 
 - Chaves do `localStorage` são versionadas: `rpg_personagens_v1`,
   `rpg_ultimo_id`, `rpg_estado_v1` (e as do ranking: `rpg_rank_nick_v1`,
-  `rpg_rank_cache_v1`, `rpg_rank_ultimo_v1`). Ao alterar o formato do
+  `rpg_rank_cache_v1`, `rpg_rank_ultimo_v1`; e a das opções:
+  `rpg_opcoes_v1` — toggles de conforto, lida/grava em `js/opcoes.js`
+  com merge defensivo sobre o padrão). Ao alterar o formato do
   save, suba o sufixo `_v1` e/ou normalize na leitura (`Personagem.normalizar`) — não
   quebre saves antigos em silêncio (hoje: `p.stats` via
   `Personagem.normalizaStats`).

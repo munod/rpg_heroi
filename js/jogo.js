@@ -5,6 +5,9 @@
 var Jogo = (function () {
   var blinkT = 0;
   var eventosLigados = false;
+  var opAberta = false;      // overlay de opções (spec opcoes R-OP-3)
+  var opAbriuAgora = false;  // mesma-frame do clique que abriu: sem
+                              // close-instântaneo por clique "fora"
 
   // Ausência: o rAF não roda com a aba oculta, então o tempo longe do jogo
   // é creditado de volta simulando a batalha no mesmo ritmo de sempre.
@@ -15,6 +18,7 @@ var Jogo = (function () {
   function enter() {
     Batalha.iniciar();
     Cutscene.fecha();   // reentrada não herda cutscene de sessão anterior
+    opAberta = false;
     ligarEventos();
     Gravacao.entrar(Game.personagem);
     var ausente = voltaAusencia(true);
@@ -133,11 +137,19 @@ var Jogo = (function () {
     // cutscene: auto-dismiss dos eventos (a fronteira espera o jogador)
     Cutscene.update(dt);
 
-    // painel: clique/segurar nos +/− de atributos. Com vitória/cutscene
-    // no ar, o painel de baixo NÃO recebe clique — os mesmos dois níveis
-    // do overlay de vitória (bloqueio no desenho + pulo do update)
-    if (!vitPendente() && !Cutscene.ativa()) {
+    // painel: clique/segurar nos +/− de atributos. Com vitória/cutscene/
+    // opções no ar, o painel de baixo NÃO recebe clique — os mesmos dois
+    // níveis do overlay de vitória (bloqueio no desenho + pulo do update)
+    if (!vitPendente() && !Cutscene.ativa() && !opAberta) {
       Gestao.update(dt, Game.personagem);
+    }
+
+    // opções: Esc fecha; vitória/cutscene têm prioridade e derrubam o
+    // overlay por baixo (ele volta sozinho se reabrir depois)
+    if (opAberta) {
+      if (Input.pressed('Escape') || vitPendente() || Cutscene.ativa()) {
+        opAberta = false;
+      }
     }
 
     // Enter fecha a cutscene (o botão fecha no render); sem cutscene,
@@ -197,19 +209,63 @@ var Jogo = (function () {
     }
   }
 
+  // ------------------------------------------------------- opções
+  // Overlay de toggles (spec opcoes R-OP-3): painel central com os 4
+  // toggles + Fechar. Prioridade de desenho: vitória > cutscene >
+  // opções (as duas primeiras derrubam o overlay no update).
+  function desenhaOpcoes(ctx) {
+    var W = Game.W;
+    var pw = 380, ph = 272;
+    var px = Math.round((W - pw) / 2), py = 80;
+    // véu (mesmo padrão da vitória) — só fillRect
+    ctx.fillStyle = 'rgba(8, 6, 16, 0.84)';
+    ctx.fillRect(0, 0, W, 432);
+    UI.panel(px, py, pw, ph, 'OPÇÕES');
+    UI.text('Conforto visual — vale na hora, sem reiniciar.',
+      px + pw / 2, py + 40, { align: 'center', color: '#9a90b8', font: '13px monospace' });
+    var linhas = [
+      ['shake', 'Sacudir a tela'],
+      ['flash', 'Flash e vinheta'],
+      ['num', 'Números de dano'],
+      ['poeira', 'Poeira ambiente']
+    ];
+    for (var i = 0; i < linhas.length; i++) {
+      var chave = linhas[i][0];
+      var on = Opcoes.liga(chave);
+      if (UI.button(px + 30, py + 52 + i * 42, pw - 60, 36,
+                    linhas[i][1] + ' · ' + (on ? 'LIG' : 'DES'),
+                    { ativo: on, font: '15px monospace' })) {
+        Opcoes.alterna(chave);
+      }
+    }
+    if (UI.button(px + 70, py + ph - 46, pw - 140, 36, 'Fechar')) {
+      opAberta = false;
+    }
+    // clique fora do painel fecha — mas NÃO o clique do frame em que o
+    // overlay abriu (senão o botão do cabeçalho fecharia na hora)
+    if (!opAbriuAgora && Input.mouse.clicked) {
+      var mx = Input.mouse.x, my = Input.mouse.y;
+      if (mx < px || mx > px + pw || my < py || my > py + ph) opAberta = false;
+    }
+    opAbriuAgora = false;
+  }
+
   // -------------------------------------------------------------- render
   function render(ctx) {
     var vit = vitPendente();
     var corte = Cutscene.ativa();
-    UI.bloqueia(vit || corte);  // botões de baixo desenham sem responder
+    // bloqueio em 2 níveis (mesmo padrão da vitória): os botões de
+    // baixo desenham sem responder enquanto o overlay está no ar
+    UI.bloqueia(vit || corte || opAberta);
     desenhaFundo(ctx);
     Gravacao.desenharAviso(ctx,
       'Combate 100% automático — gerencie seus atributos');
     UI.bloqueia(false);
-    // prioridade: vitória > cutscene (no 100→101 a cutscene já é cortada
-    // em passaMapa; a ordem do desenho deixa a regra explícita)
+    // prioridade: vitória > cutscene > opções (no 100→101 a cutscene já
+    // é cortada em passaMapa; a ordem do desenho deixa a regra explícita)
     if (vit) desenhaVitoria(ctx);   // por cima de tudo, incl. o aviso
     else if (corte) Cutscene.desenhar(ctx);
+    else if (opAberta) desenhaOpcoes(ctx);
   }
 
   function desenhaFundo(ctx) {
@@ -233,6 +289,12 @@ var Jogo = (function () {
       align: 'right',
       color: p.pontos > 0 ? '#8ce08c' : '#9a90b8'
     });
+    // opções (spec opcoes R-OP-3): toggle de conforto visual — vive no
+    // cabeçalho p/ não mexer na grade de abas da Gestão (contrato)
+    if (UI.button(W - 216, 3, 64, 24, 'Opções', { font: '13px monospace' })) {
+      opAberta = true;
+      opAbriuAgora = true;
+    }
 
     // ---------------- arena automática (esquerda)
     var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';

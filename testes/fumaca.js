@@ -5371,6 +5371,81 @@ console.log('51) respiro: contagem no HUD, beat do clear e fim do delay duplo');
     ' frame(s) de vazio antes da troca (eram ~479+479)');
 }
 
+console.log('52) opções: defaults, gates, persistência e overlay');
+{
+  const Opcoes = sandbox.Opcoes;
+  const Efeitos = sandbox.Efeitos;
+
+  // --- a) defaults = comportamento de sempre (tudo ligado)
+  conf(Opcoes.liga('shake') && Opcoes.liga('flash') &&
+       Opcoes.liga('num') && Opcoes.liga('poeira'),
+    'defaults de todas as opções ligados');
+
+  // --- b) gate do shake (spec opcoes R-OP-2)
+  Opcoes.alterna('shake');                      // desliga
+  Efeitos.sacudir(1);
+  conf(Efeitos.shakeOffset() === null,
+    'shake desligado: sacudir não produz offset');
+  Opcoes.alterna('shake');                      // religa
+  Efeitos.sacudir(1);
+  conf(Efeitos.shakeOffset() !== null,
+    'shake religado: sacudir volta a produzir offset');
+  Efeitos.limpar();
+
+  // --- c) gate do flash e dos números
+  Opcoes.alterna('flash');
+  Efeitos.flashTela('#ffffff', 0.9, 0.2);
+  conf(!Efeitos.info().flash, 'flash desligado: flashTela não arma');
+  Opcoes.alterna('flash');
+  Opcoes.alterna('num');
+  const q0 = Efeitos.info().qtd;
+  Efeitos.nota(10, 10, 'DANO', '#ffffff', false);
+  conf(Efeitos.info().qtd === q0,
+    'números desligados: nota normal não nasce');
+  Efeitos.nota(10, 10, 'AVISO', '#ffffff', true);
+  conf(Efeitos.info().qtd === q0 + 1,
+    'números desligados: estilo big (aviso) continua nascendo');
+  Opcoes.alterna('num');
+  Efeitos.limpar();
+
+  // --- d) persistência (rpg_opcoes_v1)
+  Opcoes.alterna('poeira');
+  const bruto = localStorageStub.getItem('rpg_opcoes_v1');
+  conf(!!bruto && bruto.indexOf('"poeira":false') >= 0,
+    'alterna grava em rpg_opcoes_v1 (' + bruto + ')');
+  Opcoes.alterna('poeira');                     // restaura pra teste
+
+  // --- e) overlay: abre pelo botão do cabeçalho, toggle, Fechar
+  conf(Game.cena === 'jogo', 'cena jogo ativa p/ o overlay');
+  jogoCanvas._textos = [];
+  clique(584, 15);                             // botão Opções (552..616, 3..27)
+  frame(2);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('OPÇÕES') >= 0),
+    'clique em Opções abre o overlay (título OPÇÕES no frame)');
+
+  clique(384, 150);                            // 1º toggle (shake) no painel
+  frame(2);
+  conf(Opcoes.liga('shake') === false,
+    'toggle no overlay desliga shake');
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('Sacudir a tela · DES') >= 0),
+    'o toggle reflete DES no rótulo');
+  Efeitos.sacudir(1);
+  conf(Efeitos.shakeOffset() === null,
+    'shake desligado pelo overlay: sem offset');
+  Efeitos.limpar();
+
+  clique(384, 324);                            // Fechar (264..504, 306..342)
+  frame(2);
+  jogoCanvas._textos = [];
+  frame(2);
+  conf(!(jogoCanvas._textos || []).some(t => t.indexOf('OPÇÕES') >= 0),
+    'Fechar fecha o overlay (não desenha mais)');
+
+  // restaura o estado pra não vazar pros artefatos seguintes
+  if (!Opcoes.liga('shake')) Opcoes.alterna('shake');
+  localStorageStub.removeItem('rpg_opcoes_v1');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');

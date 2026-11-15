@@ -1909,13 +1909,17 @@ var Batalha = (function () {
     // (ordem do doc: aditiva → sólida → fumaça → números)
     Efeitos.desenharTopo(ctx);
 
-    // poeira ambiente (espaço de mundo, dentro do clip da janela)
-    for (i = 0; i < poeira.length; i++) {
-      var pdu = poeira[i];
-      ctx.globalAlpha = 0.10 + 0.12 *
-        (0.5 + 0.5 * Math.sin(pdu.fase * 2 + pdu.x * 0.05));
-      ctx.fillStyle = '#d8d8f0';
-      ctx.fillRect(Math.round(pdu.x), Math.round(pdu.y), pdu.tam, pdu.tam);
+    // poeira ambiente (espaço de mundo, dentro do clip da janela) —
+    // opções: pode desligar (conforto visual). O reset de alpha fica
+    // incondicional logo abaixo (desenharTopo pode sair com alpha < 1)
+    if (Opcoes.liga('poeira')) {
+      for (i = 0; i < poeira.length; i++) {
+        var pdu = poeira[i];
+        ctx.globalAlpha = 0.10 + 0.12 *
+          (0.5 + 0.5 * Math.sin(pdu.fase * 2 + pdu.x * 0.05));
+        ctx.fillStyle = '#d8d8f0';
+        ctx.fillRect(Math.round(pdu.x), Math.round(pdu.y), pdu.tam, pdu.tam);
+      }
     }
     ctx.globalAlpha = 1;
 

@@ -12,6 +12,27 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Respiro entre ondas vira beat (spec `respiro`)** — reclamação do
+  playtest: *"o personagem dorme entre as ondas"*. O HUD agora mostra
+  **`PRÓXIMA ONDA EM Xs`** durante o respiro (`info().espera` expõe o
+  timer), o clear do campo dispara **`ONDA LIMPA · Xs · +N PONTOS`**
+  (a espera vira momento de decisão — a "lição do card" do D2
+  Survivors; o chefe mantém `BOSS DERROTADO!` + `MAPA N`) e a morte na
+  onda 100 **zera o timer**: os dois 8s que se somavam no troco de
+  mapa (16s de campo vazio) viraram **8s únicos**, com banner/corte já
+  no kill. `ESPERA_BASE` 4→2s (respiro do mundo 1, ajuste do
+  mantenedor). Fumaça seção 51.
+- **Opções do jogo (spec `opcoes`)** — módulo `js/opcoes.js` com 4
+  toggles de conforto persistidos em **`rpg_opcoes_v1`** (default =
+  comportamento atual): **Sacudir a tela**, **Flash e vinheta**
+  (inclui o vermelho de perigo), **Números de dano** (estilo `big`/
+  aviso fica sempre) e **Poeira ambiente**. Overlay `OPÇÕES` aberto
+  pelo botão no cabeçalho (não mexe na grade de abas da Gestão);
+  fecha por `Fechar`, `Esc` ou clique fora; vitória/cutscene têm
+  prioridade. Fumaça seção 52.
+
+### Added
+
 - **`ritmo.js` vira instrumento de balanceamento (fase 1)** — seed do
   RNG (4º arg, padrão 1, mulberry32 espelhado do `perlin.js`; run
   **determinístico** com os eventos aleatórios **ativos** — mesma
