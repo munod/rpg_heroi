@@ -2,3 +2,5 @@
 testes/*.png
 # screenshots/QA não versionados (regenerados)
 testes/*.jpg
+# resultados do ritmo.js (regenerados a cada medição)
+resultados/

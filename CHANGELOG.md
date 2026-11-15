@@ -10,6 +10,21 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Added
+
+- **`ritmo.js` vira instrumento de balanceamento (fase 1)** — seed do
+  RNG (4º arg, padrão 1, mulberry32 espelhado do `perlin.js`; run
+  **determinístico** com os eventos aleatórios **ativos** — mesma
+  semente = mesmo run = A/B limpo entre versões), **sondas por frame**
+  (espera = condição do contador de `tOnda`: `esperaPct`/`esperaMediaS`/
+  `esperaMaxS` por marco e agregado — o número da queixa "dorme entre
+  as ondas"), **métricas de combate/economia** de `p.stats` (kpm · dps
+  efetivo · ttk médio · inimigos médio/máx · gpm · eficiência ouro ·
+  xpm analítico · uptime · mortes/h · menor HP vivo), **marcos de
+  nível** (nv 10/20/30 + instante da Keystone) e **JSON** em
+  `resultados/ritmo.json` (gitignored) com config/marcos/níveis/
+  métricas/commit p/ comparar builds.
+
 ## [0.6.0] — 2026-11-15
 
 ### Security

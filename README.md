@@ -222,7 +222,7 @@ node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
 node testes/mapa.js X.png # converte screenshot em mapa ASCII (layout)
 node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
-node testes/ritmo.js [min] [mundo|mapa] [k] # mede o ritmo (tuning; padrão 15)
+node testes/ritmo.js [min] [mundo|mapa] [k] [semente] # mede o ritmo + métricas de combate/economia (tuning; padrão 15min, seed 1; grava resultados/ritmo.json)
 ```
 
 São **513 asserções** no total. Todos os testes que abrem o jogo compartilham

@@ -152,9 +152,14 @@
   clear/survival — ver a linha de Mapas abaixo) + `HP_POR_NIVEL 6` em
   `personagem.js` (fonte única — NÃO espelhe fórmula em
   `statusDetalhado`). Mudou algum? Meça com
-  `node testes/ritmo.js [min] [mundo|mapa] [k]` (marcos até 13.500min
-  p/ a campanha inteira +
-  coluna nv/min; argv 2/3 = variante da escala de monstros; fica fora
+  `node testes/ritmo.js [min] [mundo|mapa] [k] [semente]` (marcos até
+  13.500min p/ a campanha inteira +
+  coluna nv/min; argv 2/3 = variante da escala de monstros; argv 4 =
+  seed do `Math.random`, padrão 1 → run DETERMINÍSTICO, eventos
+  aleatórios ATIVOS (mesma semente = mesmo run = A/B limpo; ≥4 seeds
+  por decisão); grava `resultados/ritmo.json` (gitignored) com
+  config/marcos/níveis/métricas/commit; métricas: kpm/dps/ttk/espera%/uptime/xpm/gpm/eficiência
+  ouro/mortes-h/hpMin/inimigos; fica fora
   do `todos.js`) — **≥4 runs por decisão** (run único iludiu uma
   "validação"). **Cliff mapeado**: produto `ESC_HP×ESC_DMG ≤0,086`
   passa / `≥0,095` estola o mapa 3 em 4/4 (renda fixa num tot parado ×
