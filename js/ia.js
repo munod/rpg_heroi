@@ -44,15 +44,20 @@ var IA = (function () {
   // ----------------------------------------------------------- herói
   // Decide alvo, estado e ponto de destino. h.ia = { t, estado, alvo,
   // destino, agu }. Estados: espera | perseguir | combate | kite | recuar.
-  // Limites do mundo (espelho de batalha.js: 384×268) com margem: o
-  // destino de fuga SEMPRE fica dentro do mapa — sem isso o herói
-  // empurrava a parede no vértice e ficava preso (bug: INT alta).
-  var MUNDO_L = 384, MUNDO_A = 268, MARGEM_FUGA = 16;
-  function clampFuga(x, y) {
-    return {
-      x: Math.max(MARGEM_FUGA, Math.min(MUNDO_L - MARGEM_FUGA, x)),
-      y: Math.max(MARGEM_FUGA, Math.min(MUNDO_A - MARGEM_FUGA, y))
-    };
+  // Limites do destino de fuga (spec mapa-infinito R-INF-3): sem
+  // mundo, o teto é a DISTÂNCIA AO HERÓI — destino a no máx 96px do
+  // ponto de referência (as bases geométricas usam 90/24px, então o
+  // teto é no-op p/ elas e só evita destino absurdo em fuga
+  // encadeada; sem parede, os obstáculos do chunk dão a estrutura).
+  var FUGA_MAX = 96;
+  function clampFuga(hx, hy, x, y) {
+    var dx = x - hx, dy = y - hy;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (d > FUGA_MAX) {
+      x = hx + dx / d * FUGA_MAX;
+      y = hy + dy / d * FUGA_MAX;
+    }
+    return { x: x, y: y };
   }
 
   function decideHeroi(h, inimigos, dt) {
@@ -134,7 +139,7 @@ var IA = (function () {
     // no influence map)
     if (estado === 'recuar') {
       var cx = perto ? sx / perto : dxAlvo, cy = perto ? sy / perto : dyAlvo;
-      if (cx === 0 && cy === 0) ia.destino = clampFuga(h.x, h.y);
+      if (cx === 0 && cy === 0) ia.destino = { x: h.x, y: h.y };
       else ia.destino = direcaoEvasao(h, Math.atan2(-cy, -cx), 90);
     } else if (estado === 'kite') {
       // recua até a faixa segura: ponto ~24px para longe do mais perto
@@ -145,7 +150,7 @@ var IA = (function () {
         if (dv < d2m) { d2m = dv; mi = i; }
       }
       var nx = h.x - inimigos[mi].x, ny = h.y - inimigos[mi].y;
-      if (nx === 0 && ny === 0) ia.destino = clampFuga(h.x, h.y);
+      if (nx === 0 && ny === 0) ia.destino = { x: h.x, y: h.y };
       else ia.destino = direcaoEvasao(h, Math.atan2(ny, nx), 24);
     } else {
       ia.destino = ia.alvo;             // segue vivo, atualizado no frame
@@ -206,7 +211,8 @@ var IA = (function () {
     var melhor = null, melhorS = Infinity;
     for (var k = 0; k < EVASAO_N; k++) {
       var ang = angBase + k * (Math.PI * 2 / EVASAO_N);
-      var pt = clampFuga(h.x + Math.cos(ang) * dist,
+      var pt = clampFuga(h.x, h.y,
+                         h.x + Math.cos(ang) * dist,
                          h.y + Math.sin(ang) * dist);
       var s = celulaOcup(pt.x, pt.y);
       // rocha testada no PONTO ARREDONDADO: é o mesmo que info()

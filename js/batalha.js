@@ -323,11 +323,8 @@ var Batalha = (function () {
   }
 
   function resolve(ent, raio) {
-    if (ent.x < 8) ent.x = 8;
-    if (ent.x > MW - 8) ent.x = MW - 8;
-    if (ent.y < 10) ent.y = 10;
-    if (ent.y > MH - 8) ent.y = MH - 8;
-
+    // sem clamp de borda (spec mapa-infinito R-INF-2): o mundo não tem
+    // limites — a estrutura é dos obstáculos do chunk
     for (var i = 0; i < obst.length; i++) {
       var o = obst[i];
       var dx = ent.x - o.cx, dy = ent.y - o.cy;
@@ -337,10 +334,6 @@ var Batalha = (function () {
         var d = Math.sqrt(d2) || 0.001;
         ent.x = o.cx + (dx / d) * min;
         ent.y = o.cy + (dy / d) * min;
-        if (ent.x < 8) ent.x = 8;
-        if (ent.x > MW - 8) ent.x = MW - 8;
-        if (ent.y < 10) ent.y = 10;
-        if (ent.y > MH - 8) ent.y = MH - 8;
       }
     }
   }
@@ -404,13 +397,15 @@ var Batalha = (function () {
 
   function reiniciar() { iniciar(); }
 
-  // Pó ambiente: motes lentos que sobem e dão a volta no mundo. Semente
-  // única em iniciar() — atualizar só move (simulação offline não aloca).
+  // Pó ambiente: motes lentos que sobem e dão a volta na JANELA VISÍVEL
+  // (spec mapa-infinito R-INF-4 — sem mundo, a referência é a câmera).
+  // Semente única em iniciar() — atualizar só move (simulação offline
+  // não aloca).
   function semearPoeira() {
     poeira = [];
     for (var i = 0; i < 36; i++) {
       poeira.push({
-        x: Math.random() * MW, y: Math.random() * MH,
+        x: cam.x + Math.random() * VW, y: cam.y + Math.random() * VH,
         vx: (Math.random() - 0.5) * 3, vy: -(1 + Math.random() * 2),
         fase: Math.random() * 6, tam: Math.random() < 0.3 ? 2 : 1
       });
@@ -425,12 +420,11 @@ var Batalha = (function () {
   function alternarPausa() { pausada = !pausada; return pausada; }
 
   // ------------------------------------------------------------- câmera
-  // Alvo: herói centralizado, presa nos limites do mundo.
+  // Alvo: herói SEMPRE centralizado (spec mapa-infinito R-INF-1) —
+  // sem clamp de limites do mundo: não há bordas. O teleporte do
+  // renascimento continua com o trava-rápido no atualizaCamera.
   function alvoCamera() {
-    return {
-      x: Math.max(0, Math.min(MW - VW, heroi.x - VW / 2)),
-      y: Math.max(0, Math.min(MH - VH, heroi.y - VH / 2))
-    };
+    return { x: heroi.x - VW / 2, y: heroi.y - VH / 2 };
   }
 
   // Suaviza o deslize (lerp); teleporte grande (renascimento) trava na
@@ -559,8 +553,9 @@ var Batalha = (function () {
   }
 
   // Eventos aleatórios da onda: Açougueiro primeiro (em campo trava o
-  // resto); gatuno rouba 15% e nasce longe das bordas p/ dar tempo de
-  // reação. O ouro é debitado aqui (batalha é a dona de p.ouro).
+  // resto); gatuno rouba 15% e nasce no anel do herói (a fuga é por
+  // distância — spec mapa-infinito). O ouro é debitado aqui (batalha
+  // é a dona de p.ouro).
   function nasceEventos() {
     if (Eventos.nasceAco(onda)) {
       var ac = spawn({ tipo: 'acougueiro' });
@@ -593,23 +588,24 @@ var Batalha = (function () {
     var t = TIPOS[def.tipo] || TIPOS.slime;
     var raio = t.raio || 6;
     // nasce fora da janela, ao redor do herói: mantém o ritmo das ondas
-    // (nas bordas do mundo grande o inimigo levaria uma eternidade p/ chegar)
+    // (sem clamp de borda — spec mapa-infinito R-INF-2: o anel é
+    // relativo ao herói e o terreno é gerado onde ele estiver)
     var fora = 110;                                // ~fora da tela do herói
     var x = heroi.x, y = heroi.y, dx = 0, dy = 0, tent = 0;
     do {
       var ang = Math.random() * Math.PI * 2;
       var dist = fora + Math.random() * 22;        // 110..132px do herói
-      x = Math.max(14, Math.min(MW - 14, heroi.x + Math.cos(ang) * dist));
-      y = Math.max(14, Math.min(MH - 14, heroi.y + Math.sin(ang) * dist));
+      x = heroi.x + Math.cos(ang) * dist;
+      y = heroi.y + Math.sin(ang) * dist;
       dx = x - heroi.x;
       dy = y - heroi.y;
       tent++;
     } while (tent < 30 && (colideObst(x, y, raio) ||
       dx * dx + dy * dy < (fora - 8) * (fora - 8)));
     if (tent >= 30 && dx * dx + dy * dy < (fora - 8) * (fora - 8)) {
-      // herói grudado na parede: canto oposto ao agrupamento (quase nunca)
-      x = heroi.x < MW / 2 ? MW - 14 : 14;
-      y = heroi.y < MH / 2 ? MH - 14 : 14;
+      // grudado em obstáculos: canto do anel na direção oposta ao
+      // agrupamento (quase nunca — 30 tentativas aleatórias falhando)
+      x = heroi.x - dx; y = heroi.y - dy;
     }
 
     // dificuldade em escala CONTÍNUA entre mapas: ondaTotal soma as
@@ -661,11 +657,8 @@ var Batalha = (function () {
       regenApos: t.regenApos,
       dreno: t.dreno
     };
-    if (ent.gatuno) {
-      // longe das bordas p/ dar tempo de reação (contrajogada)
-      ent.x = Math.max(70, Math.min(MW - 70, ent.x));
-      ent.y = Math.max(70, Math.min(MH - 70, ent.y));
-    }
+    // (sem clamp de borda do gatuno — spec mapa-infinito R-INF-4: ele
+    // nasce no anel do herói e a fuga é por DISTÂNCIA, não por borda)
     inimigos.push(ent);
     return ent;
   }
@@ -900,12 +893,16 @@ var Batalha = (function () {
     }
   }
 
-  // Renascimento: sorteia no mundo, longe de obstáculos e de inimigos;
-  // depois de 30 tentativas, cai no centro (quase nunca acontece).
+  // Renascimento: sorteia num ANEL AO REDOR DO HERÓI (spec mapa-infinito
+  // R-INF-2 — sem mundo, a referência é o próprio herói), longe de
+  // obstáculos e de inimigos; depois de 30 tentativas, cai a 80px na
+  // direção sorteada (quase nunca acontece).
   function posicaoAleatoriaSegura() {
     for (var tent = 0; tent < 30; tent++) {
-      var x = 16 + Math.random() * (MW - 32);
-      var y = 16 + Math.random() * (MH - 32);
+      var ang = Math.random() * Math.PI * 2;
+      var dist = 40 + Math.random() * 80;          // 40..120px do herói
+      var x = heroi.x + Math.cos(ang) * dist;
+      var y = heroi.y + Math.sin(ang) * dist;
       if (colideObst(x, y, 8)) continue;
       var perto = false;
       for (var i = 0; i < inimigos.length; i++) {
@@ -914,7 +911,7 @@ var Batalha = (function () {
       }
       if (!perto) return { x: x, y: y };
     }
-    return { x: MW / 2, y: MH / 2 };
+    return { x: heroi.x + 80, y: heroi.y };
   }
 
   // Recompensa do COFRE (spec monstros-novos R-MON-4.2): ouro =
@@ -1545,16 +1542,17 @@ var Batalha = (function () {
         }
       }
 
-      // Gatuno (evento): não briga — corre p/ a borda mais próxima com
-      // o ouro; tocar a borda = perda (o tempo do Eventos desemperra)
+      // Gatuno (evento): não briga — corre NA DIREÇÃO MAIS LONGE DO
+      // HERÓI com o ouro; passar de 240px = perda (spec mapa-infinito
+      // R-INF-4 — sem bordas a fuga é por distância; o tempo do
+      // Eventos continua desemperrando o emperrado)
       if (en.gatuno) {
-        var dk = 0;
-        var dists = [en.x, MW - en.x, en.y, MH - en.y];
-        for (var q = 1; q < 4; q++) if (dists[q] < dists[dk]) dk = q;
+        var gx = en.x - heroi.x, gy = en.y - heroi.y;
+        var gd = Math.sqrt(gx * gx + gy * gy) || 1;
         var pv = en.vel * dt;
-        mover(en, dk === 0 ? -pv : (dk === 1 ? pv : 0),
-                   dk === 2 ? -pv : (dk === 3 ? pv : 0), en.raio || 6);
-        if (dists[dk] <= pv + 1) {
+        mover(en, (gx / gd) * pv, (gy / gd) * pv, en.raio || 6);
+        gx = en.x - heroi.x; gy = en.y - heroi.y;
+        if (gx * gx + gy * gy > 240 * 240) {
           var perdido = en.roubo || 0;
           Eventos.gatFugiu();
           inimigos.splice(i, 1);
@@ -1730,15 +1728,16 @@ var Batalha = (function () {
       if (tOnda <= 0) proximaOnda();
     }
 
-    // poeira: deriva lenta com wrap (só posição, sem alocação)
+    // poeira: deriva lenta com wrap na JANELA VISÍVEL (só posição, sem
+    // alocação — spec mapa-infinito R-INF-4)
     for (var i = 0; i < poeira.length; i++) {
       var po = poeira[i];
       po.x += po.vx * dt;
       po.y += po.vy * dt;
       po.fase += dt;
-      if (po.y < 0) { po.y += MH; po.x = Math.random() * MW; }
-      if (po.x < 0) po.x += MW;
-      else if (po.x >= MW) po.x -= MW;
+      if (po.y < cam.y) { po.y += VH; po.x = cam.x + Math.random() * VW; }
+      if (po.x < cam.x) po.x += VW;
+      else if (po.x >= cam.x + VW) po.x -= VW;
     }
   }
 
@@ -2022,7 +2021,9 @@ var Batalha = (function () {
       // onda p/ teste — 0 = onda em campo ou spawn em curso
       espera: Math.max(0, tOnda),
       janela: { w: VW, h: VH },
-      mundo: { w: MW, h: MH },
+      // região ativa = 3×3 chunks de 384×268 ao redor do herói
+      // (spec mapa-infinito R-INF-5/10 — o mundo não tem bordas)
+      mundo: { w: MW * 3, h: MH * 3 },
       cam: { x: Math.round(cam.x), y: Math.round(cam.y) },
       // sonda dos inimigos (spec monstros-novos — seção 41 mede
       // skill de espécie: hp do regenerador, chave do atirador, etc)

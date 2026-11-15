@@ -1193,44 +1193,43 @@ console.log('16) skills automáticas (procs por classe)');
   p.atributos.con = 1;
 }
 
-console.log('17) câmera, mundo maior e renascimento aleatório');
+console.log('17) câmera sempre centralizada, região ativa e renascimento');
 {
   const Batalha = sandbox.Batalha;
   const p = Game.personagem;
   let inf = Batalha.info();
 
   conf(inf.janela.w === 192 && inf.janela.h === 134 &&
-       inf.mundo.w === 384 && inf.mundo.h === 268,
-    'mundo 384×268 com a janela 192×134 intacta');
+       inf.mundo.w === 1152 && inf.mundo.h === 804,
+    'região ativa 3×3 chunks (1152×804) com a janela 192×134 intacta');
 
   // --- câmera: pausa congela o mundo (mas não a câmera) e ela assenta
+  // SEMPRE centralizada no herói — sem clamp, sem bordas (spec
+  // mapa-infinito R-INF-1: era "presa nos limites do mundo")
   Batalha.alternarPausa();
-  let limitesOk = true;
+  for (let i = 0; i < 200; i++) frame(1);
+  inf = Batalha.info();
+  const dx0 = inf.cam.x - (inf.heroi.x - inf.janela.w / 2);
+  const dy0 = inf.cam.y - (inf.heroi.y - inf.janela.h / 2);
+  conf(Math.abs(dx0) <= 2 && Math.abs(dy0) <= 2,
+    'câmera centralizada no herói após assentar (dx=' +
+    dx0.toFixed(1) + ' dy=' + dy0.toFixed(1) + ')');
+  let centralOk = true;
   for (let i = 0; i < 200; i++) {
     frame(1);
     const c = Batalha.info();
-    if (c.cam.x < 0 || c.cam.y < 0 ||
-        c.cam.x > c.mundo.w - c.janela.w ||
-        c.cam.y > c.mundo.h - c.janela.h) {
-      limitesOk = false;
-    }
+    const dx = c.cam.x - (c.heroi.x - c.janela.w / 2);
+    const dy = c.cam.y - (c.heroi.y - c.janela.h / 2);
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) centralOk = false;
   }
-  conf(limitesOk, 'câmera sempre presa nos limites do mundo');
-  inf = Batalha.info();
-  const ax = Math.max(0, Math.min(inf.mundo.w - inf.janela.w,
-    inf.heroi.x - inf.janela.w / 2));
-  const ay = Math.max(0, Math.min(inf.mundo.h - inf.janela.h,
-    inf.heroi.y - inf.janela.h / 2));
-  conf(Math.abs(inf.cam.x - ax) <= 2 && Math.abs(inf.cam.y - ay) <= 2,
-    'câmera assentada e centrada no herói (dx=' +
-    (inf.cam.x - ax) + ' dy=' + (inf.cam.y - ay) + ')');
+  conf(centralOk, 'câmera sempre centralizada no herói (nunca sai do centro)');
   Batalha.alternarPausa();
 
-  // --- renascimento aleatório: 3 ciclos de morte em locais distintos.
-  // Fixture determinística: nv 4 (SEM skills → sem bênção que out-heala)
-  // e INT 8 (agu baixo → sem kite/recuar, o herói fica e apanha — mesma
-  // lição da seção 21; com o ritmo mais lento os heróis herdados eram
-  // fortes demais p/ morrer sozinhos)
+  // --- renascimento aleatório: 3 ciclos; cai no ANEL 40..120px do
+  // ponto de queda (spec mapa-infinito R-INF-2 — era: dentro dos
+  // limites do mundo 384×268). Fixture determinística: nv 4 (SEM
+  // skills → sem bênção que out-heala) e INT 8 (agu baixo → sem
+  // kite/recuar, o herói fica e apanha — mesma lição da seção 21)
   p.atributos.con = 1;
   p.atributos.for = 1;
   p.atributos.int = 8;
@@ -1246,6 +1245,7 @@ console.log('17) câmera, mundo maior e renascimento aleatório');
       morreu = Batalha.info().morto;
     }
     if (!morreu) { completo = false; break; }
+    const queda = { x: Batalha.info().heroi.x, y: Batalha.info().heroi.y };
     let reviveu = false;
     for (let i = 0; i < 600 && !reviveu; i++) {
       frame(1);
@@ -1253,30 +1253,31 @@ console.log('17) câmera, mundo maior e renascimento aleatório');
     }
     if (!reviveu) { completo = false; break; }
     const h = Batalha.info().heroi;
-    if (h.x < 16 || h.x > 384 - 16 || h.y < 16 || h.y > 268 - 16) {
-      completo = false;
-      break;
-    }
-    locais.push(h.x + ',' + h.y);
+    const d = Math.sqrt((h.x - queda.x) * (h.x - queda.x) +
+                        (h.y - queda.y) * (h.y - queda.y));
+    if (d < 39 || d > 121) { completo = false; break; }
+    locais.push(Math.round(h.x) + ',' + Math.round(h.y));
   }
-  conf(completo, 'renascimento dentro dos limites do mundo (3 ciclos)');
+  conf(completo,
+    'renascimento no anel 40..120px da queda (3 ciclos' +
+    (completo ? '' : '; locais ' + locais.join(' | ')) + ')');
   conf(new Set(locais).size >= 2,
     'renascimento em locais distintos (' + locais.join(' | ') + ')');
   p.nivel = 25;               // devolve o nv da seção 16 (a fixture desceu
-                              // só p/ garantir as 3 mortes — sem vazamento)
+                               // só p/ garantir as 3 mortes — sem vazamento)
 
   // --- a câmera viajou junto do renascimento (assenta na pausa)
   Batalha.alternarPausa();
   for (let i = 0; i < 200; i++) frame(1);
   const f = Batalha.info();
-  const fax = Math.max(0, Math.min(f.mundo.w - f.janela.w,
-    f.heroi.x - f.janela.w / 2));
-  const fay = Math.max(0, Math.min(f.mundo.h - f.janela.h,
-    f.heroi.y - f.janela.h / 2));
-  conf(Math.abs(f.cam.x - fax) <= 2 && Math.abs(f.cam.y - fay) <= 2,
-    'câmera acompanha o renascimento');
+  const fdx = f.cam.x - (f.heroi.x - f.janela.w / 2);
+  const fdy = f.cam.y - (f.heroi.y - f.janela.h / 2);
+  conf(Math.abs(fdx) <= 2 && Math.abs(fdy) <= 2,
+    'câmera acompanha o renascimento (dx=' + fdx.toFixed(1) +
+    ' dy=' + fdy.toFixed(1) + ')');
   Batalha.alternarPausa();
 }
+
 
 console.log('18) toque, resolução e escala responsiva');
 {
@@ -2550,6 +2551,11 @@ console.log('29) evento: o Gatuno (rouba, foge, resgate)');
   for (let i = 0; i < 6000 && !pegou; i++) {
     frame(1);
     pegou = p.stats.gatunos > 0;
+    if (i % 600 === 0) console.log('    [dbg gat] i=' + i + ' gat=' +
+      Batalha.info().gatuno + ' morto=' + Batalha.info().morto +
+      ' estado=' + Batalha.info().heroi.estado +
+      ' mapa=' + Batalha.info().mapa + ' onda=' + Batalha.info().onda +
+      ' pausada=' + Batalha.info().pausada);
   }
   Math.random = rnd;
   conf(pegou, 'alcança e derruba o Gatuno (prioridade na IA)');
@@ -2855,15 +2861,18 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
         f.destino) {
       fugas++;
       const d = f.destino;
-      // limites com margem 16 (mundo 384×268): fora disso = bug
-      if (d.x < 16 || d.x > 368 || d.y < 16 || d.y > 252) fora++;
+      // spec mapa-infinito R-INF-3: sem mundo, o teto é a DISTÂNCIA
+      // ao herói (FUGA_MAX = 96; folga p/ arredondamento) — era:
+      // limites com margem 16 no mundo 384×268
+      const ddx = d.x - f.heroi.x, ddy = d.y - f.heroi.y;
+      if (Math.sqrt(ddx * ddx + ddy * ddy) > 97) fora++;
       // evasão de cerco (spec ia-heroi): fuga nunca pousa em rocha
       if (sandbox.IA.celulaObst(d.x, d.y, 6)) emRocha++;
     }
   }
   conf(fugas > 500 && fora === 0,
-    'destino de fuga sempre dentro do mapa (' + fugas +
-    ' fugas, ' + fora + ' fora)');
+    'destino de fuga sempre perto do herói (' + fugas +
+    ' fugas, ' + fora + ' além de 96px)');
   // tolerância de 1%: a evasão já escolhe fora de rocha (ponto
   // arredondado), mas quando TODOS os candidatos estão bloqueados o
   // fallback é o slot de sempre (documentado na spec) — caso raro
