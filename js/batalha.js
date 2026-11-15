@@ -145,7 +145,7 @@ var Batalha = (function () {
   // como eventos na medição comparativa (T9: 6 mortes em 2400min).
   // Se a sim estolar, SOBE este número.
   var REGEN_MAX = 500;
-  var ESPERA_BASE = 4.0;      // respiro do mundo 1 (intacto)
+  var ESPERA_BASE = 2.0;      // respiro do mundo 1 (intacto)
   var ESPERA_PASSO = 1.1;     // + por mapa de profundidade
   var ESPERA_TRANSICAO = 8.0; // pós-chefe: a troca de mapa é o seu
                               // próprio tempo (não espera o respiro
