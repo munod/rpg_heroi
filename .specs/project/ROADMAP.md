@@ -19,6 +19,15 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
   clicável na bolsa
 - gate 708 confs · sanidade `ritmo 60`: mapa 1 em **30,3min**
 
+### v0.6.0 — 2026-11-15 (ver `CHANGELOG.md`) — segurança de placar e save
+- `ranking-antitrampa` — rules: score recalculado no servidor,
+  teto de progressão por tempo do projeto, `at` ±24h, `nivel ≤9500`
+  (**implantado e verificado ao vivo**: leitura 200 · paridade 403 ·
+  legítimo 200 · teto 403)
+- `save-assinado` — HMAC-SHA256 em JS puro nos saves de personagens
+  e de estado (rejeitado **e preservado**; migração sem janela)
+- gate **719 confs** · `ritmo 60` intacto (mapa 1 em 30,3min)
+
 ### v0.4.1 — 2026-11-14 (ver `CHANGELOG.md`)
 - `virada-ataque` — herói espelha o sprite/corte para o alvo
 - `ajustes` — ESPERA_BASE 8→4s (mantenedor, sem medição)
@@ -118,7 +127,7 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Série 2026-11 — em curso (ordem aprovada pelo mantenedor)
 
-0a. ✅ **`ranking-antitrampa`** *(não liberado — em `Unreleased`)* —
+0a. ✅ **`ranking-antitrampa`** —
     só rules (jogo intocado): **score recalculado no servidor**
     (espelho exato do `scoreDe`), **teto de progressão por tempo do
     projeto** (30 + min/100 desde 2026-11-01 — recalibrar com o
@@ -127,7 +136,7 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     (rede, fora do gate) sonda o que está implantado · limite
     honesto registrado: a 1ª marca por apelido é confiável (sem
     relógio por jogador — `resource` não expõe `createTime`).
-0b. ✅ **`save-assinado`** *(não liberado — em `Unreleased`)* —
+0b. ✅ **`save-assinado`** —
     **HMAC-SHA256 em JS puro** (`js/assinatura.js`; `crypto.subtle` não
     vale em `file://` e o sandbox tem whitelist — verificado contra o
     `crypto` do Node) assinando personagens **e** estado de batalha;

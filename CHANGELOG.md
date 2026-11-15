@@ -8,6 +8,52 @@ Versionamento [Semantic Versioning](https://semver.org/lang/pt-BR/) em
 As linhas citam os commits (`sha`) e a rastreabilidade requisito→commit
 vive em `.specs/features/`.
 
+## [Unreleased]
+
+## [0.6.0] — 2026-11-15
+
+### Security
+
+- **Ranking antitrampa: score e progressão validados no servidor (spec
+  `ranking-antitrampa`)** — auditoria prévia mostrou o buraco real: as
+  regras validavam só a *forma* e **`score` era escolhido pelo cliente**
+  (dá pra postar o score máximo sem jogar) e a key do Firebase é
+  pública **por design** (vai no bundle do jogo — manter o repo privado
+  não a esconde e ainda quebra o Pages no plano gratuito). A leva mexe
+  **só nas rules** (zero mudança no jogo): **paridade exata**
+  `score == mapa×100000 + onda×1000 + min(nivel,999)` (sem `min()` na
+  linguagem — identidade dos dois ramos, espelho de `Ranking.scoreDe`),
+  **teto de progressão por tempo do projeto** (`mapa ≤ 30 +
+  minutosDesde2026-11-01 / 100`, constante nomeada + fórmula de
+  recalibragem no arquivo — sem relógio por jogador: `resource` só
+  expõe `data/id/__name__`), **`at` fresco** (±24h / nunca no futuro)
+  e `nivel ≤ 9500` (teto do jogo). Testes: **conf nova** que trava a
+  identidade rules↔`scoreDe` em 8 casos de borda (se a fórmula mudar,
+  o teste avisa que as rules mudam junto) · **`node testes/regras.js`**
+  (rede, fora do gate) sonda as rules implantadas: leitura 200 ·
+  paridade violada → 403 · envio legítimo → 200 · `--teto` opcional.
+  Limite documentado: a **1ª marca de um apelido é confiável até o
+  teto** (eliminar exigiria identidade ou save autoritativo — opção C,
+  adiada).
+- **Save assinado: integridade do localStorage (spec `save-assinado`)**
+  — cada entrada de `rpg_personagens_v1` **e** de `rpg_estado_v1` sai
+  com `_s = HMAC-SHA256(JSON sem _s)` (`js/assinatura.js` novo —
+  SHA-256/HMAC **em JS puro**, porque `crypto.subtle` não é confiável
+  em `file://` e o sandbox dos testes tem whitelist; verificado contra
+  o `crypto` do Node em 10 casos). Com o marcador do storage ativo,
+  entrada adulterada **ou sem `_s`** é **rejeitada** — mas o dado
+  rejeitado **nunca é destruído** (fica intacto e todo `salvar`
+  preserva as entradas alheias ⇒ falso positivo não apaga save). Primeira
+  leitura sem marcador **migra re-escritando na hora** (sem janela em
+  que o save aceito vire rejeitado no boot seguinte). Export sai
+  **assinado** (transferência entre aparelhos valida — sem sal por
+  aparelho de propósito); import aceita JSON antigo sem assinatura com
+  aviso. Sonda `Salvar.rejeitados()` + `console.warn` por entrada.
+  **+10 confs = 719**: HMAC×Node, round-trip, adulteração→rejeição,
+  **preservação no storage**, migração, estado→null, limpeza. Limite
+  honesto: a chave vai no bundle (barreira p/ edição casual, não
+  segredo) e **o placar não depende daqui** (é a outra leva).
+
 ## [0.5.0] — 2026-11-15
 
 ### Added
@@ -98,50 +144,6 @@ vive em `.specs/features/`.
   vez de 121). Registro honesto: a "linha pontilhada" que eu atribuí
   ao chão era **texto de dano flutuante** no rasterizador — refutado
   por contagem de px e toggle de camada (lição no `STATE`).
-
-## [Unreleased]
-
-### Security
-
-- **Ranking antitrampa: score e progressão validados no servidor (spec
-  `ranking-antitrampa`)** — auditoria prévia mostrou o buraco real: as
-  regras validavam só a *forma* e **`score` era escolhido pelo cliente**
-  (dá pra postar o score máximo sem jogar) e a key do Firebase é
-  pública **por design** (vai no bundle do jogo — manter o repo privado
-  não a esconde e ainda quebra o Pages no plano gratuito). A leva mexe
-  **só nas rules** (zero mudança no jogo): **paridade exata**
-  `score == mapa×100000 + onda×1000 + min(nivel,999)` (sem `min()` na
-  linguagem — identidade dos dois ramos, espelho de `Ranking.scoreDe`),
-  **teto de progressão por tempo do projeto** (`mapa ≤ 30 +
-  minutosDesde2026-11-01 / 100`, constante nomeada + fórmula de
-  recalibragem no arquivo — sem relógio por jogador: `resource` só
-  expõe `data/id/__name__`), **`at` fresco** (±24h / nunca no futuro)
-  e `nivel ≤ 9500` (teto do jogo). Testes: **conf nova** que trava a
-  identidade rules↔`scoreDe` em 8 casos de borda (se a fórmula mudar,
-  o teste avisa que as rules mudam junto) · **`node testes/regras.js`**
-  (rede, fora do gate) sonda as rules implantadas: leitura 200 ·
-  paridade violada → 403 · envio legítimo → 200 · `--teto` opcional.
-  Limite documentado: a **1ª marca de um apelido é confiável até o
-  teto** (eliminar exigiria identidade ou save autoritativo — opção C,
-  adiada).
-- **Save assinado: integridade do localStorage (spec `save-assinado`)**
-  — cada entrada de `rpg_personagens_v1` **e** de `rpg_estado_v1` sai
-  com `_s = HMAC-SHA256(JSON sem _s)` (`js/assinatura.js` novo —
-  SHA-256/HMAC **em JS puro**, porque `crypto.subtle` não é confiável
-  em `file://` e o sandbox dos testes tem whitelist; verificado contra
-  o `crypto` do Node em 10 casos). Com o marcador do storage ativo,
-  entrada adulterada **ou sem `_s`** é **rejeitada** — mas o dado
-  rejeitado **nunca é destruído** (fica intacto e todo `salvar`
-  preserva as entradas alheias ⇒ falso positivo não apaga save). Primeira
-  leitura sem marcador **migra re-escritando na hora** (sem janela em
-  que o save aceito vire rejeitado no boot seguinte). Export sai
-  **assinado** (transferência entre aparelhos valida — sem sal por
-  aparelho de propósito); import aceita JSON antigo sem assinatura com
-  aviso. Sonda `Salvar.rejeitados()` + `console.warn` por entrada.
-  **+10 confs = 719**: HMAC×Node, round-trip, adulteração→rejeição,
-  **preservação no storage**, migração, estado→null, limpeza. Limite
-  honesto: a chave vai no bundle (barreira p/ edição casual, não
-  segredo) e **o placar não depende daqui** (é a outra leva).
 
 ## [0.4.1] — 2026-11-14
 
@@ -799,7 +801,8 @@ e deploy no GitHub Pages.
 - **Barras laterais no celular**: layout passou a seguir o aspecto da
   viewport (bug reportado por print) (`4c249e4`).
 
-[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/munod/rpg_heroi/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/munod/rpg_heroi/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/munod/rpg_heroi/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/munod/rpg_heroi/compare/v0.3.0...v0.4.0
