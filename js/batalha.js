@@ -975,8 +975,18 @@ var Batalha = (function () {
       soltaItens(en);
     }
     // dentro do mapa o respiro escala com a profundidade; na onda 100
-    // (chefe) ele é fixo — a troca de mapa tem seu próprio tempo
-    tOnda = ehBoss(onda) ? ESPERA_TRANSICAO : esperaOnda();
+    // (chefe) ele é ZERO (spec respiro R-RES-3): a espera da troca de
+    // mapa é a do passaMapa (ESPERA_TRANSICAO) — antes os DOIS 8s
+    // somavam 16s de campo vazio no troco ("o personagem dorme").
+    // B2: o clear vira beat de decisão — avisa quanto falta e o que já
+    // dá pra distribuir. Chefe não avisa aqui (BOSS DERROTADO! + o
+    // MAPA N do passaMapa já cobrem o momento).
+    tOnda = ehBoss(onda) ? 0 : esperaOnda();
+    if (inimigos.length === 0 && !ehBoss(onda) && !heroi.morto) {
+      var pts = Game.personagem.pontos || 0;
+      aviso('ONDA LIMPA · ' + Math.ceil(tOnda) + 's' +
+        (pts > 0 ? ' · +' + UI.abrev(pts) + ' PONTOS' : ''), '#8ce08c');
+    }
   }
 
   // Drop do abate: equipa automaticamente se for melhor que o equipado;
@@ -1937,6 +1947,14 @@ var Batalha = (function () {
       });
     UI.text('Onda ' + onda + ' (' + inimigos.length + ')',
       vx + vw - 4 * k, vy + 7 * k, { align: 'right', color: '#e8c86a' });
+    // B1 (spec respiro R-RES-1): contagem visível do respiro — sem ela
+    // a espera parece infinita ("dorme entre as ondas"); antecipação >
+    // incerteza. Mesmo x da linha de onda, uma linha abaixo.
+    if (inimigos.length === 0 && tOnda > 0 && !heroi.morto) {
+      UI.text('PRÓXIMA ONDA EM ' + Math.max(1, Math.ceil(tOnda)) + 's',
+        vx + vw - 4 * k, vy + 17 * k,
+        { align: 'right', color: '#8ce08c' });
+    }
 
     if (heroi.morto) {
       ctx.fillStyle = 'rgba(5,3,10,0.5)';
@@ -1980,6 +1998,9 @@ var Batalha = (function () {
       gatuno: temE('gatuno'),
       dano: (heroi && heroi.stats) ? Math.round(heroi.stats.dano) : 0,
       onda: onda,
+      // sonda do respiro (spec respiro R-RES-1): tempo até a próxima
+      // onda p/ teste — 0 = onda em campo ou spawn em curso
+      espera: Math.max(0, tOnda),
       janela: { w: VW, h: VH },
       mundo: { w: MW, h: MH },
       cam: { x: Math.round(cam.x), y: Math.round(cam.y) },

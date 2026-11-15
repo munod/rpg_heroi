@@ -5306,6 +5306,71 @@ console.log('50) Virada do herói: facing aplica o espelho para o alvo');
   conf(dir, 'alvo à direita → herói volta (facing 1)');
 }
 
+console.log('51) respiro: contagem no HUD, beat do clear e fim do delay duplo');
+{
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // cena limpa + herói forte p/ clear rápido (mesmo padrão da 12)
+  p.vitoria = false;
+  if (typeof Cutscene !== 'undefined') Cutscene.fecha();
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+  p.atributos.for = 999;
+  p.atributos.con = 999;
+  let esp = 0;
+  while (Batalha.info().morto && esp < 900) { frame(1); esp++; }
+  Batalha.restaurarMapa(1);
+  Batalha.restaurarOnda(3);
+  esp = 0;
+  while (Batalha.info().onda < 3 && esp < 600) { frame(1); esp++; }
+  conf(Batalha.info().onda === 3, 'onda 3 em campo antes do teste');
+
+  // --- a/b: o respiro expõe espera e o HUD mostra a contagem (R-RES-1)
+  jogoCanvas._textos = [];
+  for (let i = 0; i < 3000 && Batalha.info().inimigos > 0; i++) frame(1);
+  conf(Batalha.info().inimigos === 0, 'onda 3 limpa → respiro em curso');
+  conf(Batalha.info().espera > 0, 'info().espera > 0 durante o respiro');
+  jogoCanvas._textos = [];
+  frame(1);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('PRÓXIMA ONDA') >= 0),
+    'HUD mostra a contagem da próxima onda no respiro');
+
+  // --- b: o clear dispara o beat de decisão (R-RES-2)
+  conf((jogoCanvas._textos || []).length >= 0, 'reset do _textos p/ 2b'); // âncora
+  Batalha.restaurarOnda(4);
+  esp = 0;
+  while (Batalha.info().onda < 4 && esp < 600) { frame(1); esp++; }
+  jogoCanvas._textos = [];
+  for (let i = 0; i < 3000 && Batalha.info().inimigos > 0; i++) frame(1);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('ONDA LIMPA') >= 0),
+    'clear comum avisa ONDA LIMPA com a contagem');
+
+  // --- c: morte do chefe NÃO dispara o beat e NÃO tem delay duplo
+  // (R-RES-3): do kill ao mapa ≥ 2 são 0 frames de campo vazio — antes
+  // eram ~479 (8s de tOnda) + 8s do passaMapa somando 16s de vazio
+  Batalha.restaurarMapa(1);
+  Batalha.restaurarOnda(100);
+  esp = 0;
+  while (!(Batalha.info().onda === 100 && Batalha.info().boss) && esp < 600) {
+    frame(1); esp++;
+  }
+  conf(Batalha.info().boss === true, 'chefe do mapa 1 em campo');
+  jogoCanvas._textos = [];
+  let framesVazio = 0, passou = false;
+  for (let i = 0; i < 6000 && !passou; i++) {
+    frame(1);
+    const f = Batalha.info();
+    if (f.mapa >= 2) passou = true;
+    else if (f.onda === 100 && f.inimigos === 0 && !f.boss) framesVazio++;
+  }
+  conf(passou, 'chefe derrubado → mapa 2');
+  conf(!(jogoCanvas._textos || []).some(t => t.indexOf('ONDA LIMPA') >= 0),
+    'morte do chefe NÃO dispara ONDA LIMPA (o passaMapa assume)');
+  conf(framesVazio <= 5,
+    'sem delay duplo: ' + framesVazio +
+    ' frame(s) de vazio antes da troca (eram ~479+479)');
+}
+
 console.log('');
 if (falhas) {
   console.log(falhas + ' FALHA(S)');
