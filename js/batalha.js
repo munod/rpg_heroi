@@ -129,8 +129,17 @@ var Batalha = (function () {
   // Leva balance-dopamina (R-BAL-3): 1,90 → 1,55 — TTK de esponja
   // (monstro demais pra morrer) e produto do cliff 0,0855 → 0,0698
   // (folga real: ≤0,086 passa). Medir ttk/mortes/estol p/ mudar.
-  var ESC_HP = 1.55;      // vida do inimigo por onda
-  var ESC_DMG = 0.045;    // dano do inimigo por onda
+  // R-BAL-6: 1,55 → 1,25 — com o tema por mapa (R-INF-9) os mobs dos
+  // primeiros mapas são mais duros e o ttk voltou a 2,48; em4 seeds
+  // ×240min o1,25 devolveu a progressão à faixa do baseline (nv725
+  // vs725-773) com ttk2,32 ≈ pré-leva3 (2,21). Produto do cliff
+  // 0,0463 = folga máxima.
+  var ESC_HP = 1.25;      // vida do inimigo por onda
+  // R-BAL-6: dano por monstro compensa a densidade (k0,75 = teto11 no
+  // mundo10 = +22% de monstros vs o baseline k0,5/teto9): perigo TOTAL
+  // do fim = 11×0,037 = 0,407 ≈ 9×0,045 = 0,405 do baseline medido
+  // (222,5h sem estol). A progressão da sim completa manda (R-BAL-4c).
+  var ESC_DMG = 0.037;    // dano do inimigo por onda
   // Respiro entre ondas — ALAVANCA DE DURAÇÃO da campanha (spec mundos
   // R-MUN-7). Medido (ritmo, 4 configs): o nº de monstros NÃO muda a
   // duração (k=1/3/5 → todos ~21 mapas/600min; só o perigo muda — k=10
@@ -146,11 +155,17 @@ var Batalha = (function () {
   // pós-teto (R-MUN-7 emendado). No modo infinito (mapa > 100) o
   // rampa trava no min(mapa, 100) e o teto completa — sem eles
   // cresceria sem limite (mapa 1000 = 18min/onda).
-  // Teto da regen (spec gestao-atributos): 500 hp/s. Early intocado
+  // Teto da regen (spec gestao-atributos): era 500 hp/s. Early intocado
   // (4-20 hp/s); no late corta 2.800 → 500. Critério: manter mortes
   // como eventos na medição comparativa (T9: 6 mortes em 2400min).
   // Se a sim estolar, SOBE este número.
-  var REGEN_MAX = 500;
+  // COMPENSAÇÃO DA LEVA DOPAMINA (medição R-BAL-6): o ESPERA_TETO 45s
+  // encolheu a janela de cura do fim (45×500 = 22,5k vs 113s×500 =
+  // 56,5k sem teto) e a sim completa ESTOLOU no mapa 97 (1.357
+  // mortes). Com 1250 a cura por respiro volta a 45×1250 = 56k ≈ a
+  // janela histórica estável; o cap só pega com HP >31k (só o late —
+  // early/mid idênticos aos medidos).
+  var REGEN_MAX = 1250;
   var ESPERA_BASE = 2.0;      // respiro do mundo 1 (intacto)
   var ESPERA_PASSO = 1.1;     // + por mapa de profundidade
   // Teto do respiro (spec balance-dopamina R-BAL-1, decisão do
