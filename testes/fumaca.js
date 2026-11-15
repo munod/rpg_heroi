@@ -669,17 +669,18 @@ console.log('12) chefe do fim de mapa e avanço de mapa');
   p.atributos.for = 999;
   p.atributos.con = 999;
   conf(Batalha.info().mapa === 1, 'jogo no mapa 1');
-  // spec mundos: tema por MUNDO com ciclo (mundo 11 = tema do mundo 1)
+  // spec mundos: mundo()/noMundo() intactos + tema POR MAPA
+  // (spec mapa-infinito R-INF-9 — era por mundo; emenda na spec mundos)
   conf(sandbox.Mapas.mundo(1) === 1 && sandbox.Mapas.mundo(10) === 1 &&
        sandbox.Mapas.mundo(11) === 2 && sandbox.Mapas.mundo(101) === 11,
     'mundo() = ceil(mapa/10) (campanha 10×10)');
   conf(sandbox.Mapas.noMundo(7) === 7 && sandbox.Mapas.noMundo(13) === 3,
     'noMundo() = posição do mapa dentro do mundo (1-10)');
-  conf(sandbox.Mapas.info(31) !== sandbox.Mapas.info(21),
-    'mundo 4 tem tema PRÓPRIO (fix do chão travado no tema 3)');
-  conf(sandbox.Mapas.info(101) === sandbox.Mapas.info(1) &&
-       sandbox.Mapas.info(99) === sandbox.Mapas.info(91),
-    'modo infinito: mundos ciclam (mundo 11 = tema do mundo 1)');
+  conf(sandbox.Mapas.info(1) !== sandbox.Mapas.info(2),
+    'mapas vizinhos têm temas distintos (ciclo por mapa)');
+  conf(sandbox.Mapas.info(11) === sandbox.Mapas.info(1) &&
+       sandbox.Mapas.info(101) === sandbox.Mapas.info(1),
+    'ciclo de 10: mapa 11/101 repetem o tema do mapa 1');
   conf(sandbox.Mapas.forca(99) > sandbox.Mapas.forca(1),
     'forca segue escalando no modo infinito');
 
@@ -4107,23 +4108,25 @@ console.log('41) monstros novos: espécies com skill, ranged, comum intacto e ev
        T.drenador.hp <= T.aranha.hp,
     'stats MENORES que o raro antigo (a mecânica já é a ameaça)');
 
-  // --- 2) comum intacto nos 10 + raro novo só nos mundos 5-10
+  // --- 2) comum intacto nos 10 + raro novo só nos temas 5-9
+  // (varre os 10 TEMAS — com o ciclo por mapa de10 (R-INF-9) info(m)
+  // percorre LISTA[0..9] na ordem de sempre)
   const comuns = [];
   const raros = [];
   for (let m = 1; m <= 10; m++) {
-    const t = Mapas.info(m * 10).inimigos;
+    const t = Mapas.info(m).inimigos;
     comuns.push(t.comum.tipo);
     raros.push(t.raro.tipo);
   }
   conf(JSON.stringify(comuns) === JSON.stringify(
     ['slime', 'slime', 'aranha', 'slime', 'slime',
      'morcego', 'visgo', 'morcego', 'visgo', 'aranha']),
-    'o COMUM dos 10 mundos não mudou (progressão medida intacta): ' +
+    'o COMUM dos 10 temas não mudou (progressão medida intacta): ' +
     comuns.join(','));
   conf(JSON.stringify(raros.slice(4)) === JSON.stringify(
     ['regenerador', 'atirador', 'regenerador', 'atirador',
      'drenador', 'drenador']),
-    'mundos 5-10 ganham as espécies novas como RARO: ' +
+    'temas 5-9 ganham as espécies novas como RARO: ' +
     raros.slice(4).join(','));
 
   // --- 3) SKILLS PURAS (função exportada = fonte única do update)
@@ -4473,10 +4476,10 @@ console.log('42) cutscenes: fronteiras de mundo, eventos e mapa do universo');
   const tu = jogoCanvas._textos;
   conf(tu.some(x => x.indexOf('MAPA DO UNIVERSO') >= 0),
     'título MAPA DO UNIVERSO na tela');
-  conf(tu.some(x => x.indexOf('Ninho Rubro') >= 0),
-    'mundo atual do save (3) com nome');
-  conf(tu.some(x => x.indexOf('Aranha Matriarca') >= 0),
-    'chefe do mundo atual na tela');
+  conf(tu.some(x => x.indexOf('Pântano Venenoso') >= 0),
+    'tema do mapa do save (25 → ciclo por mapa = Pântano) com nome');
+  conf(tu.some(x => x.indexOf('Baba do Pântano') >= 0),
+    'chefe do tema atual na tela');
   conf(tu.some(x => x.indexOf('mapa 25') >= 0),
     'progresso do save (mapa 25) na tela');
   clique(Math.round(Game.W / 2), 358);   // botão Voltar (W/2-70,340,140,36)

@@ -191,12 +191,15 @@ var Mapas = (function () {
     return ((mapaValido(n) - 1) % MAPAS_POR_MUNDO) + 1;
   }
 
-  // Tema do mapa n — por MUNDO, ciclando no modo infinito (mundo 11 →
-  // tema do mundo 1). Cada mundo tem tema próprio (fix do chão do
-  // mundo 4+: era travado no tema 3).
+  // Tema do mapa n — POR MAPA, ciclando a cada 10 (spec mapa-infinito
+  // R-INF-9: "alternando cor/textura/mobs conforme vai passando de
+  // mapa" — era por MUNDO, emenda na spec mundos). Mapa 11 = tema do
+  // mapa 1; no infinito o ciclo segue (100 → 110 → ...). Cada tema
+  // traz chão E mobs próprios (info().inimigos), então a troca de
+  // mapa já muda os dois.
   function info(n) {
-    var m = mundo(n);
-    return LISTA[(m - 1) % LISTA.length];
+    var m = (typeof n === 'number' && isFinite(n)) ? Math.floor(n) : 1;
+    return LISTA[((m - 1) % LISTA.length + LISTA.length) % LISTA.length];
   }
 
   // Multiplicador do mapa n — hoje só nos DROPs de item (itens.js). A

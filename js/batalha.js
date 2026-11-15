@@ -6,7 +6,6 @@ var Batalha = (function () {
   var cam = { x: 0, y: 0 };     // posição da janela no mundo
   var morte = { x: 0, y: 0 };   // onde o herói caiu (inimigos miram aqui)
 
-  var chao = null;
   var obst = [];
   var heroi = null;
   var inimigos = [];
@@ -187,52 +186,63 @@ var Batalha = (function () {
   }
 
   // ------------------------------------------------------------ cenário
-  // Terreno procedural: manchas orgânicas amostradas do campo de Perlin
-  // (sede do mapa) e elementos apontados por sorteio com semente — mesmo
-  // mapa, mesmo chão; mapa novo, chão novo (inclusive no modo infinito).
-  function constroiChao(tema, semente) {
-    chao = document.createElement('canvas');
-    chao.width = MW;
-    chao.height = MH;
-    var c = chao.getContext('2d');
+  // Terreno procedural INFINITO por chunks (spec mapa-infinito R-INF-5):
+  // cada chunk 384×268 é renderizado SOB DEMANDA com a mesma receita do
+  // chão antigo (grid + manchas do Perlin absoluto + flores), SEM
+  // strokeRect de borda (não há borda). Manchas amostram a coordenada
+  // ABSOLUTA (Perlin contínuo entre chunks); flores/pedrinhas são
+  // sorteadas POR CHUNK (id determinístico = mapa + chunk) — mesmo
+  // mapa + mesmo chunk = mesmo chão. Cache com teto; invalidado na
+  // troca de mapa (garanteCenario).
+  var chaoCache = {};
+  var CHAO_MAX = 36;              // teto do cache (3×3 ativo + folga)
 
-    c.fillStyle = tema.chao.base;
+  function chunkDe(cx, cy) {
+    var chave = cx + ',' + cy;
+    if (chaoCache[chave]) return chaoCache[chave];
+    var tem = Mapas.info(mapa);
+    var ch = document.createElement('canvas');
+    ch.width = MW;
+    ch.height = MH;
+    var c = ch.getContext('2d');
+    var ox = cx * MW, oy = cy * MH;   // origem absoluta do chunk
+
+    c.fillStyle = tem.chao.base;
     c.fillRect(0, 0, MW, MH);
 
+    // grid do xadrez: coordenada LOCAL — como o chunk tem múltiplo de
+    // 16, a paridade casa com a do vizinho (sem emenda visível)
     var T = 16;
     var x, y, i;
     for (y = 0; y < MH; y += T) {
       for (x = 0; x < MW; x += T) {
-        c.fillStyle = ((x / T + y / T) % 2 === 0) ? tema.chao.par : tema.chao.imp;
+        c.fillStyle = ((x / T + y / T) % 2 === 0) ? tem.chao.par : tem.chao.imp;
         c.fillRect(x, y, T, T);
       }
     }
 
-    // manchas em duas faixas do ruído (altas/baixas): remendos orgânicos
-    // ligados uns aos outros no lugar de elipses soltas aleatórias
+    // manchas em duas faixas do ruído (altas/baixas) — coordenada
+    // ABSOLUTA: o campo do Perlin é contínuo entre chunks
     var passo = 4;
     for (y = 0; y < MH; y += passo) {
       for (x = 0; x < MW; x += passo) {
-        var v = Perlin.valor(x / 56, y / 56);
-        if (v >= 0.62) c.fillStyle = tema.chao.mancha[0];
-        else if (v <= 0.38) c.fillStyle = tema.chao.mancha[1];
+        var v = Perlin.valor((ox + x) / 56, (oy + y) / 56);
+        if (v >= 0.62) c.fillStyle = tem.chao.mancha[0];
+        else if (v <= 0.38) c.fillStyle = tem.chao.mancha[1];
         else continue;
         c.fillRect(x, y, passo, passo);
       }
     }
 
-    // flores em cachos: faixa aceita MAIS LARGA (0,45..0,75) + 1 vizinho
-    // por flor — as 30 saem em ~33 tentativas (antes 121) e caem mais
-    // soltas pelo mapa. (Medição da leva: a "linha pontilhada" que
-    // aparecia nas screenshots era TEXTO de dano flutuante — o
-    // rasterizador de teste desenha glifo como bloco — e não o chão.)
-    var flores = tema.chao.flores;
-    var rng = Perlin.sorteio(semente * 3 + 1);
+    // flores em cachos + pedrinhas/rachaduras: sorteio POR CHUNK (a
+    // densidade por área é a do chão antigo: 30 flores/chunk)
+    var flores = tem.chao.flores;
+    var rng = Perlin.sorteio(mapa * 7919 + (cx + 64) * 131 + (cy + 64));
     var tent = 0;
     for (i = 0; flores.length && i < 30 && tent < 500; tent++) {
       var fx = Math.floor(rng() * MW);
       var fy = Math.floor(rng() * MH);
-      var fa = Perlin.valor(fx / 40 + 11, fy / 40 + 5);
+      var fa = Perlin.valor((ox + fx) / 40 + 11, (oy + fy) / 40 + 5);
       if (fa < 0.45 || fa > 0.75) continue;
       c.fillStyle = flores[i % flores.length];
       c.fillRect(fx, fy, 2, 2);
@@ -241,43 +251,51 @@ var Batalha = (function () {
       i++;
     }
 
-    // pedrinhas e rachaduras: textura dura em fillRect puro
-    c.fillStyle = tema.chao.borda2;
+    c.fillStyle = tem.chao.borda2;
     for (i = 0; i < 26; i++) {
       c.fillRect(Math.floor(rng() * MW), Math.floor(rng() * MH),
         rng() < 0.35 ? 2 : 1, 1);
     }
-    c.fillStyle = tema.chao.imp;
+    c.fillStyle = tem.chao.imp;
     for (i = 0; i < 20; i++) {
       c.fillRect(Math.floor(rng() * MW), Math.floor(rng() * MH), 2, 1);
     }
+    // SEM strokeRect de borda (spec R-INF-5: não há bordas)
 
-    c.strokeStyle = tema.chao.borda;
-    c.lineWidth = 8;
-    c.strokeRect(4, 4, MW - 8, MH - 8);
-    c.strokeStyle = tema.chao.borda2;
-    c.lineWidth = 2;
-    c.strokeRect(4, 4, MW - 8, MH - 8);
+    if (Object.keys(chaoCache).length >= CHAO_MAX) chaoCache = {};
+    chaoCache[chave] = ch;
+    return ch;
   }
 
-  // Obstáculos proceduralmente posicionados: pontos sorteados na base
-  // 192×134 (mesma convenção das coordenadas antigas de mapas.js) filtrados
-  // pelo ruído de Perlin — só entram em "clareira" do campo, sempre longe
-  // do centro (spawn/renascimento do herói) e afastados uns dos outros.
-  // Tipos e densidade vêm do tema; a posição, da semente do mapa.
-  function constroiObst(tema, semente) {
+  // Obstáculos proceduralmente posicionados POR CHUNK (spec
+  // mapa-infinito R-INF-6): pontos sorteados na base 192×134 local,
+  // filtrados pelo ruído de Perlin em COORDENADA ABSOLUTA (clareira
+  // contínua entre chunks). Centro livre por chunk (spawn do chunk 0 e
+  // renascimento caem em clareira) e afastados uns dos outros: 30 base
+  // = 60 mundo ≥ o contrato de 55 da seção 20; a margem [12,176] base
+  // garante ≥56 mundo ENTRE chunks vizinhos. Densidade/tipos vêm do
+  // tema; a posição, da semente mapa+chunk (mesmo chunk = mesmos
+  // obstáculos em qualquer sessão — determinismo preservado).
+  var obstCache = {};                  // 'cx,cy' → lista do chunk
+  var obstCx = null, obstCy = null;    // chunk dono da lista ativa
+
+  function obstChunk(cx, cy) {
+    var chave = cx + ',' + cy;
+    if (obstCache[chave]) return obstCache[chave];
+    var tem = Mapas.info(mapa);
     var ex = MW / 192, ey = MH / 134;
-    var rng = Perlin.sorteio(semente * 7 + 29);
-    var tipos = tema.obst.tipos;
-    var alvo = tema.obst.qtd;
+    var rng = Perlin.sorteio(
+      mapa * 7919 + (cx + 64) * 131 + (cy + 64) + 5000);
+    var tipos = tem.obst.tipos;
+    var alvo = tem.obst.qtd;
     var feitos = [];
-    obst = [];
+    var out = [];
     var tent = 0;
-    while (obst.length < alvo && tent < 600) {
+    while (out.length < alvo && tent < 600) {
       tent++;
-      var x = 12 + rng() * 168;         // base 192 com folga de borda
-      var y = 12 + rng() * 110;         // base 134
-      // centro livre: onde o herói nasce e onde o renascimento cai no pior caso
+      var x = 12 + rng() * 164;         // margem nova [12,176] base
+      var y = 12 + rng() * 106;         // [12,118] base
+      // centro livre do CHUNK (clareira por região)
       if (Math.abs(x - 96) < 36 && Math.abs(y - 67) < 32) continue;
       var perto = false;
       for (var i = 0; i < feitos.length; i++) {
@@ -285,30 +303,60 @@ var Batalha = (function () {
         if (ddx * ddx + ddy * ddy < 30 * 30) { perto = true; break; }
       }
       if (perto) continue;
-      // clareira do ruído (relaxada depois de 400 tentativas: o tema tem
-      // que ter a densidade mínima, mesmo num campo desfavorável)
-      if (tent < 400 && Perlin.valor(x / 48 + 3, y / 48 + 9) < 0.42) continue;
-      // vegetação nas altas do ruído, pedra nas baixas (quando há as duas)
-      var arvore = tipos.length > 1 && Perlin.valor(x / 30 + 5, y / 30 + 5) > 0.5;
+      // clareira do ruído em coordenada ABSOLUTA (relaxada depois de
+      // 400 tentativas: o tema tem que ter a densidade mínima)
+      var ax = cx * 192 + x, ay = cy * 134 + y;
+      if (tent < 400 && Perlin.valor(ax / 48 + 3, ay / 48 + 9) < 0.42) {
+        continue;
+      }
+      // vegetação nas altas do ruído, pedra nas baixas (absoluto)
+      var arvore = tipos.length > 1 &&
+        Perlin.valor(ax / 30 + 5, ay / 30 + 5) > 0.5;
       var tipo = arvore ? 'tree' : tipos[tipos.length - 1];
       feitos.push({ x: x, y: y });
-      obst.push({
-        x: x * ex, y: y * ey,
+      out.push({
+        x: ax * ex, y: ay * ey,
         r: tipo === 'tree' ? 7 : 5,
         tipo: tipo,
         // âncora do sprite: árvore sobe 6, pedra 4 (convenção antiga)
-        cx: x * ex, cy: (y + (tipo === 'tree' ? -6 : -4)) * ey
+        cx: ax * ex, cy: (ay + (tipo === 'tree' ? -6 : -4)) * ey
       });
     }
+    if (Object.keys(obstCache).length >= 36) obstCache = {};
+    obstCache[chave] = out;
+    return out;
   }
 
-  // (re)constrói chão e obstáculos quando o mapa muda
+  // Lista ATIVA = 3×3 chunks em volta do herói (raio cobre a janela +
+  // o anel de spawn 110..132px). Reconstruída quando o herói muda de
+  // chunk ou o mapa muda — colideObst/resolve/desenho leem obst[].
+  function atualizaObstAtivos() {
+    if (!heroi) return;
+    var hx = Math.floor(heroi.x / MW), hy = Math.floor(heroi.y / MH);
+    if (obstCx === hx && obstCy === hy) return;
+    obstCx = hx; obstCy = hy;
+    var out = [];
+    for (var dy = -1; dy <= 1; dy++) {
+      for (var dx = -1; dx <= 1; dx++) {
+        var l = obstChunk(hx + dx, hy + dy);
+        for (var i = 0; i < l.length; i++) out.push(l[i]);
+      }
+    }
+    obst = out;
+  }
+
+  // (re)constrói cenário quando o mapa muda: limpa os caches de chunks
+  // (chão e obstáculos são gerados sob demanda — spec mapa-infinito
+  // R-INF-5/6) e reconstrói a lista ativa na hora (o teste lê
+  // info().obst sem rodar frame)
   function garanteCenario() {
     if (cenarioMapa === mapa) return;
     var tem = Mapas.info(mapa);
     Perlin.definirSemente(mapa);   // terreno/obstáculos = f(mapa)
-    constroiChao(tem, mapa);
-    constroiObst(tem, mapa);
+    chaoCache = {};
+    obstCache = {};
+    obstCx = null; obstCy = null;
+    atualizaObstAtivos();
     cenarioMapa = mapa;
   }
 
@@ -1656,6 +1704,9 @@ var Batalha = (function () {
   // ausência (progresso offline) em jogo.js não é tempo jogado
   function atualizar(dt, contaTempo) {
     if (!heroi) return;
+    atualizaObstAtivos();      // lista ativa = 3×3 chunks do herói
+                               // (spec mapa-infinito R-INF-6 — antes
+                               // dos resolves deste frame)
     atualizaCamera(dt);        // é apresentação: segue mesmo pausada
     if (pausada) return;
     // hit-stop antes de tudo (doc): congela mundo E partículas — o
@@ -1664,7 +1715,7 @@ var Batalha = (function () {
     // influence map: ocupação repintada no TOPO do frame, antes do
     // herói (atualizaHeroi) e dos monstros (atualizaInimigos) — os
     // dois leem a pintura corrente (spec ia-heroi / ia-monstros)
-    IA.pintaMapa(inimigos);
+    IA.pintaMapa(inimigos, heroi.x, heroi.y);
     if (contaTempo) stat('tempo', dt);
 
 
@@ -1899,7 +1950,15 @@ var Batalha = (function () {
     var so = Efeitos.shakeOffset();
     if (so) ctx.translate(so.x, so.y);
 
-    ctx.drawImage(chao, 0, 0);
+    // terreno: chunks visíveis sob demanda (1-4 por frame — a janela
+    // 192×134 cabe em no máximo 2×2 chunks de 384×268)
+    var cx0 = Math.floor(cam.x / MW), cy0 = Math.floor(cam.y / MH);
+    var cx1 = Math.floor((cam.x + VW) / MW), cy1 = Math.floor((cam.y + VH) / MH);
+    for (var icy = cy0; icy <= cy1; icy++) {
+      for (var icx = cx0; icx <= cx1; icx++) {
+        ctx.drawImage(chunkDe(icx, icy), icx * MW, icy * MH);
+      }
+    }
     Efeitos.desenharBaixo(ctx);   // anéis no chão, atrás das entidades
 
     // profundidade: obstáculos e entidades ordenados pelos pés

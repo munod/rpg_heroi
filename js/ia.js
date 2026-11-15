@@ -294,12 +294,15 @@ var IA = (function () {
   }
 
   // ------------------------------------------------ caminho (A* + reta)
-  // Mundo 384×268 em células de 16px = 24×17 = 408 nós — A* é instantâneo.
-  // Só é chamado quando a LINHA RETA está bloqueada (ver batalha.moverPara)
-  // e a entidade é esperta o bastante; burros continuam na reta e escorregam
-  // na colisão (comportamento "zumbi" proposital e barato).
+  // Janela 24×17 de células de 16px = 384×272, ANCORADA NA CÉLULA DA
+  // ENTIDADE que chama (spec mapa-infinito R-INF-7 — era grade absoluta
+  // do mundo, que colapsava p/ a origem longe do 0). A* é instantâneo.
+  // Só é chamado quando a LINHA RETA está bloqueada (ver
+  // batalha.moverPara) e a entidade é esperta o bastante; burros
+  // continuam na reta e escorregam na colisão (comportamento "zumbi"
+  // proposital e barato).
   var G = 16;
-  var COLS = 24, LINHAS = 17;          // ceil(384/16), ceil(268/16)
+  var COLS = 24, LINHAS = 17;          // janela rolante (era ceil do mundo)
   var DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1],
               [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
@@ -327,16 +330,20 @@ var IA = (function () {
   // null = sem caminho (aí quem chamou segue na reta e escorrega).
   function caminho(x1, y1, x2, y2, raio) {
     if (linhaLivre(x1, y1, x2, y2, raio)) return null;
-    var si = Math.floor(x1 / G), sj = Math.floor(y1 / G);
-    var ti = Math.floor(x2 / G), tj = Math.floor(y2 / G);
-    si = clamp(si, 0, COLS - 1); sj = clamp(sj, 0, LINHAS - 1);
-    ti = clamp(ti, 0, COLS - 1); tj = clamp(tj, 0, LINHAS - 1);
+    // origem da janela rolante: célula da entidade − metade da grade
+    var oi0 = Math.floor(x1 / G) - (COLS >> 1);
+    var oj0 = Math.floor(y1 / G) - (LINHAS >> 1);
+    var si = clamp(Math.floor(x1 / G) - oi0, 0, COLS - 1);
+    var sj = clamp(Math.floor(y1 / G) - oj0, 0, LINHAS - 1);
+    var ti = clamp(Math.floor(x2 / G) - oi0, 0, COLS - 1);
+    var tj = clamp(Math.floor(y2 / G) - oj0, 0, LINHAS - 1);
 
     var bloq = [];                      // memo por célula (null = sem testar)
     function ocupada(ci, cj) {
       var idx = cj * COLS + ci;
       if (bloq[idx] === undefined) {
-        bloq[idx] = Batalha.colideObst(ci * G + G / 2, cj * G + G / 2, raio);
+        bloq[idx] = Batalha.colideObst((ci + oi0) * G + G / 2,
+                                       (cj + oj0) * G + G / 2, raio);
       }
       return bloq[idx];
     }
@@ -422,7 +429,7 @@ var IA = (function () {
     var guarda2 = 0;
     while (cur !== orig && cur >= 0 && guarda2++ < 900) {
       var wi = cur % COLS, wj = (cur / COLS) | 0;
-      out.push({ x: wi * G + G / 2, y: wj * G + G / 2 });
+      out.push({ x: (wi + oi0) * G + G / 2, y: (wj + oj0) * G + G / 2 });
       cur = veio[cur];
     }
     if (cur < 0) return null;
@@ -432,27 +439,31 @@ var IA = (function () {
   }
 
   // --------------------------- influence map + flocking (ia-monstros)
-  // Mapa de influência do mundo: grade de 8px (48×34 = 1632 células —
-  // resolução para discriminar os candidatos do anel de 11px, que ficam
-  // ~5,7px entre si; a grade do A* continua em 16px). A camada de
-  // OCUPAÇÃO é repintada por frame (monstros por célula); obstáculos
-  // são consulta DIRETA por candidato com o raio da entidade — sem memo
-  // entre frames, para nunca ficar stale entre mapas (o A* usa memo por
-  // chamada: mesmo princípio).
+  // Mapa de influência: grade de 8px (48×34 = 1632 células — resolução
+  // para discriminar os candidatos do anel de 11px, que ficam ~5,7px
+  // entre si; a grade do A* continua em 16px). JANELA ROLANTE ancorada
+  // no herói (spec mapa-infinito R-INF-8 — era grade absoluta do
+  // mundo): repintada por frame no topo de atualizar; obstáculos são
+  // consulta DIRETA por candidato com o raio da entidade — sem memo
+  // entre frames, para nunca ficar stale entre mapas (o A* usa memo
+  // por chamada: mesmo princípio). Sem hx/hy (fixtures de teste) a
+  // origem é (0,0) — cobre o mapa clássico.
   var IG = 8;
-  var ICOLS = 48, ILINHAS = 34;         // ceil(384/8), ceil(268/8)
+  var ICOLS = 48, ILINHAS = 34;         // janela rolante (era ceil do mundo)
   var mapaOcup = new Array(ICOLS * ILINHAS).fill(0);
+  var inflOx = 0, inflOy = 0;           // célula absoluta do canto
 
   function idxInfl(x, y) {
-    var ci = Math.floor(x / IG), cj = Math.floor(y / IG);
+    var ci = Math.floor(x / IG) - inflOx, cj = Math.floor(y / IG) - inflOy;
     if (ci < 0) ci = 0; else if (ci >= ICOLS) ci = ICOLS - 1;
     if (cj < 0) cj = 0; else if (cj >= ILINHAS) cj = ILINHAS - 1;
     return cj * ICOLS + ci;
   }
 
-  // repinta a ocupação — chamada no topo de atualizaInimigos, antes do
-  // laço (cada frame os monstros estão onde estão)
-  function pintaMapa(inimigos) {
+  // repinta a ocupação — chamada no topo de atualizar, antes do laço
+  function pintaMapa(inimigos, hx, hy) {
+    inflOx = (typeof hx === 'number') ? Math.floor(hx / IG) - (ICOLS >> 1) : 0;
+    inflOy = (typeof hy === 'number') ? Math.floor(hy / IG) - (ILINHAS >> 1) : 0;
     for (var i = 0; i < mapaOcup.length; i++) mapaOcup[i] = 0;
     for (var j = 0; j < inimigos.length; j++) {
       mapaOcup[idxInfl(inimigos[j].x, inimigos[j].y)]++;
@@ -462,7 +473,7 @@ var IA = (function () {
   // ocupação na vizinhança 3×3 (~24px — amostra suave: um aliado
   // penaliza o candidato e os vizinhos dele)
   function celulaOcup(x, y) {
-    var ci = Math.floor(x / IG), cj = Math.floor(y / IG);
+    var ci = Math.floor(x / IG) - inflOx, cj = Math.floor(y / IG) - inflOy;
     var s = 0;
     for (var a = -1; a <= 1; a++) {
       for (var b = -1; b <= 1; b++) {
