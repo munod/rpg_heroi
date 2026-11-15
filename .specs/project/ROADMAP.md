@@ -217,6 +217,13 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     `tela-cofre.png` p/ poder olhá-lo; flores em faixa larga + cacho.
     **Hipótese refutada com medição**: a "linha pontilhada" do chão
     era texto de dano flutuante (66 px → 0 px com `limparEfeitos`).
+13. ✅ **`preview-heroi`** *(não liberado — em `Unreleased`)* —
+    prévia do herói ao vivo na aba Apar (×3 + sombra + ciclo idle/
+    ataque de 4s), nos **dois contextos** (criação e jogo), mesma
+    fonte do desenho da arena; caixa em `x616,y232` abaixo das 4
+    linhas (contrato `(706,96)` intacto), dicas encurtadas p/ caber à
+    esquerda. Sonda `Gestao.previa()` + **+2 confs = 706** ·
+    screenshot novo `tela-selecao-apar.png`.
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,

@@ -10,6 +10,23 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Added
+
+- **Prévia do herói na tela de aparência (spec `preview-heroi`)** —
+  a aba **Apar** (que serve a criação **e** o jogo) só dizia *"muda
+  na arena"*: agora tem uma **caixa de prévia** no canto
+  direito-de-baixo com o sprite a **×3**, sombra elíptica e ciclo de
+  ~4s (**idle** 3s → **ataque** 1s) — quem troca pele/cabelo/estilo/
+  roupa vê o resultado **sem entrar na arena**, inclusive na criação.
+  Mesmo caminho do desenho da arena (`lookDe` + `Anim.hero`, mesma
+  cache). Relógio em `Gestao.update` (roda em `jogo.js` **e**
+  `selecao.js`, antes dos `return` de aba); sonda `Gestao.previa()`.
+  As 4 linhas continuam **intocadas** (contrato do clique `(706,96)`)
+  e as dicas encurtaram para caber à esquerda da caixa (16px
+  monospace ≈ 9,6px/char). Screenshots novos `tela-selecao-apar.png`
+  (criação); testes: **+2 confs = 706** (caixa fora das linhas +
+  animação).
+
 ### Changed
 
 - **Visual do herói e das armas — pixel art 16-bit (spec

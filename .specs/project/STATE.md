@@ -482,6 +482,18 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   `contorna()` → partes finas via `pintorDestaque` → rosto →
   `contornaDestaque()`. Mesma lógica da arma do herói — vira regra
   geral do `sprite.js`.
+- **Prévia embaixo das linhas + texto curto à esquerda**
+  (`preview-heroi`): a aba Apar tem contrato de clique nas 4 linhas
+  (`(706,96)` = `>` da Pele) e as dicas em `x416` — a caixa ficou em
+  `616,232` (132×96) e as dicas **encurtaram** porque `16px monospace`
+  ≈ **9,6px por caractere**: "Nome: digite qualquer tecla no topo"
+  (35 chars = 336px) invadia a caixa. Regra prática: medir o texto
+  (`n × 9,6`) antes de pôr caixa ao lado — e conferir no PNG, que o
+  texto do harness é bloco, não glifo.
+- **Relógio de animação de UI mora no `Gestao.update`** — ele já roda
+  nas **duas** telas (jogo e criação) e antes dos `return` de aba; um
+  rAF/setInterval próprio congelaria na criação e quebraria a regra
+  do harness (rAF disparado à mão).
 
 ## Bloqueios
 

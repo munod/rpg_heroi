@@ -10,6 +10,10 @@ var Gestao = (function () {
   var REP_ATRASO = 0.25;   // segurar antes de começar a repetir
   var REP_PASSO = 0.1;     // cadência da repetição (~10/s)
   var RECT_TOGGLE = { x: 684, y: 224, w: 55, h: 26 };
+  var prevT = 0;           // relógio da prévia da aba Apar (spec preview-heroi)
+  // caixa da prévia: canto direito-de-baixo do painel — EM BAIXO das 4
+  // linhas (y 104..214, contrato de clique) e à direita das dicas (x416)
+  var PREVIA = { x: 616, y: 232, w: 132, h: 96, esc: 3 };
 
   function ciclo(arr, atual) {
     var i = arr.indexOf(atual);
@@ -135,7 +139,10 @@ var Gestao = (function () {
   }
 
   function update(dt, p) {
-    if (!p) { repT = 0; repI = 0; autoT = 0; return; }
+    if (!p) { repT = 0; repI = 0; autoT = 0; prevT = 0; return; }
+    // relógio da prévia: roda em QUALQUER aba (e também na criação —
+    // selecao.js chama este update), antes dos return adiante
+    prevT += dt;
     // roda em QUALQUER aba (é gestão, não visual)
     if (p.autoApr) {
       autoT += dt;
@@ -240,6 +247,42 @@ var Gestao = (function () {
       { color: '#6f678a' });
   }
 
+  // Ciclo da prévia (spec preview-heroi): 3s de idle (2 × 0,35s) + 1s
+  // de ataque (3 × 0,36s) — só visual, sem relação com a recarga real.
+  function previaFrame() {
+    var f = prevT % 4;
+    if (f < 3) return { anim: 'idle', quadro: Math.floor((f % 0.7) / 0.35) };
+    return { anim: 'attack',
+      quadro: Math.min(2, Math.floor((f - 3) / 0.36)) };
+  }
+
+  // Sonda p/ teste (e p/ uso futuro): o que a prévia está mostrando.
+  function previa() {
+    var pv = previaFrame();
+    return { anim: pv.anim, quadro: pv.quadro,
+      caixa: { x: PREVIA.x, y: PREVIA.y, w: PREVIA.w, h: PREVIA.h } };
+  }
+
+  // Prévia do herói: mesmo caminho do desenho da arena (lookDe + Anim.hero
+  // — mesma cache, mesma chave), sprite ×3 com pé na base da caixa.
+  function desenhaPrevia(ctx, p) {
+    var pv = previaFrame();
+    var c = Anim.hero(Personagem.lookDe(p), pv.anim, pv.quadro);
+    UI.panel(PREVIA.x, PREVIA.y, PREVIA.w, PREVIA.h, 'Prévia');
+    var cx = PREVIA.x + 66;
+    var base = PREVIA.y + PREVIA.h - 6;
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.ellipse(cx, base, 22, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // corpo centrado em x=8 da grade (mesma âncora da arena)
+    ctx.drawImage(c.canvas, Math.round(cx - 8 * PREVIA.esc),
+      Math.round(base - 20 * PREVIA.esc),
+      20 * PREVIA.esc, 20 * PREVIA.esc);
+  }
+
   function desenhaAparencia(ctx, p, o) {
     var estiloIds = Personagem.ESTILOS.map(function (e) { return e.id; });
     var estiloNomes = {};
@@ -297,13 +340,17 @@ var Gestao = (function () {
       if (UI.button(692, y - 14, 24, 28, '>')) lin.muda(1);
     });
 
-    UI.text('Muda na arena em tempo real', 416, 248, { color: '#9a90b8' });
+    desenhaPrevia(ctx, p);
+
+    // dicas curtas: a caixa da prévia começa em x616 (o texto tem que
+    // caber à esquerda — 16px monospace ≈ 9,6px por caractere)
+    UI.text('Muda em tempo real', 416, 248, { color: '#9a90b8' });
     if (o && o.criacao) {
       // na tela de seleção o nome se digita no cabeçalho
-      UI.text('Nome: digite qualquer tecla no topo', 416, 280, { color: '#6f678a' });
+      UI.text('Nome: tecle no topo', 416, 280, { color: '#6f678a' });
       UI.text('Enter entra na arena', 416, 308, { color: '#6f678a' });
     } else {
-      UI.text('Enter salva a qualquer momento', 416, 280, { color: '#6f678a' });
+      UI.text('Enter salva o look', 416, 280, { color: '#6f678a' });
     }
   }
 
@@ -826,6 +873,7 @@ var Gestao = (function () {
     desenhar: desenhar,
     update: update,
     quebra: quebra,
-    statsGeom: statsGeom
+    statsGeom: statsGeom,
+    previa: previa
   };
 })();

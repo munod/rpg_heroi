@@ -300,6 +300,14 @@ const dxL = sandbox.Game.W - 768;
 // a tela inicial é a seleção/criação (a jogatina é outra tela)
 salvar('tela-selecao.png');
 
+// prévia do herói na CRIAÇÃO (spec preview-heroi): aba Apar na tela de
+// seleção — e volta pra Atributos p/ não alterar o resto do roteiro
+clique(515, 50);
+frame(3);
+salvar('tela-selecao-apar.png');
+clique(445, 50);
+frame(2);
+
 // JOGAR entra na arena
 clique(120, 388);
 frame(4);

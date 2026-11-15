@@ -313,6 +313,22 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   frame(2);
   conf(p1.look.skin !== pele0, 'troca de cor de pele funciona');
 
+  // --- prévia do herói (spec preview-heroi): existe, não cobre as
+  //     linhas (contrato do clique em 706,96) e ANIMA com o tempo
+  const pv0 = sandbox.Gestao.previa();
+  conf(pv0.caixa.y > 214 && pv0.caixa.y + pv0.caixa.h <= 336 &&
+    pv0.caixa.x >= 412,
+    'caixa da prévia fora das linhas e dentro do painel (' +
+    pv0.caixa.x + ',' + pv0.caixa.y + ' ' + pv0.caixa.w + 'x' +
+    pv0.caixa.h + ')');
+  let animou = false;
+  for (let i = 0; i < 60 && !animou; i++) {
+    frame(1);
+    const pv = sandbox.Gestao.previa();
+    if (pv.anim !== pv0.anim || pv.quadro !== pv0.quadro) animou = true;
+  }
+  conf(animou, 'prévia anima (idle/ataque alternam em ~4s)');
+
   clique(585, 50);           // aba Classe (centro da 3ª aba)
   frame(2);
   clique(673, 102);          // Mago na grade 2×2 (590..756, 88..116)
