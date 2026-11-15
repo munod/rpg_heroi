@@ -398,17 +398,37 @@ var Gestao = (function () {
       '#e8c86a']]);
   }
 
+  // Ícone de item na aba Itens (spec icones-itens): desenhado em escala
+  // nativa (16×16) — reamostrar achataria os pixels. Sem item = nada.
+  function iconeItem(ctx, item, x, y) {
+    if (!item) return;
+    var tipo = item.slot === 'armadura' ? 'armadura' : (item.arma || 'espada');
+    var c = Anim.icone(tipo, Itens.corRar(item.rar));
+    ctx.drawImage(c.canvas, x, y, c.w, c.h);
+  }
+
+  // "chip" clicável à esquerda da linha da bolsa: clica no ícone e
+  // equipa igual à linha (o retângulo da linha recua p/ não sobrepor)
+  function chipItem(ctx, item, y, h) {
+    var clica = UI.button(416, y, 24, h, '');
+    iconeItem(ctx, item, 416 + (24 - 16) / 2, y + (h - 16) / 2);
+    return clica;
+  }
+
   function desenhaItens(ctx, p) {
     var arma = p.equip.arma, arm = p.equip.armadura;
-    // nomes enxutos (20/16 chars): a linha termina antes do [x] em 640
-    UI.text('Arma: ' + (arma ? Itens.linha(arma, null, 20) : '—'), 416, 96,
+    // nomes enxutos: o texto saiu de x416 p/ x442 (ícone em 416) e o
+    // corte caiu p/ 17/13 — o fim tem que passar ANTES do [x] em 640
+    iconeItem(ctx, arma, 416, 88);
+    UI.text('Arma: ' + (arma ? Itens.linha(arma, null, 17) : '—'), 442, 96,
       { color: arma ? Itens.corRar(arma.rar) : '#6f678a', font: '13px monospace' });
-    UI.dica({ x: 416, y: 84, w: 220, h: 24 }, Itens.dicas(p, arma));
+    UI.dica({ x: 416, y: 84, w: 246, h: 24 }, Itens.dicas(p, arma));
     slotFixar(p, 'arma', 84);
     slotAcoes(p, arma, 84);
-    UI.text('Armadura: ' + (arm ? Itens.linha(arm, null, 16) : '—'), 416, 124,
+    iconeItem(ctx, arm, 416, 116);
+    UI.text('Armadura: ' + (arm ? Itens.linha(arm, null, 13) : '—'), 442, 124,
       { color: arm ? Itens.corRar(arm.rar) : '#6f678a', font: '13px monospace' });
-    UI.dica({ x: 416, y: 112, w: 220, h: 24 }, Itens.dicas(p, arm));
+    UI.dica({ x: 416, y: 112, w: 246, h: 24 }, Itens.dicas(p, arm));
     slotFixar(p, 'armadura', 112);
     slotAcoes(p, arm, 112);
 
@@ -451,8 +471,12 @@ var Gestao = (function () {
     p.bolsa.slice(paginaBolsa * 5, paginaBolsa * 5 + 5)
       .forEach(function (item, i) {
         var y = 176 + i * 30;
-        if (UI.button(416, y, 272, 26,
-          Itens.linha(item, p.equip[item.slot], 33), {
+        // chip (ícone) à esquerda: clicável e equipa igual à linha;
+        // a linha recua p/ x444 e o corte cai de 33 p/ 29 chars —
+        // só o NOME trunca (os deltas com ★ nunca são cortados)
+        var noChip = chipItem(ctx, item, y, 26);
+        if (noChip || UI.button(444, y, 244, 26,
+          Itens.linha(item, p.equip[item.slot], 29), {
             align: 'left', color: Itens.corRar(item.rar),
             font: '13px monospace'
           })) {

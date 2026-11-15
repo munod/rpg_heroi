@@ -494,6 +494,17 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   nas **duas** telas (jogo e criação) e antes dos `return` de aba; um
   rAF/setInterval próprio congelaria na criação e quebraria a regra
   do harness (rAF disparado à mão).
+- **Ícone em escala NATIVA + chip clicável** (`icones-itens`): os
+  ícones são 16×16 desenhados **sem reamostrar** (escala 1,43
+  borraria a borda) e, na bolsa, o ícone virou um **chip-botão** à
+  esquerda da linha — em vez de empurrar o texto, que estava fixo em
+  `x+8` pelo `UI.button` (não aceita indent). Cortes: 20/16→17/13 nos
+  slots e 33→29 na bolsa; como o `Itens.linha` **só trunca o nome**,
+  `★`/`-15HP` (asserções 15/26) sobrevivem por construção.
+- **Contorno de parte fina é só por fora** — a lição do morcego
+  (asas de 1px virando contorno) voltou nos **ícones**: rodar
+  `contorna()` na lâmina de 3px a transformaria toda em contorno;
+  o caminho é marcar os pixels e chamar `contornaDestaque()`.
 
 ## Bloqueios
 

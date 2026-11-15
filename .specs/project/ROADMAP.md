@@ -224,6 +224,14 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     linhas (contrato `(706,96)` intacto), dicas encurtadas p/ caber à
     esquerda. Sonda `Gestao.previa()` + **+2 confs = 706** ·
     screenshot novo `tela-selecao-apar.png`.
+14. ✅ **`icones-itens`** *(não liberado — em `Unreleased`)* —
+    **5 ícones 16×16** (espada/adaga/cajado/martelo/armadura) no
+    sistema de grid+rampa, acento da **raridade** passado por HEX
+    (sprite não depende de itens), cache `Anim.icone`; slots com o
+    ícone abrindo a linha (texto 416→442, cortes 17/13) e bolsa com
+    **chip clicável** (linha 444..688, corte 33→29 — `★`/`-15HP`
+    intactos). **+2 confs = 708** · screenshot `tela-itens.png` ·
+    nenhum clique de teste mudou.
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,

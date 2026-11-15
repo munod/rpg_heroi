@@ -337,6 +337,33 @@ clique(515 + dxL, 50);   // aba Aparência
 frame(4);
 salvar('tela-aparencia.png');
 
+// aba Itens (spec icones-itens): gera/equipa itens p/ os ÍCONES
+// aparecerem na foto — e RESTAURA o estado em seguida (o resto do
+// roteiro não pode herdar dano/ouro/bolsa de um teste de imagem)
+{
+  const It = sandbox.Itens;
+  const pj = sandbox.Game.personagem;
+  const eq0 = { arma: pj.equip.arma, armadura: pj.equip.armadura };
+  const bolsa0 = pj.bolsa.slice();
+  const ouro0 = pj.ouro;
+  for (let k = 0; k < 12; k++) {
+    It.guardar(pj, It.geraItem(1 + (k % 4), 1, pj.classe));
+  }
+  const semArma = pj.bolsa.filter(it => it.slot === 'arma');
+  const semArmadura = pj.bolsa.filter(it => it.slot === 'armadura');
+  if (!eq0.arma && semArma.length) It.equipar(pj, semArma[0]);
+  if (!eq0.armadura && semArmadura.length) It.equipar(pj, semArmadura[0]);
+  clique(655 + dxL, 50);      // aba Itens
+  frame(4);
+  salvar('tela-itens.png');
+  pj.equip.arma = eq0.arma;
+  pj.equip.armadura = eq0.armadura;
+  pj.bolsa = bolsa0;
+  pj.ouro = ouro0;
+  clique(445 + dxL, 50);      // volta p/ Atributos
+  frame(2);
+}
+
 // gestão: aba classe (âncora direita em tela larga)
 clique(585 + dxL, 50);   // aba Classe
 frame(4);

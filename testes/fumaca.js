@@ -874,6 +874,16 @@ console.log('15) drops, equipamento e aba de itens');
   frame(2);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('Bolsa') >= 0),
     'aba Itens abre com a bolsa');
+
+  // --- ícones de item (spec icones-itens): o sprite existe e a cache
+  //     separa tipo + raridade (sem isso, rar 4 mostra ícone de rar 1)
+  const icEspada = sandbox.Anim.icone('espada', sandbox.Itens.corRar(1));
+  conf(icEspada.canvas._pixels > 40,
+    'ícone de espada desenhado (' + icEspada.canvas._pixels + ' px)');
+  conf(sandbox.Anim.icone('espada', '#111111') !==
+    sandbox.Anim.icone('espada', '#222222'),
+    'cache do ícone separa a cor da raridade');
+
   clique(584, 216);                // linha da bolsa (2ª: y=206..232)
   frame(2);
   conf(p.equip.armadura === manto && p.bolsa.indexOf(manto) < 0,

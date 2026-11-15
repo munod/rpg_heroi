@@ -6,6 +6,7 @@ var Anim = (function () {
   var aranhaCache = {};
   var treeCache = null;
   var rockCache = null;
+  var iconeCache = {};
 
   function hero(look, anim, frame) {
     // classe e rar entram na chave: sem elas, trocar de classe/equipar
@@ -39,10 +40,19 @@ var Anim = (function () {
     return treeCache;
   }
 
+  // Ícone de item (spec icones-itens): chave = tipo + cor do acento
+  // (raridade) — trocar de raridade tem que trocar o sprite.
+  function icone(tipo, cor) {
+    var k = (tipo || '?') + '|' + (cor || '');
+    if (!iconeCache[k]) iconeCache[k] = Sprite.iconeCanvas(tipo, cor);
+    return iconeCache[k];
+  }
+
   function rock() {
     if (!rockCache) rockCache = Sprite.rockCanvas();
     return rockCache;
   }
 
-  return { hero: hero, slime: slime, morcego: morcego, aranha: aranha, tree: tree, rock: rock };
+  return { hero: hero, slime: slime, morcego: morcego, aranha: aranha,
+    tree: tree, rock: rock, icone: icone };
 })();

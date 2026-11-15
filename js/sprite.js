@@ -250,7 +250,8 @@ var Sprite = (function () {
   // ---- autoria em texto ---------------------------------------------------
   // Desenha uma faixa de linhas (todas com W colunas) no grid, deslocada em
   // dy (o "bob" do frame). '.' = vazio = não toca no que já estava.
-  function desenhaFaixa(g, W, H, linhas, y0, dy, nome) {
+  function desenhaFaixa(g, W, H, linhas, y0, dy, nome, tabela) {
+    var tab = tabela || CH;
     for (var i = 0; i < linhas.length; i++) {
       var linha = linhas[i];
       if (linha.length !== W) {
@@ -262,7 +263,7 @@ var Sprite = (function () {
       for (var x = 0; x < W; x++) {
         var ch = linha.charAt(x);
         if (ch === '.') continue;
-        var v = CH[ch];
+        var v = tab[ch];
         if (v === undefined) {
           throw new Error('sprite ' + nome + ': caractere desconhecido "' + ch + '"');
         }
@@ -648,6 +649,143 @@ var Sprite = (function () {
     return paraCanvas(r.grid, r.W, r.H, r.palette);
   }
 
+  // ---- ícones de item (spec icones-itens) -------------------------------
+  // 16×16 na aba Itens, desenhados em ESCALA NATIVA (sem reamostrar).
+  // A cor de acento (raridade) vem como HEX de fora — este módulo não
+  // pode depender de itens.js (mesma regra do personagem.js).
+  var PALETA_ICONE = [
+    ['.', 0], ['#', 1], ['m', 2], ['M', 3], ['N', 4],   // metal
+    ['w', 5], ['v', 6],                                  // madeira
+    ['b', 7], ['B', 8],                                  // couro
+    ['a', 9], ['A', 10], ['d', 11]                       // acento (raridade)
+  ];
+  var CH_ICONE = {};
+  for (var ii = 0; ii < PALETA_ICONE.length; ii++) {
+    CH_ICONE[PALETA_ICONE[ii][0]] = PALETA_ICONE[ii][1];
+  }
+
+  var ICONES = {
+    // espada: lâmina de 3px, guarda larga, cabo e pomo
+    espada: [
+      '................',
+      '.......Mm.......',
+      '......MmN.......',
+      '......MmN.......',
+      '......MmN.......',
+      '......MmN.......',
+      '......MmN.......',
+      '......MmN.......',
+      '......MmN.......',
+      '......MmN.......',
+      '....Aaaaaad.....',
+      '.......bB.......',
+      '.......bB.......',
+      '.......bB.......',
+      '.......aa.......',
+      '................'
+    ],
+    // adaga: lâmina curta e guarda estreita
+    adaga: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '.......Mm.......',
+      '......MmN.......',
+      '......MmN.......',
+      '......MmN.......',
+      '......MmN.......',
+      '......MmN.......',
+      '.....Aaaad......',
+      '.......bB.......',
+      '.......bB.......',
+      '.......bB.......',
+      '.......aa.......',
+      '................'
+    ],
+    // cajado: cristal em cima, anel e cabo de madeira
+    cajado: [
+      '................',
+      '......AAAA......',
+      '......Aaad......',
+      '.......dd.......',
+      '......aaaa......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......vv.......',
+      '................'
+    ],
+    // martelo: cabeça com faixa do acento e cabo
+    martelo: [
+      '................',
+      '................',
+      '.....MMMMMM.....',
+      '....mmmmmmmm....',
+      '....aaaaaaaa....',
+      '....NNNNNNNN....',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......wv.......',
+      '.......aa.......',
+      '................'
+    ],
+    // armadura: peitoral (ombros largos, entalhe do pescoço, faixa do
+    // acento e cintura afunilada — sem isso virava "copo")
+    armadura: [
+      '................',
+      '................',
+      '................',
+      '...MMmm##mmNN...',
+      '...mMmmmmmmNN...',
+      '....mMMmmmmN....',
+      '....mmmmmmmm....',
+      '....maaaaadN....',
+      '....mmmmmmmm....',
+      '....mmmmmmmm....',
+      '....mmmmmmmm....',
+      '.....mmmmmm.....',
+      '.....NNNNNN.....',
+      '................',
+      '................',
+      '................'
+    ]
+  };
+
+  function iconePaleta(corAcento) {
+    var met = rampa(COR_METAL);
+    var mad = rampa(COR_MADEIRA);
+    var cou = rampa(COR_COURO);
+    var acc = rampa(corAcento || COR_OURO);
+    return [null, COR_CONTORNO, met.base, met.luz, met.som,
+      mad.base, mad.som, cou.base, cou.som,
+      acc.base, acc.luz, acc.som];
+  }
+
+  function iconeCanvas(tipo, corAcento) {
+    var W = 16, H = 16;
+    var g = new Uint8Array(W * H);
+    desenhaFaixa(g, W, H, ICONES[tipo] || ICONES.armadura, 0, 0,
+      'icone ' + tipo, CH_ICONE);
+    // contorno só POR FORA: rodar contorna() aqui comeria a lâmina de
+    // 2-3px (mesma pegadinha das asas do morcego)
+    var destaque = [];
+    for (var i = 0; i < g.length; i++) if (g[i]) destaque.push(i);
+    contornaDestaque(g, W, H, destaque);
+    return paraCanvas(g, W, H, iconePaleta(corAcento));
+  }
+
   // ---- inimigos ----------------------------------------------------------
   // 0 vazio | 1 contorno | 2 corpo | 3 corpo sombra | 4 corpo luz |
   // 5 olho branco | 6 pupila | 7 detalhe | 8 detalhe luz
@@ -931,6 +1069,7 @@ var Sprite = (function () {
     heroPaleta: heroPalette,
     txtPaleta: txtPaleta,
     heroCanvas: heroCanvas,
+    iconeCanvas: iconeCanvas,
     slimeCanvas: slimeCanvas,
     morcegoCanvas: morcegoCanvas,
     aranhaCanvas: aranhaCanvas,

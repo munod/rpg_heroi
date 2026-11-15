@@ -26,6 +26,23 @@ vive em `.specs/features/`.
   monospace ≈ 9,6px/char). Screenshots novos `tela-selecao-apar.png`
   (criação); testes: **+2 confs = 706** (caixa fora das linhas +
   animação).
+- **Ícones de item na aba Itens (spec `icones-itens`)** — a aba era
+  100% texto; agora cada equipamento tem **ícone próprio**:
+  `Sprite.iconeCanvas(tipo, corAcento)` com **5 ícones 16×16** em
+  grid de texto (espada · adaga · cajado · martelo · armadura), mesma
+  paleta-rampa do resto (metal/madeira/couro) e o **acento vindo da
+  raridade** (`Itens.corRar`, passado como HEX — `sprite.js` não
+  depende de `itens.js`). Cache `Anim.icone(tipo, cor)`. Nos **slots
+  equipados** o ícone abre a linha (texto sai de x416 → x442, corte
+  20→17 / 16→13 p/ passar antes do `fixar` em x640); nas **linhas da
+  bolsa** ele vira **chip clicável** à esquerda (equipa igual à linha)
+  e a linha recua para `444..688` (corte 33→29 — só o **nome**
+  trunca, os deltas com `★`/`-15HP` nunca são cortados). Contorno do
+  ícone só **por fora** (`contornaDestaque`) — o `contorna()` comeria
+  a lâmina de 3px. Screenshots: `tela-itens.png` novo; testes **+2
+  confs = 708** (ícone desenhado + cache separa raridade) e nenhum
+  clique existente mudou (`(584,216)`, `(584,246)`, `(707,189)`,
+  `(695,96)`, `(500,96)`).
 
 ### Changed
 
