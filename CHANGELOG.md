@@ -10,6 +10,8 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-11-15
+
 ### Added
 
 - **Onda com cota de tempo (spec `onda-timer`)** — fechamento da
@@ -68,10 +70,9 @@ vive em `.specs/features/`.
   decisão**):
   - **`ESPERA_TETO = 45s`** no `esperaOnda()` — o rampa trava no mapa
     ~40: sono do mapa 100 **111s → 45s** (sem teto, 88% do tempo era
-    morto naquele ponto). Alvo de duração do R-MUN-7 passa a ser o da
-    **sim completa pós-teto** (mantenedor aceitou campanha mais curta).
-    Comportamento exportado e testado (`esperaOnda`: mapa 1 = 2s,
-    mapa 100 = 45s travado).
+    morto naquele ponto). *(Intermediário: superado dentro desta mesma
+    leva pela `onda-timer` — a espera saiu de cena; o teto vive só
+    como histórico da calibração.)*
   - **Ponto POR NÍVEL (V1 neutro)** — `PONTOS_CADA 3→1` **+**
     `PONTO_MULT 9→3` (régua: pontos × mult = constante → poder
     medido idêntico, 3× mais decisões — a "lição do card" do gênero
@@ -93,7 +94,9 @@ vive em `.specs/features/`.
   onda 100 **zera o timer**: os dois 8s que se somavam no troco de
   mapa (16s de campo vazio) viraram **8s únicos**, com banner/corte já
   no kill. `ESPERA_BASE` 4→2s (respiro do mundo 1, ajuste do
-  mantenedor). Fumaça seção 51.
+  mantenedor). *(A espera em si foi superada pela `onda-timer` na
+  mesma leva — o countdown virou a COTA da onda; o toast e o fim do
+  delay duplo continuam.)* Fumaça seção 51.
 - **Opções do jogo (spec `opcoes`)** — módulo `js/opcoes.js` com 4
   toggles de conforto persistidos em **`rpg_opcoes_v1`** (default =
   comportamento atual): **Sacudir a tela**, **Flash e vinheta**
@@ -908,7 +911,8 @@ e deploy no GitHub Pages.
 - **Barras laterais no celular**: layout passou a seguir o aspecto da
   viewport (bug reportado por print) (`4c249e4`).
 
-[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/munod/rpg_heroi/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/munod/rpg_heroi/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/munod/rpg_heroi/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/munod/rpg_heroi/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/munod/rpg_heroi/compare/v0.4.0...v0.4.1
