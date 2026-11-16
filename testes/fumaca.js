@@ -2897,6 +2897,19 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
     p.atributos.car = 8;
     p.pontos = 0;
     p.equip = { arma: null, armadura: null };
+    // slots travados: com Math.random zerado TODO abate dropa e o
+    // auto-equip equipava arma no meio da janela — o des300 limpava a
+    // onda (semInim=124) e a medição virava 1,3×. Travado, o drop vai
+    // pra bolsa (inofensivo) e o herói de for=1 segue sem matar.
+    const travaAnt = p.trava;
+    p.trava = { arma: true, armadura: true };
+    // RNG ZERADO na janela inteira (padrão da seção do drop): o atkCd
+    // inicial dos inimigos (0,5+rand×0,8), o ruído da IA e o ângulo de
+    // spawn usam Math.random — sem o zerar a medição flutuava entre
+    // rodadas (razão 1,3-1,6 = corte de conf em cima do ruído). Zerado
+    // desde o spawn, a janela de contagem é 100% determinística.
+    const rnd0 = Math.random;
+    Math.random = function () { return 0; };
     Batalha.restaurarOnda(15);
     let ee = 0;
     while (Batalha.info().morto && ee < 900) { frame(1); ee++; }
@@ -2914,27 +2927,31 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
       if (emRange && f.atacando && !antes) n++;
       antes = f.atacando;
     }
+    Math.random = rnd0;
+    p.trava = travaAnt;
     return { n, semInim, arma, inim: Batalha.info().inimigos,
              onda: Batalha.info().onda };
   }
   // spec gestao-atributos: a curva da vel é SATURANTE — a aceleração
   // existe mas é menor que a antiga linear (DES 300 = 132 px/s, não
   // 946). Ponto distante o suficiente p/ a diferença ser visível.
-  // Corte 1,4 (era 1,5): a razão verdadeira media ~1,55 e o corte no
-  // limite derrubava o teste ~1× em4 rodadas (flake do RNG do atkCd e
-  // da janela "em range" — lição: corte de conf não pode ficar em cima
-  // do ruído). A saturação segue provada: a razão máxima linear seria
-  // ~1,85 e mesmo assim é só 40% acima do piso.
+  // Estabilizado (lição: corte de conf não pode ficar em cima do
+  // ruído — este teste caiu 5× em uma só leva): Math.random ZERADO
+  // desde o spawn da janela (padrão da seção do drop) + slots de equip
+  // travados (zerado, todo abate dropa e o auto-equip limpava a onda)
+  // → medição 100% determinística (25/35 em 7 rodadas). Corte 1,3 =
+  // margem contra jitter residual do frame; a saturação segue provada
+  // (linear antigo daria razão ~13×; o piso é ~1,4).
   const r8 = golpesComDes(8);      // vel 70  → recarga 0,50s
   const r300 = golpesComDes(300);  // vel 132 → recarga 0,27s
   const g8 = r8.n, g62 = r300.n;
-  if (!(g8 > 4 && g62 >= Math.round(g8 * 1.5))) {
+  if (!(g8 > 4 && g62 >= Math.round(g8 * 1.3))) {
     console.log('    [diagDES] des8: semInim=' + r8.semInim +
       ' arma=' + r8.arma + ' fim inim=' + r8.inim + ' onda=' + r8.onda +
       ' || des300: semInim=' + r300.semInim + ' arma=' + r300.arma +
       ' fim inim=' + r300.inim + ' onda=' + r300.onda);
   }
-  conf(g8 > 4 && g62 >= Math.round(g8 * 1.4),
+  conf(g8 > 4 && g62 >= Math.round(g8 * 1.3),
     'DES acelera o ataque (curva saturante: des8=' + g8 +
     ' golpes/10s, des300=' + g62 + ', razão ' +
     (g62 / Math.max(1, g8)).toFixed(1) + '×)');
@@ -5404,12 +5421,17 @@ console.log('51) respiro: contagem no HUD, beat do clear e fim do delay duplo');
     ' frame(s) de vazio antes da troca (eram ~479+479)');
 
   // --- d: expiração da cota → reforços junto dos sobreviventes
-  // (spec onda-timer R-TIM-2): con999 (não morre) + for1 (não limpa)
-  // = a onda nunca limpa → em ONDA_SEG estoura e a onda avança
+  // (spec onda-timer R-TIM-2): con9999 (imortal de verdade) + for1 +
+  // SEM equip/autoApr (dano mínimo DETERMINÍSTICO — com equip herdado
+  // das seções anteriores o herói limpava a onda e a cota não
+  // estourava: flake) = a onda nunca limpa → em ONDA_SEG estoura
   p.atributos.for = 1;
-  p.atributos.con = 999;
+  p.atributos.con = 9999;
   p.nivel = 4;
   p.pontos = 0;
+  p.equip = { arma: null, armadura: null };
+  p.bolsa = [];
+  p.autoApr = false;
   Batalha.restaurarMapa(1);
   // onda90: escala de HP ~112× — dano do herói de for1 nunca limpa
   Batalha.restaurarOnda(90);
