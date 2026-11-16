@@ -1,6 +1,9 @@
 # Spec: Respiro entre ondas — contagem visível, recompensa no clear e fim do delay duplo
 
-Status: **concluída** (gate = 725 confs, 10 delas na seção 51) · Data: 2026-11-15 ·
+Status: **concluída e parcialmente sucedida** — a spec `onda-timer`
+(superou o R-RES-1/5 em 2026-11-15: a espera virou batida de2s e a
+contagem virou a COTA da onda; o R-RES-2/3 do beat e do delay duplo
+seguem válidos e testados na seção 51) · Data: 2026-11-15 ·
 Iniciativa: mantenedor (reclamação de tédio: "o personagem dorme entre as ondas").
 
 ## Contexto
@@ -21,7 +24,10 @@ Iniciativa: mantenedor (reclamação de tédio: "o personagem dorme entre as ond
 
 ## Requisitos
 
-- **R-RES-1 (contagem no HUD)** — enquanto `inimigos === 0 && tOnda > 0 &&
+- **R-RES-1 (contagem no HUD)** — *(SUPERADO pela spec `onda-timer`
+  em2026-11-15: a espera virou batida de2s e a contagem do respiro
+  virou a COTA da onda — a contagem no HUD continua, agora com o
+  `TEMPO Xs` durante o combate.)* Enquanto `inimigos === 0 && tOnda > 0 &&
   herói vivo`, o HUD da arena mostra `PRÓXIMA ONDA EM Xs` alinhado à
   direita, logo abaixo da linha `Onda N (k)` (mesmo x, `vy + 17*k`).
   `Batalha.info()` passa a expor **`espera: tOnda`** (sonda p/ teste).

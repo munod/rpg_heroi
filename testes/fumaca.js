@@ -4058,20 +4058,11 @@ console.log('40) gestao-atributos: teto da regen, afixo vel e clamp final');
     'fonte única: 1 ponto a cada nível (' + Personagem.PONTOS_CADA +
     '/' + Personagem.PONTOS_NIVEL + ')');
 
-  // --- 5) teto do respiro (spec balance-dopamina R-BAL-1): constante
-  // exportada + comportamento do min() no esperaOnda em 3 profundidades
-  conf(Batalha.ESPERA_TETO === 45,
-    'teto do respiro exportado em 45s (ESPERA_TETO=' +
-    Batalha.ESPERA_TETO + ')');
-  const m0 = Batalha.info().mapa;
-  Batalha.restaurarMapa(1);
-  const espM1 = Batalha.esperaOnda();
-  Batalha.restaurarMapa(100);
-  const espM100 = Batalha.esperaOnda();
-  Batalha.restaurarMapa(m0);
-  conf(espM1 === 2 && espM100 === 45,
-    'esperaOnda: mapa 1 = 2s e mapa 100 = 45s TRAVADO (era 111s; ' +
-    espM1 + 's/' + espM100 + 's)');
+  // --- 5) batida e cota (spec onda-timer R-TIM-1/2): constantes
+  // exportadas (o comportamento cobre a seção 51)
+  conf(Batalha.BEAT === 2 && Batalha.ONDA_SEG === 30,
+    'batida 2s e cota 30s exportadas (BEAT=' + Batalha.BEAT +
+    ' · ONDA_SEG=' + Batalha.ONDA_SEG + ')');
 }
 
 console.log('41) monstros novos: espécies com skill, ranged, comum intacto e eventos');
@@ -5351,6 +5342,14 @@ console.log('51) respiro: contagem no HUD, beat do clear e fim do delay duplo');
   esp = 0;
   while (Batalha.info().onda < 3 && esp < 600) { frame(1); esp++; }
   conf(Batalha.info().onda === 3, 'onda 3 em campo antes do teste');
+  conf(Batalha.info().cota > 29 && Batalha.info().cota <= 30,
+    'onda normal nasce com cota de 30s (cota=' +
+    Batalha.info().cota.toFixed(1) + ')');
+  // HUD da cota durante a onda (spec onda-timer R-TIM-4)
+  jogoCanvas._textos = [];
+  frame(1);
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('TEMPO') >= 0),
+    'HUD mostra TEMPO durante a onda (cota visível)');
 
   // --- a/b: o respiro expõe espera e o HUD mostra a contagem (R-RES-1)
   jogoCanvas._textos = [];
@@ -5382,6 +5381,8 @@ console.log('51) respiro: contagem no HUD, beat do clear e fim do delay duplo');
     frame(1); esp++;
   }
   conf(Batalha.info().boss === true, 'chefe do mapa 1 em campo');
+  conf(Batalha.info().cota === -1,
+    'chefe isento da cota (cota=-1 = sem prazo, spec R-TIM-3)');
   jogoCanvas._textos = [];
   let framesVazio = 0, passou = false;
   for (let i = 0; i < 6000 && !passou; i++) {
@@ -5396,6 +5397,37 @@ console.log('51) respiro: contagem no HUD, beat do clear e fim do delay duplo');
   conf(framesVazio <= 5,
     'sem delay duplo: ' + framesVazio +
     ' frame(s) de vazio antes da troca (eram ~479+479)');
+
+  // --- d: expiração da cota → reforços junto dos sobreviventes
+  // (spec onda-timer R-TIM-2): con999 (não morre) + for1 (não limpa)
+  // = a onda nunca limpa → em ONDA_SEG estoura e a onda avança
+  p.atributos.for = 1;
+  p.atributos.con = 999;
+  p.nivel = 4;
+  p.pontos = 0;
+  Batalha.restaurarMapa(1);
+  // onda90: escala de HP ~112× — dano do herói de for1 nunca limpa
+  Batalha.restaurarOnda(90);
+  esp = 0;
+  while (Batalha.info().onda < 90 && esp < 600) { frame(1); esp++; }
+  conf(Batalha.info().inimigos > 0, 'onda 90 em campo (herói não limpa)');
+  const ondaAntes = Batalha.info().onda;
+  const inimAntes = Batalha.info().inimigos;
+  const cotaFrames = Math.round(Batalha.ONDA_SEG * 1000 / 16.7);
+  jogoCanvas._textos = [];
+  let estourou = false;
+  for (let i = 0; i < cotaFrames + 180 && !estourou; i++) {
+    frame(1);
+    estourou = Batalha.info().onda > ondaAntes;
+  }
+  conf(estourou,
+    'cota expirou → a onda avança sem limpar (' + ondaAntes + '→' +
+    Batalha.info().onda + ' em ≤' + (cotaFrames + 180) + ' frames)');
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('ATRASADA') >= 0),
+    'aviso ONDA ATRASADA — REFORÇOS! na tela');
+  conf(Batalha.info().inimigos > inimAntes,
+    'reforços somam aos sobreviventes (' + inimAntes + '→' +
+    Batalha.info().inimigos + ' inimigos)');
 }
 
 console.log('52) opções: defaults, gates, persistência e overlay');

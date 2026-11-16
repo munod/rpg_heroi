@@ -158,9 +158,10 @@
   antigo estolava) e renda em `Batalha.xpAbate`
   (**`12 × 1,064^ondaTotal`**, harmônica com o custo → tempo/nível
   estável). Combate em `Batalha`: `ESC_HP 1,25 · ESC_DMG 0,037 ·
-  esperaOnda()` (respiro = regen: alavanca de ritmo que NÃO piora
-  clear/survival — ver a linha de Mapas abaixo; **teto `ESPERA_TETO
-  45s`** desde a leva `balance-dopamina`) + `HP_POR_NIVEL 6` em
+  onda-timer` (**spec `onda-timer`**: sem espera entre ondas — o clear
+  dá a batida de `BEAT 2s` e cada onda tem cota de `ONDA_SEG 30s`
+  (expirou → reforços com os sobreviventes); a alavanca de duração da
+  campanha passou a ser o **clear**) + `HP_POR_NIVEL 6` em
   `personagem.js` (fonte única — NÃO espelhe fórmula em
   `statusDetalhado`). Mudou algum? Meça com
   `node testes/ritmo.js [min] [mundo|mapa] [k] [semente]` (marcos até
@@ -170,7 +171,7 @@
   aleatórios ATIVOS (mesma semente = mesmo run = A/B limpo; ≥4 seeds
   por decisão); grava `resultados/ritmo.json` (gitignored) com
   config/marcos/níveis/métricas/commit; métricas: kpm/dps/ttk/espera%/uptime/xpm/gpm/eficiência
-  ouro/mortes-h/hpMin/inimigos; fica fora
+  ouro/mortes-h/hpMin/inimigos/clear-médio-p95-máx/atrasoPct; fica fora
   do `todos.js`) — **≥4 runs por decisão** (run único iludiu uma
   "validação"). **Cliff mapeado**: produto `ESC_HP×ESC_DMG ≤0,086`
   passa / `≥0,095` estola o mapa 3 em 4/4 (renda fixa num tot parado ×
@@ -224,12 +225,14 @@
   travava no tema 3 do mapa 4 em diante). Dados em `js/mapas.js` (`Mapas.forca(n)` só nos drops de
   item; dificuldade/XP de combate = escala contínua `ondaTotal()` em
   `batalha.js` — onda 1 do mapa 2 = patamar da onda 100 do mapa 1);
-  cenário reconstruído por `garanteCenario()`. **Respiro entre ondas =
-  `esperaOnda()`** (`min(2 + (min(mapa,100)−1) × 1,1, 45)`s — a
-  **alavanca de duração** da campanha: mundo 1 = 2s, +1,1s por mapa até
-  o **`ESPERA_TETO` 45s no mapa ~40** (spec `balance-dopamina` —
-  mantenedor aceitou campanha mais curta; sem teto ia a 111s = 88%
-  morto no ponto); pós-chefe usa `ESPERA_TRANSICAO` fixo 8s e o kill do
+  cenário reconstruído por `garanteCenario()`. **Espera entre ondas =
+  `BEAT` de 2s** (spec `onda-timer` — era `esperaOnda()` com rampa até
+  111s, removida por decisão do mantenedor: "muito ruim e chato") — o
+  campo limpo → batida → próxima onda, e **cada onda tem cota de
+  `ONDA_SEG` 30s**: não limpou → `ONDA ATRASADA — REFORÇOS!` (sobreviventes + novos; baseline medido nunca estoura: atrasoPct 0,0%;
+  clear p95 =18s). A **alavanca de duração** da campanha passou a ser
+  o **clear** (modelo:10.000 × ~12s ≈35h — alvo = sim completa);
+  pós-chefe usa `ESPERA_TRANSICAO` fixo 8s e o kill do
   chefe zera o timer — troca de mapa = 8s únicos, não 16). **Escala de
   monstros**:
   `qtdMonstros()` = `min(3+tot/2, teto)` com teto **5→11** shipado
@@ -239,7 +242,8 @@
   `'mundo'` (degraus por fronteira) e `'mapa'` (suave),
   `escalaMonstros(modo, k)` exposta p/ o A/B; `k=0` = teto fixo 5. **Medido: o nº
   de monstros NÃO muda a duração** (só o perigo — XP extra fortalece);
-  quem controla tempo é o `esperaOnda()`. Vitória: chefe do mapa 100 →
+  quem controla tempo é o **clear** (+ a cota `ONDA_SEG` como freio de
+  build fraca). Vitória: chefe do mapa 100 →
   overlay em `jogo.js` (`UI.bloqueia` + `p.vitoria`, normalizar com
   default `false`) → Continuar = modo infinito. O estado salvo guarda `mapa` e
   `Salvar.lerEstado` migra saves legados (onda >100 → mapa/onda equivalentes)

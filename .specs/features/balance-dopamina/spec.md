@@ -27,9 +27,11 @@ dos pontos/lvl pode resolver isso, precisa testar").
 
 ## Requisitos
 
-- **R-BAL-1 (teto do respiro)** — `esperaOnda()` ganha
-  `ESPERA_TETO = 45` (`Math.min` com o rampa), **exportado** em
-  `Batalha`. Sono do mapa 100: 111s → **45s**; respiro ainda ≥ 25s =
+- **R-BAL-1 (teto do respiro)** — *(SUPERADO em2026-11-15 pela spec
+  `onda-timer`: a espera entre ondas foi removida — `esperaOnda`/
+  `ESPERA_TETO` saíram de cena; vira `BEAT2s + ONDA_SEG30`.)*
+  `esperaOnda()` ganha `ESPERA_TETO = 45` (`Math.min` com o rampa),
+  **exportado** em `Batalha`. Sono do mapa 100: 111s → **45s**; respiro ainda ≥ 25s =
   janela de full-heal (4%/s) preservada em qualquer mapa. Escrita do
   bloco de calibragem em `batalha.js` atualizada com os novos números.
 - **R-BAL-2 (ponto todo nível — V1 neutro)** — `PONTOS_CADA 3→1` **e**

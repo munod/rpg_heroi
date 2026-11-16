@@ -568,6 +568,22 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   teste curto pegaria; (d) isolar a causa com A/B parcial (tema vs
   IA) antes de "consertar" — o isolamento mostrou que a IA nova era
   neutra e o conteúdo era o responsável.
+- **Onda-timer (5º leva, fechamento)** — o mantenedor mandou **remover
+  a espera entre ondas** ("muito ruim e chato") e propôs **cota de
+  tempo por onda** ("se exceder X segundos, a outra onda já inicia").
+  A ideia foi aceita como estruturalmente superior: inverte o sinal
+  (espera parada → pressão durante o combate), faz a **build virar o
+  motor da progressão** (build boa = campanha no ritmo do clear;
+  build fraca = reforços acumulando → espiral → morte) e dá papel de
+  drama aos eventos (Enxame = a onda que estoura a cota). Execução:
+  spec `onda-timer` antes do código → instrumentar clear (p95) no
+  ritmo → **X escolhido pelos dados** (p95=18s → cota30, folga67%)
+  → implementação com timers preservando os fluxos de
+  morte/rollback/troca de mapa → A/B4 seeds (mapa9→12, nv777→1050,
+  atraso0%) → sim completa p/ duração. Aceite do mantenedor: campanha
+  ~45-50h (medida tende a ~35h — confirmar na sim), batida de2s
+  mantida, troco de mapa8s mantido. Alavanca de duração da campanha:
+  **deixou de ser a espera e passou a ser o clear** (AGENTS reescrito).
 
 ## Bloqueios
 

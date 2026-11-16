@@ -1,6 +1,6 @@
 // Mede o ritmo de progressão E a qualidade do tempo de jogo —
 // ferramenta manual para ajustar a curva (Personagem.custoProximo /
-// CUSTO_BASE), o respiro entre ondas (esperaOnda/ESPERA_TETO) e a
+// CUSTO_BASE), a cota da onda (ONDA_SEG/BEAT da spec onda-timer) e a
 // esponja de dano (TTK). Fica fora do todos.js.
 // Uso: node testes/ritmo.js [minutos] [mundo|mapa] [k] [semente]
 //   minutos = duração da sim (padrão 15; 60 p/ ver o boss; 13500 p/ a
@@ -112,7 +112,10 @@ const amo = {
   frames: 0, vivo: 0, morto: 0,
   esp: 0, espRun: 0, espSoma: 0, espQtd: 0, espMax: 0,
   inimSoma: 0, inimMax: 0, hpMin: null,
-  nv10: null, nv20: null, nv30: null, keystone: null
+  nv10: null, nv20: null, nv30: null, keystone: null,
+  // duração de clear por onda (spec onda-timer R-TIM-6a): do spawn
+  // (campo 0→vivo) ao clear (vivo→0) — daí sai o X da cota
+  campoAnt: 0, ultSpawn: 0, ultBoss: false, clears: [], atrasos: 0
 };
 function agora() { return total * FPS_MS / 1000; }
 function amostra(f) {
@@ -133,6 +136,18 @@ function amostra(f) {
   }
   amo.inimSoma += f.inimigos;
   if (f.inimigos > amo.inimMax) amo.inimMax = f.inimigos;
+  // transições de campo p/ a métrica de clear (chefe separado: a cota
+  // da onda-timer é isenta p/ ele)
+  if (f.inimigos > 0 && amo.campoAnt === 0) {
+    amo.ultSpawn = amo.frames;
+    amo.ultBoss = (f.onda === 100);
+  } else if (f.inimigos === 0 && amo.campoAnt > 0 && !amo.ultBoss) {
+    const dur = (amo.frames - amo.ultSpawn) * FPS_MS / 1000;
+    amo.clears.push(dur);
+    // ondas que ESTOURARIAM/estouraram a cota (spec onda-timer R-TIM-6b)
+    if (dur > Batalha.ONDA_SEG) amo.atrasos++;
+  }
+  amo.campoAnt = f.inimigos;
   if (amo.nv10 === null && p.nivel >= 10) amo.nv10 = agora();
   if (amo.nv20 === null && p.nivel >= 20) amo.nv20 = agora();
   if (amo.nv30 === null && p.nivel >= 30) amo.nv30 = agora();
@@ -267,13 +282,27 @@ const metricas = {
   esperaMaxS: +(amo.espMax * FPS_MS / 1000).toFixed(1),
   ttkMedio: abates > 0 ? +((tempoSeg - segEsp) / abates).toFixed(2) : null,
   inimigosMedio: +(amo.inimSoma / Math.max(1, amo.frames)).toFixed(2),
-  inimigosMax: amo.inimMax
+  inimigosMax: amo.inimMax,
+  // clear por onda (spec onda-timer R-TIM-6a) — daí sai o X da cota
+  clearMedio: +(amo.clears.reduce((a, b) => a + b, 0) /
+    Math.max(1, amo.clears.length)).toFixed(2),
+  clearP95: amo.clears.length
+    ? +amo.clears.slice().sort((a, b) => a - b)[
+        Math.floor(amo.clears.length * 0.95)].toFixed(2) : null,
+  clearMax: amo.clears.length
+    ? +Math.max.apply(null, amo.clears).toFixed(2) : null,
+  clears: amo.clears.length,
+  atrasoPct: +(100 * amo.atrasos / Math.max(1, amo.clears.length))
+    .toFixed(2)
 };
 console.log('--- métricas (' + tempoSeg.toFixed(0) + 's simulados) ---');
 console.log('combate: kpm ' + metricas.kpm + ' · dps efetivo ' +
   metricas.dpsEfetivo + ' · ttk médio ' +
   (metricas.ttkMedio === null ? '—' : metricas.ttkMedio + 's') +
   ' · inimigos ' + metricas.inimigosMedio + ' (máx ' + metricas.inimigosMax + ')');
+console.log('clear/onda: médio ' + metricas.clearMedio + 's · p95 ' +
+  metricas.clearP95 + 's · máx ' + metricas.clearMax + 's (' +
+  metricas.clears + ' clears — base do X da onda-timer)');
 console.log('tempo: espera ' + metricas.esperaPct + '% (média ' +
   metricas.esperaMediaS + 's · máx ' + metricas.esperaMaxS + 's) · uptime ' +
   (100 * metricas.uptime).toFixed(1) + '% · menor HP vivo ' + metricas.hpMin);

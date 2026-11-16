@@ -217,7 +217,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 725 asserções: sprites, status, UI visual, idle, toque, ranking, mundos, cutscenes, árvore, IA (monstros + herói), respiro, opções
+node testes/fumaca.js     # 732 asserções: sprites, status, UI visual, idle, toque, ranking, mundos, cutscenes, árvore, IA (monstros + herói), respiro, opções, onda-timer
 node testes/grade.js      # grade do sprite em ASCII + 17 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -226,7 +226,7 @@ node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] [mundo|mapa] [k] [semente] # mede o ritmo + métricas de combate/economia (tuning; padrão 15min, seed 1; grava resultados/ritmo.json)
 ```
 
-São **743 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **750 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.

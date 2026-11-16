@@ -11,7 +11,8 @@ var Batalha = (function () {
   var inimigos = [];
   var poeira = [];       // pó ambiente da arena (visual só)
   var onda = 0;
-  var tOnda = 1.0;                // espera até a próxima onda
+  var tOnda = 1.0;                // batida até a próxima onda (BEAT)
+  var tCota = -1;                 // cota da onda em campo (−1 = sem)
   var pausada = false;
   var donoId = null;         // personagem dono da batalha em memória
   var mapa = 1;              // mapa atual (ciclo de FIM_MAPA ondas)
@@ -140,53 +141,42 @@ var Batalha = (function () {
   // do fim = 11×0,037 = 0,407 ≈ 9×0,045 = 0,405 do baseline medido
   // (222,5h sem estol). A progressão da sim completa manda (R-BAL-4c).
   var ESC_DMG = 0.037;    // dano do inimigo por onda
-  // Respiro entre ondas — ALAVANCA DE DURAÇÃO da campanha (spec mundos
-  // R-MUN-7). Medido (ritmo, 4 configs): o nº de monstros NÃO muda a
-  // duração (k=1/3/5 → todos ~21 mapas/600min; só o perigo muda — k=10
-  // → 195 mortes), porque o XP extra fortalece o herói e compensa. O
-  // ESPERA é linear e seguro (tempo de regen, sem tocar no cliff
-  // HP×DMG): 8s → 21 mapas/600min, 40s → 8, 70s → 5.
-  // Por isso ele ESCALA COM A PROFUNDIDADE (e agora TEM TETO — spec
-  // balance-dopamina R-BAL-1): o mundo 1 respira 2s (base do
-  // mantenedor), cada mapa seguinte +1,1s até bater os 45s no mapa ~40
-  // e travar até o fim (sono do mapa 100: 111s → 45s). Calibração
-  // modelo pós-teto: 100 mapas × 100 ondas × (clear ~15s + espera
-  // média ~36s) ≈ 143h — o alvo DEFINITIVO é o da sim completa
-  // pós-teto (R-MUN-7 emendado). No modo infinito (mapa > 100) o
-  // rampa trava no min(mapa, 100) e o teto completa — sem eles
-  // cresceria sem limite (mapa 1000 = 18min/onda).
   // Teto da regen (spec gestao-atributos): era 500 hp/s. Early intocado
-  // (4-20 hp/s); no late corta 2.800 → 500. Critério: manter mortes
-  // como eventos na medição comparativa (T9: 6 mortes em 2400min).
+  // (4-20 hp/s); no late corta 2.800. Critério: manter mortes como
+  // eventos na medição comparativa (T9: 6 mortes em 2400min).
   // Se a sim estolar, SOBE este número.
-  // COMPENSAÇÃO DA LEVA DOPAMINA (medição R-BAL-6): o ESPERA_TETO 45s
-  // encolheu a janela de cura do fim (45×500 = 22,5k vs 113s×500 =
-  // 56,5k sem teto) e a sim completa ESTOLOU no mapa 97 (1.357
-  // mortes). Com 1250 a cura por respiro volta a 45×1250 = 56k ≈ a
-  // janela histórica estável; o cap só pega com HP >31k (só o late —
+  // COMPENSAÇÃO DA LEVA DOPAMINA (medição R-BAL-6): o antigo teto de
+  // espera de45s encolheu a janela de cura do fim (45×500 = 22,5k vs
+  // 113s×500 = 56,5k) e a sim completa ESTOLOU no mapa97 (1.357
+  // mortes). Com 1250 a cura por ciclo volta a 56k ≈ a janela
+  // histórica estável; o cap só pega com HP >31k (só o late —
   // early/mid idênticos aos medidos).
   var REGEN_MAX = 1250;
-  var ESPERA_BASE = 2.0;      // respiro do mundo 1 (intacto)
-  var ESPERA_PASSO = 1.1;     // + por mapa de profundidade
-  // Teto do respiro (spec balance-dopamina R-BAL-1, decisão do
-  // mantenedor 2026-11-15: aceitar campanha mais curta): sem teto o
-  // rampa ia a 111s no mapa 100 (88% do tempo morto naquele ponto).
-  // Com 45s: sono do mapa 100 vira 45s e a janela de full-heal
-  // (4%/s = 25s sem apanhar) continua garantida em qualquer mapa.
-  // O rampa continua sendo a alavanca de duração (R-MUN-7) — o alvo
-  // novo é o medido pela sim completa pós-teto.
-  var ESPERA_TETO = 45.0;
+
+  // ---- onda-timer (spec onda-timer): a espera virou PRESSÃO ----
+  // A alavanca de duração da campanha deixou de ser o respiro parado e
+  // passou a ser o CLEAR (R-TIM-1): campo limpo → batida curta de BEAT
+  // (o toast ONDA LIMPA respira) → próxima onda; e cada onda tem
+  // COTA de tempo (R-TIM-2): não limpou em ONDA_SEG → reforços entram
+  // junto com os sobreviventes (build fraca = espiral → morte = −5
+  // ondas = castigo; build boa = campanha na hora do clear).
+  // Baseline medido (ritmo, 4 seeds ×240min): clear médio 10,5s · p95
+  // 18s · máx 34,6s (enxame) → ONDA_SEG 30 = folga ~67% sobre o p95;
+  // estoura só em ondas pesadas = drama intencional (o Enxame vira a
+  // onda que aperta). Modelo de campanha: 10.000 ondas × (clear ~10,5s
+  // + batida 2s) ≈ 35h + atrasos/mortes — alvo DEFINITIVO = sim
+  // completa (R-TIM-6c; mantenedor aceitou ~45-50h em 2026-11-15).
+  // A batida NÃO é a espera antiga: era rampa de até111s parado.
+  // Mantidas: ESPERA_TRANSICAO (troco de mapa, contexto próprio com
+  // banner/cutscene — decisão do mantenedor) e a regen durante as
+  // brechas do combate + a batida (R-TIM-5).
+  var BEAT = 2.0;           // batida após o clear (era a espera)
+  var ONDA_SEG = 30;        // cota da onda em segundos (R-TIM-2)
   var ESPERA_TRANSICAO = 8.0; // pós-chefe: a troca de mapa é o seu
-                              // próprio tempo (não espera o respiro
-                              // escalado — senão a vitória atrasaria
-                              // 117s após o último chefe)
+                              // próprio tempo (banner/cutscene —
+                              // mantida por decisão do mantenedor)
   var MAPA_FIM_CAMPANHA =
     Mapas.MAPAS_POR_MUNDO * Mapas.LISTA.length;   // 10 × 10 = 100
-
-  function esperaOnda() {
-    var m = Math.min(mapa, MAPA_FIM_CAMPANHA);
-    return Math.min(ESPERA_BASE + (m - 1) * ESPERA_PASSO, ESPERA_TETO);
-  }
 
   // Renda de XP harmônica com o custo (spec progressao-exponencial):
   // XP = XP_BASE × XP_H^ondaTotal; em tot=0 vale 12 (escala inicial).
@@ -454,6 +444,7 @@ var Batalha = (function () {
     ultimaSkill = null;
     onda = 0;
     tOnda = 1.0;
+    tCota = -1;
     Efeitos.limpar();
     pausada = false;
   }
@@ -586,6 +577,10 @@ var Batalha = (function () {
   // (2ª vida, Cetro da Tempestade) são efeitos de nascimento.
   function spawnaOnda() {
     if (heroi) heroi.fenixUsada = false;
+    // cota da onda (spec onda-timer R-TIM-2/3): −1 = sem cota (chefe é
+    // isento — clímax sem prazo); normais têm ONDA_SEG p/ estourar em
+    // reforços com os sobreviventes
+    tCota = ehBoss(onda) ? -1 : ONDA_SEG;
     if (Itens.temEfeito(Game.personagem, 'tempestade')) skillsEstado = {};
     var tem = Mapas.info(mapa);
     if (ehBoss(onda)) {
@@ -1050,14 +1045,13 @@ var Batalha = (function () {
     } else {
       soltaItens(en);
     }
-    // dentro do mapa o respiro escala com a profundidade; na onda 100
-    // (chefe) ele é ZERO (spec respiro R-RES-3): a espera da troca de
-    // mapa é a do passaMapa (ESPERA_TRANSICAO) — antes os DOIS 8s
-    // somavam 16s de campo vazio no troco ("o personagem dorme").
-    // B2: o clear vira beat de decisão — avisa quanto falta e o que já
-    // dá pra distribuir. Chefe não avisa aqui (BOSS DERROTADO! + o
-    // MAPA N do passaMapa já cobrem o momento).
-    tOnda = ehBoss(onda) ? 0 : esperaOnda();
+    // dentro do mapa o clear dá a batida (BEAT — era a espera); na onda
+    // 100 (chefe) o timer é ZERO: a espera da troca de mapa é a do
+    // passaMapa (ESPERA_TRANSICAO) — 8s únicos, não 16 (spec respiro
+    // R-RES-3). B2: o clear vira beat de decisão — avisa quanto falta
+    // e o que já dá pra distribuir. Chefe não avisa aqui (BOSS
+    // DERROTADO! + o MAPA N do passaMapa já cobrem o momento).
+    tOnda = ehBoss(onda) ? 0 : BEAT;
     if (inimigos.length === 0 && !ehBoss(onda) && !heroi.morto) {
       var pts = Game.personagem.pontos || 0;
       aviso('ONDA LIMPA · ' + Math.ceil(tOnda) + 's' +
@@ -1788,10 +1782,18 @@ var Batalha = (function () {
       aviso('GATUNO DESISTIU DA FUGA!', '#ff6b6b');
     }
 
-    // ondas
+    // ondas: batida (campo vazio) OU cota da onda (campo cheio —
+    // spec onda-timer R-TIM-2: expirou → reforços junto com os
+    // sobreviventes; o contador de onda avança, sem ONDA LIMPA)
     if (inimigos.length === 0 && !heroi.morto) {
       tOnda -= dt;
       if (tOnda <= 0) proximaOnda();
+    } else if (inimigos.length > 0 && !heroi.morto && tCota > 0) {
+      tCota -= dt;
+      if (tCota <= 0) {
+        aviso('ONDA ATRASADA — REFORÇOS!', '#ff6b6b');
+        proximaOnda();
+      }
     }
 
     // poeira: deriva lenta com wrap na JANELA VISÍVEL (só posição, sem
@@ -2040,13 +2042,16 @@ var Batalha = (function () {
       });
     UI.text('Onda ' + onda + ' (' + inimigos.length + ')',
       vx + vw - 4 * k, vy + 7 * k, { align: 'right', color: '#e8c86a' });
-    // B1 (spec respiro R-RES-1): contagem visível do respiro — sem ela
-    // a espera parece infinita ("dorme entre as ondas"); antecipação >
-    // incerteza. Mesmo x da linha de onda, uma linha abaixo.
+    // B1/R-TIM-4: contagem visível — na batida (campo vazio) e na
+    // COTA da onda (campo cheio; vermelho ≤5s = alerta de expiração)
     if (inimigos.length === 0 && tOnda > 0 && !heroi.morto) {
       UI.text('PRÓXIMA ONDA EM ' + Math.max(1, Math.ceil(tOnda)) + 's',
         vx + vw - 4 * k, vy + 17 * k,
         { align: 'right', color: '#8ce08c' });
+    } else if (inimigos.length > 0 && tCota > 0 && !heroi.morto) {
+      UI.text('TEMPO ' + Math.max(1, Math.ceil(tCota)) + 's',
+        vx + vw - 4 * k, vy + 17 * k,
+        { align: 'right', color: tCota <= 5 ? '#ff6b6b' : '#e8c86a' });
     }
 
     if (heroi.morto) {
@@ -2091,9 +2096,11 @@ var Batalha = (function () {
       gatuno: temE('gatuno'),
       dano: (heroi && heroi.stats) ? Math.round(heroi.stats.dano) : 0,
       onda: onda,
-      // sonda do respiro (spec respiro R-RES-1): tempo até a próxima
-      // onda p/ teste — 0 = onda em campo ou spawn em curso
+      // sonda do respiro (spec respiro R-RES-1): batida até a próxima
+      // onda — 0 = onda em campo ou spawn em curso
       espera: Math.max(0, tOnda),
+      // cota da onda (spec onda-timer R-TIM-4): −1 = sem cota (chefe)
+      cota: tCota,
       janela: { w: VW, h: VH },
       // região ativa = 3×3 chunks de 384×268 ao redor do herói
       // (spec mapa-infinito R-INF-5/10 — o mundo não tem bordas)
@@ -2186,8 +2193,8 @@ var Batalha = (function () {
     ganhaXP: ganhaXP,         // teto de nível testável (seção 36)
     xpAbate: xpAbate,         // renda exponencial testável (seção 38)
     REGEN_MAX: REGEN_MAX,     // teto da regen (spec gestao-atributos)
-    ESPERA_TETO: ESPERA_TETO, // teto do respiro (spec balance-dopamina)
-    esperaOnda: esperaOnda,   // respiro vigente p/ teste (R-BAL-1)
+    BEAT: BEAT,             // batida após o clear (spec onda-timer)
+    ONDA_SEG: ONDA_SEG,     // cota da onda em segundos (R-TIM-2)
     TIPOS: TIPOS,             // espécies (spec monstros-novos — seção 41)
     spawn: spawn,             // p/ fixtures da seção 41 (skill de espécie)
     regeneraEspecie: regeneraEspecie,  // skill pura (teste sem arena)

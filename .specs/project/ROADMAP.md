@@ -5,28 +5,33 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Entregue
 
-### Unreleased — 2026-11-15 — leva "ritmo/dopamina" (1-4 de 4)
+### Unreleased — 2026-11-15 — leva "ritmo/dopamina" (1-4 + onda-timer)
 - **`ritmo.js` vira instrumento** (fase 1) — seed mulberry32 (4º arg,
   padrão 1) = run determinístico com **eventos ATIVOS**, sondas por
   frame (espera%, inimigos, hpMin, uptime), métricas de combate
-  (kpm/dps/ttk/xpm/gpm/eficiência/mortes-h), marcos nv 10/20/30 +
-  keystone e JSON em `resultados/` (gitignored) com commit
-- `respiro` — countdown `PRÓXIMA ONDA EM Xs` no HUD + `info().espera`,
-  toast `ONDA LIMPA · Xs · +N PONTOS` no clear e fim do **delay duplo
-  do troco de mapa (16s → 8s)**; `ESPERA_BASE` 4→2s (mantenedor)
+  (kpm/dps/ttk/xpm/gpm/eficiência/mortes-h/**clear-médio-p95-máx/
+  atrasoPct**), marcos nv 10/20/30 + keystone e JSON em
+  `resultados/` (gitignored) com commit
+- `respiro` — countdown no HUD, toast `ONDA LIMPA · +N PONTOS` e fim
+  do **delay duplo do troco de mapa (16s → 8s)**; `ESPERA_BASE` 4→2s
+  (mantenedor)
 - `opcoes` — overlay de 4 toggles de conforto (`rpg_opcoes_v1`):
   shake · flash/vinheta · números · poeira
-- **`balance-dopamina`** (spec + medições ≥4 seeds) —
-  `ESPERA_TETO 45s` · **ponto POR NÍVEL** (V1 neutro) · **esponja**
-  `ESC_HP →1,25` · densidade `k 0,5→0,75` + **R-BAL-6**: a sim
-  completa estolou no mapa97 com o teto → `REGEN_MAX 500→1250` +
-  `ESC_DMG →0,037` (compensações medidas; sim da candidata em curso)
-- **`mapa-infinito`** (spec) — **fases A-E completas**: câmera sempre
-  centralizada, mundo sem bordas, chão/obstáculos por chunk, A* e
-  influence em janelas rolantes, tema por mapa; fumaça seção17
-  reescrita; IA isolada neutra no ruído (4 seeds)
-- gate **727 confs** · pendências: sim completa da candidata (alvo de
-  duração + validação do anti-estol) e seus docs finais
+- **`balance-dopamina`** — `ESPERA_TETO 45s` · **ponto POR NÍVEL**
+  (V1 neutro) · densidade `k 0,5→0,75` · **R-BAL-6**: sim estolou no
+  mapa97 → `REGEN_MAX 1250` + `ESC_DMG 0,037` + `ESC_HP 1,25`
+- **`mapa-infinito`** (fases A-E) — câmera sempre centralizada, mundo
+  sem bordas, chão/obstáculos por chunk, A* e influence em janelas
+  rolantes, tema por mapa; fumaça seção17 reescrita; IA isolada neutra
+  no ruído (4 seeds)
+- **`onda-timer`** — **a espera entre ondas SAIU** ("muito ruim e
+  chato"): clear → batida2s → próxima onda na hora; **cota de30s por
+  onda** (expirou → reforços com os sobreviventes = desafio da build);
+  chefe isento; HUD `TEMPO Xs`; X por medição (p95=18s →0,00% de
+  atraso no baseline); A/B: **mapa9→12, nv777→1050, espera37%→17%**
+- gate **727 confs** · pendências: sim do onda-timer (vitória +
+  duração + anti-estol) e sim2 da candidata R-BAL-6 — docs finais com
+  os números quando terminarem
 
 ### v0.5.0 — 2026-11-15 (ver `CHANGELOG.md`) — série visual, parte 2
 - `visual-heroi-arma` — motor de cor (rampas HSL + luz única), herói

@@ -12,6 +12,25 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Onda com cota de tempo (spec `onda-timer`)** — fechamento da
+  queixa "o personagem dorme entre as ondas": **a espera entre ondas
+  SAIU** (era `esperaOnda()` com rampa até111s e depois `ESPERA_TETO
+  45s` — removidas por decisão do mantenedor: "muito ruim e chato").
+  Ciclo novo: **clear → batida de `BEAT 2s` → próxima onda na hora**
+  (o toast `ONDA LIMPA` respira) e **cada onda tem cota de
+  `ONDA_SEG 30s`**: não limpou no prazo → `ONDA ATRASADA —
+  REFORÇOS!` e a nova onda entra **com os sobreviventes** (build fraca
+  = campo acumulando = espiral → morte = −5 ondas; build boa = campanha
+  na velocidade do clear). **Chefe isento** (clímax sem prazo,
+  `cota=-1`), HUD vira `TEMPO Xs` durante o combate (vermelho ≤5s) e
+  `info().cota` expõe o timer. X escolhido por medição: baseline
+  clear p95 =18s → cota30 = folga67% (**`atrasoPct 0,00%` em4 seeds**).
+  A/B (4 seeds ×240min): espera%37→17, **mapa9→12, nv777→1050**,
+  clear intacto, mortes0. `ritmo.js` ganha `clearMedio/clearP95/
+  clearMax/atrasoPct`. A alavanca de duração da campanha passou a ser
+  o **clear** (~35h modelo — sim completa em curso).
+
+
 - **Mapa procedural infinito (spec `mapa-infinito`)** — playtest:
   *"esse mapa limitado faz o char sumir da tela, fica só metade dele
   qnd sobe"*. O herói agora fica **sempre no centro da janela**:
@@ -60,7 +79,6 @@ vive em `.specs/features/`.
     povoada). Medido: sem estol no mundo 3 (900min → mapa 20-23,
     mortes 0-1) — o cenário do estol histórico do k alto.
 
-### Added
 
 - **Respiro entre ondas vira beat (spec `respiro`)** — reclamação do
   playtest: *"o personagem dorme entre as ondas"*. O HUD agora mostra
@@ -81,7 +99,6 @@ vive em `.specs/features/`.
   fecha por `Fechar`, `Esc` ou clique fora; vitória/cutscene têm
   prioridade. Fumaça seção 52.
 
-### Added
 
 - **`ritmo.js` vira instrumento de balanceamento (fase 1)** — seed do
   RNG (4º arg, padrão 1, mulberry32 espelhado do `perlin.js`; run
