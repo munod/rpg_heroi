@@ -55,7 +55,10 @@ vive em `.specs/features/`.
   por respiro de volta à janela histórica) + `ESC_DMG 0,045→0,037`
   (perigo total do fim com k0,75 ≈ baseline) + `ESC_HP 1,55→1,25`
   (tema por mapa subiu o ttk;4 seeds ×240min: progressão de volta à
-  faixa do baseline). **Sim completa da candidata em curso.**
+  faixa do baseline). **Sim completa da candidata: VITÓRIA em
+  8.171min = 136,2h · nv final 9.171 (modelo 9.150) · 0 mortes** — a
+  compensação do estol validada (a sim sem ela estolou no mapa97 com
+  1.357 mortes).
 
 ### Changed
 

@@ -1,9 +1,11 @@
 # Spec: Balance da leva dopamina — teto do respiro, pontos por nível e esponja de dano
 
-Status: **código e medições locais concluídos** (gate 727 confs; A/B ≥4
-seeds por decisão: V1 neutro idêntico, TTK −12%, sem estol no mundo 3
-em 900min) · **sim completa pós-teto em curso** p/ o alvo de duração
-(R-BAL-4c/5) · Data: 2026-11-15 ·
+Status: **CONCLUÍDA** (gate 727 confs; A/B ≥4 seeds por decisão: V1
+neutro idêntico, TTK −12%, sem estol no mundo 3 em 900min; **sim
+completa da candidata: VITÓRIA em 8.171min = 136,2h com 0 mortes**
+(vs a sim sem a compensação que estolou no mapa97 com1.357) — alvo de
+duração medido da config COM espera; a vigência passou para a sim do
+`onda-timer`) · Data: 2026-11-15 ·
 Iniciativa: mantenedor (reclamações: "espera só sobe a cada mapa",
 "esponja de dano — grande problema do endgame do D4", "a evolução
 dos pontos/lvl pode resolver isso, precisa testar").
@@ -56,7 +58,10 @@ dos pontos/lvl pode resolver isso, precisa testar").
   baseline medido —222,5h sem estol);
   (c) `ESC_HP1,55 →1,25` (com o tema por mapa o ttk voltou a2,48;
   em4 seeds ×240min o1,25 devolve a progressão à faixa do baseline
-  com ttk2,32 ≈ pré-leva3). Validação: **sim completa em curso**.
+  com ttk2,32 ≈ pré-leva3). **Validação: sim completa — VITÓRIA em
+  8.171min = 136,2h, nv final9.171 (modelo9.150), 0 mortes** (a sim
+  SEM a compensação estolou no mapa97 com1.357 mortes — comparar com
+  `resultados/completa_s1.json` vs `completa2_s1.json`).
 - **R-BAL-4 (medição — o gate da leva)** — por decisão, **≥4 seeds**
   (`node testes/ritmo.js 240 mundo 0.5 <s>`) comparando DEPOIS vs
   ANTES: (a) V1 neutro → nv/onda/mapa/ttk **idênticos** (se divergir
