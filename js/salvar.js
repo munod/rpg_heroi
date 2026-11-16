@@ -28,6 +28,10 @@ var Salvar = (function () {
   // maiores vêm de storage corrompido e são rejeitados na leitura.
   var ONDA_MAX = 99999;
   var rejeitados = 0;   // entradas rejeitadas desde o boot (teste/UI)
+  // Sobe a cada escrita válida na lista de personagens — as telas usam
+  // para cachear `listar()` (a seleção chamava a cada frame: parse +
+  // HMAC de todos os saves).
+  var versao = 0;
 
   // ---------------------------------------------------- assinatura
   function assina(valor) {
@@ -112,7 +116,19 @@ var Salvar = (function () {
           (e.nome || e.id || '(sem nome)'));
         continue;   // fica no storage intacto — nada é apagado
       }
-      validos.push(Personagem.normalizar(e));
+      var normalizado;
+      try {
+        normalizado = Personagem.normalizar(e);
+      } catch (err) {
+        // assinatura ok mas conteúdo impossível de normalizar (save
+        // corrompido/editado): sem este catch o throw derrubava o boot
+        // (listar é chamado por ultimo() no load). Preserva no storage.
+        rejeitados++;
+        avisa('save inválido (normalização): ' +
+          (e.nome || e.id || '(sem nome)') + ' — ' + err.message);
+        continue;
+      }
+      validos.push(normalizado);
     }
     return validos;
   }
@@ -129,6 +145,7 @@ var Salvar = (function () {
     try {
       localStorage.setItem(KEY, JSON.stringify(saida));
       marca(KEY_MARC_P);
+      versao++;
       return true;
     } catch (e) {
       return false;
@@ -150,7 +167,15 @@ var Salvar = (function () {
       for (j = 0; j < lista.length; j++) {
         if (lista[j] && lista[j].id === e.id) { naLista = true; break; }
       }
-      if (!naLista && marcador(KEY_MARC_P) && !confere(e)) saida.push(e);
+      if (naLista || !marcador(KEY_MARC_P)) continue;
+      if (!confere(e)) { saida.push(e); continue; }
+      // assinado mas ilegível (normalização lança): preserva — apagar
+      // seria perda de dado; re-assinar seria aceitar a trapaça
+      try {
+        Personagem.normalizar(e);
+      } catch (err) {
+        saida.push(e);
+      }
     }
     return gravaBruto(saida);
   }
@@ -358,6 +383,7 @@ var Salvar = (function () {
     salvarEstado: salvarEstado,
     lerEstado: lerEstado,
     ultimo: ultimo,
-    rejeitados: rejeitadosQtd
+    rejeitados: rejeitadosQtd,
+    versao: function () { return versao; }
   };
 })();

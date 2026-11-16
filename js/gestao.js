@@ -93,13 +93,20 @@ var Gestao = (function () {
   };
 
   // Tooltip dos atributos (Leva 3): o que cada um alimenta — o detalhe
-  // numérico por fonte vive no tooltip do rodapé
+  // numérico por fonte vive no tooltip do rodapé. Os números abaixo saem
+  // das MESMAS constantes de Personagem (PONTO_MULT) para não mentirem
+  // quando a compensação mudar.
+  function nBR(v) { return String(Math.round(v * 10) / 10).replace('.', ','); }
   function dicasAtributo(linha, p) {
     var v = p.atributos[linha.at];
+    var pm = Personagem.PONTO_MULT;
     var textos = {
-      for: 'FOR: dano do ataque (+1 a cada 2 pontos efetivos)',
-      des: 'DES: velocidade (×3), recarga (÷ vel) e crítico (×1,3)',
-      con: 'CON: vida máxima (+4 por ponto)',
+      for: 'FOR: dano (+0,5 por ponto até a base; +' + nBR(0.5 * pm) +
+        ' no investido)',
+      des: 'DES: velocidade (curva saturante), recarga (÷ vel) e crítico ' +
+        '(+1,3 até a base; +' + nBR(1.3 * pm) + ' no investido)',
+      con: 'CON: vida máxima (+4 por ponto até a base; +' + nBR(4 * pm) +
+        ' no investido)',
       int: 'INT: agudeza da IA — 4 = burro, 20 = gênio (skills/IA)',
       car: 'CAR: ouro de abate (log, satura ~2,8×) — no clérigo vira dano'
     };

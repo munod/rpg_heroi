@@ -326,18 +326,22 @@ var Efeitos = (function () {
     limitar(raios, MAX.raios);
   }
 
-  // relâmpago vertical (doc §5.8 — bossChegou)
-  function raio(xAlvo) {
+  // relâmpago vertical (doc §5.8 — bossChegou). O impacto é o y do ALVO
+  // em coordenadas de MUNDO (mundo infinito — antes era fixo no topo do
+  // mundo 384×268 e o relâmpago aparecia fora da tela).
+  function raio(xAlvo, yAlvo) {
     if (mudo) return;
-    var nos = [], x = xAlvo + rand(-24, 24), y = -2;
-    while (y < 268 - 26) {
+    var base = (typeof yAlvo === 'number' && isFinite(yAlvo)) ? yAlvo : 242;
+    var topo = base - 110;
+    var nos = [], x = xAlvo + rand(-24, 24), y = topo;
+    while (y < base) {
       y += rand(5, 9);
       x += rand(-8, 8);
-      if (y > 268 - 26 && Math.abs(x - xAlvo) > 6) x += (xAlvo - x) * 0.4;
-      nos.push({ x: x, y: Math.min(y, 268 - 26) });
+      if (y > base && Math.abs(x - xAlvo) > 6) x += (xAlvo - x) * 0.4;
+      nos.push({ x: x, y: Math.min(y, base) });
     }
-    nos.push({ x: xAlvo, y: 268 - 24 });
-    raios.push({ nos: nos, alvo: xAlvo, t: 0, tMax: 0.4 });
+    nos.push({ x: xAlvo, y: base - 2 });
+    raios.push({ nos: nos, alvo: xAlvo, baseY: base, t: 0, tMax: 0.4 });
     limitar(raios, MAX.raios);
   }
 
@@ -484,8 +488,8 @@ var Efeitos = (function () {
     parar(0.14);
     flashTela('#5a0f14', 0.35, 0.3);
     bordaTela('#d84a20', 0.6, 1.1);
-    raio(x - 40);
-    raio(x + 40);
+    raio(x - 40, y - 6);
+    raio(x + 40, y - 6);
     anel(x, y, 6, 70, 0.7, '#ffb060', 0.9);
     anel(x, y, 4, 40, 0.5, '#ffffff', 0.8, 0.16);
     brilho(x, y, '#ff5a3a', 16, 0.5);
@@ -819,10 +823,11 @@ var Efeitos = (function () {
           ctx.fillRect(Math.round(px), Math.round(py), 1, 1);
         }
       }
-      // clarão cruzado no impacto
+      // clarão cruzado no impacto (baseY do raio — mundo infinito)
+      var by = (typeof r.baseY === 'number') ? r.baseY : 242;
       ctx.fillStyle = '#fff3c8';
-      ctx.fillRect(r.alvo - 2, 268 - 26, 5, 1);
-      ctx.fillRect(r.alvo, 268 - 28, 1, 5);
+      ctx.fillRect(r.alvo - 2, by - 2, 5, 1);
+      ctx.fillRect(r.alvo, by - 4, 1, 5);
     }
     ctx.globalAlpha = 1;
   }

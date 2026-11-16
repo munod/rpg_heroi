@@ -264,9 +264,10 @@ var Personagem = (function () {
   //  · até a BASE do personagem (8 + bônus de classe) vale o linear
   //    antigo — atributo baixo PAGA a penalidade (fixture de "vidro"
   //    continua de vidro: con 1 = 12 de HP, não 40);
-  //  · ACIMA da base cada ponto vale PONTO_MULT (9×) — é a
-  //    compensação dos pontos escassos (1 a cada 3 níveis = 9× menos
-  //    pontos que os 3/nível antigos), e é o que faz a decisão importar.
+  //  · ACIMA da base cada ponto vale PONTO_MULT× (hoje 3×) — é a
+  //    compensação dos pontos escassos (1 por nível = 3× menos pontos
+  //    que os 3/nível antigos, e o mult acompanha: pontos × mult =
+  //    constante, então o poder MEDIDO fica idêntico).
   function ganhoAtributo(at, at0, porPonto) {
     return Math.min(at, at0) * porPonto +
       Math.max(0, at - at0) * porPonto * PONTO_MULT;
@@ -293,17 +294,19 @@ var Personagem = (function () {
     // +6/nível (era 4): a fronteira exige que o HP do herói acompanhe
     // o dano inimigo linear — na leva progressao-exponencial os níveis
     // são mais escassos, então cada um puxa mais sobrevivência
-    // HP: ganhoAtributo (CON linear até a base, 9× acima) + o HP por
-    // nível (inalterado) mantêm a frente e o early
+    // HP: ganhoAtributo (CON linear até a base, PONTO_MULT× acima) + o
+    // HP por nível (inalterado) mantêm a frente e o early
     var con0 = 8 + (c.bonus.con || 0);
     var hpMax = c.hpBase + Math.floor(ganhoAtributo(a.con, con0, 4)) +
       (nv - 1) * HP_POR_NIVEL + b.hp;
-    // dano: ganhoAtributo (base linear +9× acima dela — ver helper)
+    // dano: ganhoAtributo (base linear + PONTO_MULT× acima dela — ver helper)
     var at0 = 8 + (c.bonus[c.danoMod] || 0);
     var dano = c.danoBase +
       Math.floor(ganhoAtributo(a[c.danoMod], at0, 0.5)) + b.dano;
-    // crítico: ganhoAtributo (DES linear até a base, 9× acima) — o
-    // clamp 45 existente continua valendo por cima (o espelho desconta)
+    // crítico: ganhoAtributo (DES linear até a base, PONTO_MULT× acima) —
+    // o TETO 45 vale para as fontes normais (atributo + itens); o
+    // keystone de crítico ROMPE o teto (é o tradeoff dele: +18C/−10%D
+    // não pode ser simplesmente descartado no fim da campanha)
     var des0 = 8 + (c.bonus.des || 0);
     var critCalc = 4 + Math.floor(ganhoAtributo(a.des, des0, 1.3)) + b.crit;
     var crit = Math.min(45, Math.max(0, critCalc));
@@ -313,7 +316,7 @@ var Personagem = (function () {
       if (k.dano) dano = Math.round(dano * k.dano);
       if (k.hpMax) hpMax = Math.round(hpMax * k.hpMax);
       if (k.vel) vel += k.vel;
-      if (k.crit) crit += k.crit;
+      if (k.crit) crit += k.crit;   // acima do teto 45 (ver comentário)
     }
     // clamps finais: afixo negativo/keystone nunca zera status, e o
     // TETO da velocidade vale p/ atributo+item+keystone somados (spec
@@ -321,9 +324,10 @@ var Personagem = (function () {
     vel = Math.max(10, Math.min(VEL_MAX, vel));
     hpMax = Math.max(10, hpMax);
     dano = Math.max(1, dano);
-    crit = Math.max(0, Math.min(45, crit));
+    crit = Math.max(0, crit);
     return {
-      // +4 de vida por nível (0 no nível 1, preservando o custo inicial)
+      // +HP_POR_NIVEL de vida por nível (0 no nível 1, preservando o
+      // custo inicial)
       hpMax: hpMax,
       dano: dano,
       vel: vel,
@@ -393,17 +397,29 @@ var Personagem = (function () {
       { v: c.danoBase, rot: 'base ' + c.nome },
       { v: Math.floor(danoBase + danoInv),
         rot: c.danoMod.toUpperCase() + ' ' + a[c.danoMod] + (danoInv > 0
-          ? ' (base linear + 9× no investido)' : '') },
+          ? ' (base linear + ' + PONTO_MULT + '× no investido)' : '') },
       { v: b.dano, rot: itRot }
     ];
     var partesHp = [
       { v: c.hpBase, rot: 'base ' + c.nome },
       { v: Math.floor(hpBase + hpInv),
-        rot: 'CON ' + a.con + (hpInv > 0 ? ' (base linear + 9×)' : '') },
+        rot: 'CON ' + a.con + (hpInv > 0
+          ? ' (base linear + ' + PONTO_MULT + '×)' : '') },
       { v: (nv - 1) * HP_POR_NIVEL,
         rot: 'nível ' + nv + ' × ' + HP_POR_NIVEL },
       { v: b.hp, rot: itRot }
     ];
+    // piso do dano/HP: o status clampa no fim (dano ≥ 1, HP ≥ 10) e sem
+    // a linha de piso o Σpartes ficava negativo contra o total (item
+    // amaldiçoado em herói fraco). O piso entra ANTES do mult do keystone.
+    function piso(partes, mult, minimo, rot) {
+      var bruto = partes.reduce(function (q, x) { return q + x.v; }, 0);
+      if (Math.round(bruto * mult) < minimo) {
+        partes.push({ v: minimo / mult - bruto, rot: rot });
+      }
+    }
+    piso(partesDano, k && k.dano ? k.dano : 1, 1, 'piso 1');
+    piso(partesHp, k && k.hpMax ? k.hpMax : 1, 10, 'piso 10');
     var ganhoVel = VEL_BASE * Math.pow(a.des / VEL_DES_REF, VEL_EXP);
     var partesVel = [
       { v: 46, rot: 'base' },
@@ -412,16 +428,27 @@ var Personagem = (function () {
     ];
     var kv = parteKeystone(k && k.vel ? k.vel : null);
     if (kv) partesVel.push(kv);
+    // desconto do clamp final da velocidade (senão Σpartes não fecha)
+    var velBruto = partesVel.reduce(function (q, x) { return q + x.v; }, 0);
+    if (velBruto > VEL_MAX) {
+      partesVel.push({ v: VEL_MAX - velBruto, rot: 'limite ' + VEL_MAX });
+    } else if (velBruto < 10) {
+      partesVel.push({ v: 10 - velBruto, rot: 'piso 10' });
+    }
     var partesCrit = [
       { v: 4, rot: 'base' },
       { v: Math.floor(ganhoAtributo(a.des, des0D, 1.3)),
-        rot: 'DES ' + a.des + ' (linear até a base, 9× acima)' },
+        rot: 'DES ' + a.des + ' (linear até a base, ' + PONTO_MULT +
+          '× acima)' },
       { v: b.crit, rot: itRot }
     ];
-    // desconto do clamp 45% (sem ele Σpartes não fecha com o status)
+    // desconto do teto normal de 45% (o keystone de crítico ROMPE o teto
+    // depois dele — por isso o desconto vem ANTES do keystone)
     var critBruto = partesCrit.reduce(function (q, x) { return q + x.v; }, 0);
     if (critBruto > 45) {
       partesCrit.push({ v: 45 - critBruto, rot: 'limite 45%' });
+    } else if (critBruto < 0) {
+      partesCrit.push({ v: -critBruto, rot: 'piso 0%' });
     }
     var kc = parteKeystone(k && k.crit ? k.crit : null);
     if (kc) partesCrit.push(kc);
@@ -562,7 +589,9 @@ var Personagem = (function () {
       // economia (Leva B) — defaults p/ saves anteriores
       up: Math.min(num(it.up, 0, 0), MAX_UP_ITENS),
       rerolls: num(it.rerolls, 0, 0),
-      escala: Math.min(num(it.escala, 1, 1), 999)
+      // 1e6: acompanha o mapa infinito (Mapas.forca) sem estourar nada;
+      // o teto 999 congelava a escala do item a partir do mapa 1.000
+      escala: Math.min(num(it.escala, 1, 1), 1e6)
     };
     if (typeof it.base === 'string' && it.base) out.base = it.base.slice(0, 24);
     // efeito lendário: só formato (a validação de id é de Itens — id
@@ -575,9 +604,15 @@ var Personagem = (function () {
       var k = BONUS_ITENS[i];
       var v = it.bonus ? it.bonus[k] : null;
       // aceita negativo (afixo amaldiçoado); teto defensivo de magnitude
+      // (1e9: o mapa infinito escala o item por Mapas.forca — o teto
+      // antigo de 99.999 apagava o bônus de itens acima do mapa ~3.000
+      // na leitura/normalização)
       if (typeof v === 'number' && isFinite(v) && v !== 0 &&
-          Math.abs(v) <= 99999) {
-        out.bonus[k] = v < 0 ? Math.ceil(v) : Math.floor(v);
+          Math.abs(v) <= 1e9) {
+        // -0 (ex.: ceil(-0,5)) vira 0 e saía na 2ª normalização — não
+        // guarda zero para `normalizar` ser idempotente
+        var r = v < 0 ? Math.ceil(v) : Math.floor(v);
+        if (r !== 0) out.bonus[k] = r;
       }
     }
     // afixos rollados (itens legados não têm — fica [])
@@ -589,7 +624,7 @@ var Personagem = (function () {
         var idx = BONUS_ITENS.indexOf(af.chave);
         var val = af.valor;
         if (idx < 0 || typeof val !== 'number' || !isFinite(val) ||
-            val <= 0 || val > 99999) continue;
+            val <= 0 || val > 1e9) continue;
         var neg = !!af.neg || af.tipo === 'neg';
         out.afixos.push({
           nome: af.nome.slice(0, 16),
@@ -663,14 +698,25 @@ var Personagem = (function () {
     // fecha o bug dos 83k) — e xp clampado em xpProx−1 (save legítimo
     // sempre tem xp < xpProx; excesso é descartado, como no teto)
     var xpProx = custoProximo(nivel);
+    // teto do xp: `xpProx - 1` deixa de ser representável quando o custo
+    // passa de ~2^53 (nv ~500) e o clamp devolvia xp == xpProx. A partir
+    // daí usa um epsilon RELATIVO (a barra fica a 1e-12 do cheio, mas o
+    // invariante xp < xpProx — que o ganhaXP assume — vale sempre).
+    var xpTeto = xpProx - 1;
+    if (!(xpTeto < xpProx)) xpTeto = xpProx * (1 - 1e-12);
+    // nome: só string conta; um array/objeto/espaços vindo de save
+    // corrompido caía em String(...).trim() vazio e o validar() lançava
+    // "nome ausente" — e Salvar.listar propagava o throw (boot morto).
+    var nome = (typeof p.nome === 'string') ? p.nome.trim() : '';
+    if (!nome) nome = base.nome;
     var out = {
       id: typeof p.id === 'string' && p.id ? p.id : base.id,
-      nome: String(p.nome || base.nome).slice(0, 14),
+      nome: nome.slice(0, 14),
       classe: CLASSES[p.classe] ? p.classe : base.classe,
       atributos: {},
       pontos: Math.min(num(p.pontos, 0, base.pontos), PONTOS_MAX),
       nivel: nivel,
-      xp: noTeto ? 0 : Math.min(num(p.xp, 0, 0), xpProx - 1),
+      xp: noTeto ? 0 : Math.min(num(p.xp, 0, 0), xpTeto),
       xpProx: xpProx,
       equip: {
         arma: normalizaItem(p.equip && p.equip.arma, 'arma'),
@@ -740,6 +786,7 @@ var Personagem = (function () {
     OURO_CAR_K: OURO_CAR_K,
     PONTOS_CADA: PONTOS_CADA,
     PONTOS_NIVEL: PONTOS_NIVEL,
+    PONTO_MULT: PONTO_MULT,
     multOuroCar: multOuroCar,
     OURO_MAX: OURO_MAX,
     PONTOS_MAX: PONTOS_MAX,

@@ -53,9 +53,10 @@ var Itens = (function () {
   var SIGLAS = { dano: 'D', hp: 'HP', vel: 'V', crit: 'C' };
   var CORES = { 1: '#c9c2dd', 2: '#8ce08c', 3: '#e8c86a', 4: '#ff9d4d' };
 
-  // Lendários: 2 por tema de mundo (o tema espelha Mapas.info — 10
-  // mundos; os 3 pools existentes CICLAM: mundos 1/4/7/10, 2/5/8,
-  // 3/6/9 — spec mundos, sem novos efeitos nesta leva). Efeito > número
+  // Lendários: 2 por tema (3 pools que ciclam POR MUNDO — mundo 1/4/7/10,
+  // 2/5/8, 3/6/9 — via Mapas.mundo; o tema do CHÃO é por mapa desde a
+  // spec mapa-infinito R-INF-9, então o pool do lendário não acompanha o
+  // chão do mapa atual). Efeito > número
   // (filosofia Last Epoch) — cada um
   // muda uma mecânica com identidade própria; a matemática dos efeitos
   // é `temEfeito/multDano/multOuro/pctVamp` lá embaixo, e os gatilhos
@@ -428,7 +429,13 @@ var Itens = (function () {
       if (lista[j].neg) negs++;
       else tipos[lista[j].tipo] = true;
     }
-    var ehNeg = !saidaDeMaldicao && negs < 1 && Math.random() < CHANCE_NEG;
+    // lendário: o preço é 1 negativo FIXO (spec lendarios-equilibrio) —
+    // re-rolar a maldição a mantém negativa; num lendário sem negativo
+    // (save antigo/editado) o re-roll o repõe. Sem isso o R+ apagava o
+    // tradeoff do item.
+    var ehNeg = (item.rar >= 4)
+      ? (negs < 1)
+      : (!saidaDeMaldicao && negs < 1 && Math.random() < CHANCE_NEG);
     var pool = ehNeg ? poolNeg() : poolPos(tipos, p.classe);
     if (!pool.length) return false;
     var novo = pool[Math.floor(Math.random() * pool.length)];
@@ -528,7 +535,7 @@ var Itens = (function () {
       out.push(['★ ' + txt, '#ff9d4d']);
     }
     if (item.up > 0) {
-      out.push(['Aprimoramento ' + item.up + '/MAX_UP (+' +
+      out.push(['Aprimoramento ' + item.up + '/' + MAX_UP + ' (+' +
         Math.round(item.up * APR * 100) + '% nos bônus)', '#c9c2dd']);
     }
     var atual = p && p.equip ? p.equip[item.slot] : null;

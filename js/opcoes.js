@@ -21,6 +21,16 @@ var Opcoes = (function () {
   function le() {
     if (ops) return ops;
     ops = copia(PADRAO);
+    // acessibilidade: sem opção salva, respeita o sistema — quem pediu
+    // menos movimento começa com shake/flash desligados (religável na
+    // própria tela de opções; não sobrescreve escolha salva)
+    try {
+      if (typeof window !== 'undefined' && window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        ops.shake = false;
+        ops.flash = false;
+      }
+    } catch (e) { /* sem matchMedia: fica no padrão */ }
     try {
       var raw = localStorage.getItem(CHAVE);
       if (!raw) return ops;

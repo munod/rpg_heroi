@@ -547,6 +547,10 @@ console.log('8b) save assinado (spec save-assinado)');
     'save gravado com _s (assinatura de 64 hex)');
   conf(Salvar.listar().some(s => s.id === alvo.id),
     'round-trip: o save assinado volta pela leitura');
+  const vAntes = Salvar.versao();
+  Salvar.salvar(alvo);
+  conf(Salvar.versao() === vAntes + 1,
+    'versão do save sobe a cada escrita (cache da lista na seleção)');
 
   // --- (c) adulteração: o save é rejeitado e NADA é destruído
   const bruto = JSON.parse(localStorageStub.getItem(K));
@@ -1851,6 +1855,34 @@ console.log('24) economia: ouro, venda/sucata, aprimoramento e re-roll');
   frame(2);
   conf(p.equip.arma.up === 1 && p.ouro === 490,
     'clique no A+ aprimora e cobra (515 - 25)');
+
+  // --- tooltip do item: teto numérico (não vaza o nome da constante)
+  const itD = { nome: 'Aprimorada', slot: 'arma', rar: 2, escala: 1,
+                up: 2, rerolls: 0, afixos: [], bonus: { dano: 5 } };
+  const linhasD = Itens.dicas(p, itD);
+  conf(linhasD.some(l => l[0].indexOf('/' + Itens.MAX_UP) >= 0) &&
+       !linhasD.some(l => l[0].indexOf('MAX_UP') >= 0),
+    'tooltip do item mostra o teto numérico (sem "MAX_UP" cru)');
+
+  // --- lendário: re-roll NUNCA apaga o negativo forçado (o preço)
+  const legR = { nome: 'Poderoso Lendário', base: 'Lendário',
+                 slot: 'arma', rar: 4, escala: 1, up: 0, rerolls: 0,
+                 bonus: { dano: 6, hp: -6 },
+                 afixos: [
+                   { nome: 'Quebrado', tipo: 'neg', chave: 'dano',
+                     neg: true, valor: 4 },
+                   { nome: 'Robusto', tipo: 'pre', chave: 'hp',
+                     neg: false, valor: 6 }
+                 ] };
+  const ouroL = p.ouro;
+  p.ouro = 99999;
+  const rndL = Math.random;
+  Math.random = function () { return 0.99; };
+  const okL = Itens.reroll(p, legR);
+  Math.random = rndL;
+  p.ouro = ouroL;
+  conf(okL && legR.afixos.filter(a => a.neg).length === 1,
+    're-roll do lendário mantém 1 negativo (tradeoff preservado)');
 }
 
 console.log('25) gestão de skills: loadout e keystone');
@@ -2525,6 +2557,20 @@ console.log('29) evento: o Gatuno (rouba, foge, resgate)');
     'desiste da fuga após 30s emperrado');
   Eventos.gatFugiu();
 
+  // --- rollback de morte: reiniciaOnda resolve Enxame/Gatuno (o estado
+  // não pode sobreviver à onda refeita: senão o ×1,5 do Enxame valia na
+  // onda nova e o gatuno removido deixava o aviso fantasma 30s depois)
+  Eventos.limpa();
+  Math.random = function () { return 0; };
+  conf(Eventos._nasceEnxame(20) && Eventos.multEnxame() === 1.5,
+    'enxame ativo vale ×1,5');
+  conf(Eventos.nasceGat(100) === 15 && Eventos.gatEmCampo(),
+    'gatuno em campo antes do rollback');
+  Eventos.reiniciaOnda();
+  conf(Eventos.multEnxame() === 1 && !Eventos.gatEmCampo(),
+    'rollback encerra o enxame e resolve o gatuno (sem estado órfão)');
+  Math.random = rnd;
+
   // --- resgate ao vivo: RNG zerado → geometria e ouro exatos.
   // spawn a 110px (clamp ≥70 das bordas) e for 999: o golpe alcança
   // antes da borda (2,0s de perseguição vs ≥2,8s de fuga)
@@ -2658,6 +2704,13 @@ console.log('30) tooltips: breakdown do rodapé, atributos e item');
     'HP detalhado: Σpartes × keystone = status');
   conf(soma(det.vel) === sD.vel && soma(det.crit) === sD.crit,
     'velocidade e crítico: Σpartes = status (keystone não mexe neles)');
+  // os rótulos do detalhamento saem da CONSTANTE (o texto já disse 9×
+  // quando o multiplicador virou 3×)
+  conf(Personagem.PONTO_MULT === 3 &&
+       det.dano.partes.some(x => x.rot.indexOf(Personagem.PONTO_MULT + '×') >= 0) &&
+       !det.dano.partes.some(x => x.rot.indexOf('9×') >= 0) &&
+       !det.hp.partes.some(x => x.rot.indexOf('9×') >= 0),
+    'rótulos do detalhamento usam PONTO_MULT (sem 9× fixo)');
   // XP saiu dos status derivados (spec gestao-atributos): a renda é a
   // calibrada, sem multiplicador de build
   conf(!('xp' in det) && !('xpMult' in sD),
@@ -3000,14 +3053,14 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
   // 'Força' é desenhado o tempo todo e não distingue
   const abriuNoMenos = (jogoCanvas._textos || [])
     .some(t => t.indexOf('Valor atual') >= 0 ||
-               t.indexOf('dano do ataque') >= 0);
+               t.indexOf('FOR: dano') >= 0);
   conf(!abriuNoMenos,
     'segurar o − não abre o tooltip da linha');
   mm(500, 96);                     // mouse no rótulo (deve abrir)
   jogoCanvas._textos = [];
   for (let i = 0; i < 40; i++) frame(1);
   conf((jogoCanvas._textos || [])
-       .some(t => t.indexOf('dano do ataque') >= 0),
+       .some(t => t.indexOf('FOR: dano') >= 0),
     'hover no rótulo abre o tooltip normalmente');
 }
 
@@ -4071,6 +4124,13 @@ console.log('40) gestao-atributos: teto da regen, afixo vel e clamp final');
   conf(sPior.recarga >= 35 / Personagem.VEL_MAX - 1e-9,
     'recarga respeita o teto da vel (' + sPior.recarga.toFixed(3) + 's ≥ ' +
     (35 / Personagem.VEL_MAX).toFixed(3) + 's)');
+  // Σpartes do detalhamento fecha com o teto (antes o rodapé mostrava
+  // 321/778 contra 250 — o clamp da velocidade não era detalhado)
+  const detPior = Personagem.statusDetalhado(p);
+  const somaVel = detPior.vel.partes.reduce((a, x) => a + x.v, 0);
+  conf(Math.abs(somaVel - sPior.vel) < 1e-9,
+    'detalhamento da velocidade fecha no teto (' + Math.round(somaVel) +
+    ' = ' + Math.round(sPior.vel) + ')');
   p.atributos = antes.at; p.equip = antes.eq; p.nivel = antes.nv;
 
   // --- 3) regen COM TETO (spec R-GA-4): a taxa observada nunca passa
@@ -4118,6 +4178,28 @@ console.log('40) gestao-atributos: teto da regen, afixo vel e clamp final');
   conf(Batalha.BEAT === 2 && Batalha.ONDA_SEG === 30,
     'batida 2s e cota 30s exportadas (BEAT=' + Batalha.BEAT +
     ' · ONDA_SEG=' + Batalha.ONDA_SEG + ')');
+
+  // --- 6) o keystone de crítico ROMPE o teto 45 (o +18C/−10%D não pode
+  // virar só o custo no late game) e o detalhamento fecha com o status
+  const bk = { classe: p.classe, nivel: p.nivel, at: p.atributos,
+               eq: p.equip, lib: p.keystoneLib, on: p.keystoneOn };
+  p.classe = 'ladino';
+  p.nivel = 100;
+  p.atributos = { for: 8, des: 20, con: 8, int: 8, car: 8 };
+  p.equip = { arma: null, armadura: null };
+  p.keystoneLib = true;
+  p.keystoneOn = false;
+  const offK = Personagem.status(p);
+  p.keystoneOn = true;
+  const onK = Personagem.status(p);
+  const detK = Personagem.statusDetalhado(p);
+  const somaK = detK.crit.partes.reduce((a, x) => a + x.v, 0);
+  conf(offK.crit === 45 && onK.crit === 45 + 18 &&
+       Math.abs(somaK - onK.crit) < 1e-9,
+    'keystone de crítico rompe o teto 45 (45 → ' + onK.crit +
+    ') e Σpartes fecha (' + Math.round(somaK) + ')');
+  p.classe = bk.classe; p.nivel = bk.nivel; p.atributos = bk.at;
+  p.equip = bk.eq; p.keystoneLib = bk.lib; p.keystoneOn = bk.on;
 }
 
 console.log('41) monstros novos: espécies com skill, ranged, comum intacto e eventos');
@@ -5563,6 +5645,154 @@ console.log('52) opções: defaults, gates, persistência e overlay');
   // restaura o estado pra não vazar pros artefatos seguintes
   if (!Opcoes.liga('shake')) Opcoes.alterna('shake');
   localStorageStub.removeItem('rpg_opcoes_v1');
+}
+
+console.log('53) teleporte no mundo infinito: sem clamp ao canto antigo');
+{
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  // estado limpo (a seção 52 mexe em opções/overlay, não na batalha)
+  Batalha.iniciar();
+  p.classe = 'mago';
+  p.nivel = 30;
+  p.atributos = { for: 8, des: 8, con: 999, int: 20, car: 8 };
+  p.pontos = 0;
+  p.loadout = ['teleporte'];     // skill de mobilidade do mago (nv 25)
+  p.ramos = null;
+  p.equip = { arma: null, armadura: null };
+
+  // longe do canto do mundo antigo (384×268), onde o clamp antigo pegava
+  Batalha._posicionaHeroi(2000, 2000);
+  const antes = Batalha.info().heroi;
+  const en = Batalha.spawn({ tipo: 'slime' });
+  en.x = 2020;                   // dentro do gatilho de proximidade (44px)
+  en.y = 2000;
+
+  let usou = false;
+  for (let i = 0; i < 30 && !usou; i++) {
+    frame(1);
+    usou = Batalha.info().ultimaSkill === 'teleporte';
+  }
+  const dep = Batalha.info().heroi;
+  const dist = Math.hypot(dep.x - antes.x, dep.y - antes.y);
+  conf(usou && antes.x > 1500 && dep.x > 1500 && dep.y > 1500 &&
+       dist <= 96 * 1.4 + 6,
+    'teleporte não é clampado ao mundo antigo (de ' + antes.x + ',' +
+    antes.y + ' para ' + dep.x + ',' + dep.y + ' = ' + dist.toFixed(0) +
+    'px)');
+
+  Batalha.iniciar();               // não vaza posição/estado pros artefatos
+}
+
+console.log('54) robustez: save corrompido, tetos do infinito e pisos');
+{
+  const Batalha = sandbox.Batalha;
+  const Itens = sandbox.Itens;
+  const Personagem = sandbox.Personagem;
+  const Salvar = sandbox.Salvar;
+  const somaP = d => d.partes.reduce((a, x) => a + x.v, 0);
+
+  // --- nome corrompido não pode derrubar normalizar/listar (o boot
+  // chamava ultimo()->listar()->normalizar e morria com "nome ausente")
+  let nomesOk = true;
+  for (const n of [[], '   ', {}, 5, null, undefined]) {
+    try {
+      const q = Personagem.normalizar({ nome: n });
+      nomesOk = nomesOk && typeof q.nome === 'string' && q.nome.length > 0;
+    } catch (e) { nomesOk = false; }
+  }
+  conf(nomesOk, 'normalizar nunca lança por nome corrompido (fallback Herói)');
+
+  // --- entrada que passa na assinatura mas quebra normalizar: listar
+  // sobrevive, a entrada fica no storage e o próximo gravar a preserva
+  const K = 'rpg_personagens_v1';
+  const KM = 'rpg_assinatura_v1';
+  const brutoS = JSON.parse(localStorageStub.getItem(K) || '[]');
+  brutoS.push({ id: 'quebrado-teste', nome: 'Quebrado', classe: 'guerreiro' });
+  localStorageStub.setItem(K, JSON.stringify(brutoS));
+  localStorageStub.removeItem(KM);       // migra/re-assina na próxima leitura
+  const origNorm = Personagem.normalizar;
+  let listaQ = null, erroQ = null;
+  Personagem.normalizar = function (e) {
+    if (e && e.id === 'quebrado-teste') throw new Error('boom');
+    return origNorm(e);
+  };
+  try { listaQ = Salvar.listar(); } catch (e) { erroQ = e; }
+  // apagar um id inexistente passa por gravar(listar()) com a quebrada
+  try { Salvar.apagar('id-que-nao-existe'); } catch (e) { erroQ = erroQ || e; }
+  Personagem.normalizar = origNorm;
+  conf(!erroQ && !!listaQ,
+    'listar/gravar sobrevivem a uma entrada que quebra normalizar');
+  const brutoDepois = JSON.parse(localStorageStub.getItem(K) || '[]');
+  conf(brutoDepois.some(e => e && e.id === 'quebrado-teste'),
+    'entrada inválida PRESERVADA no storage (nada é apagado)');
+  localStorageStub.setItem(K, JSON.stringify(
+    brutoDepois.filter(e => e && e.id !== 'quebrado-teste')));
+  Salvar.listar();                       // re-assina a lista limpa
+  conf(!Salvar.listar().some(x => x.id === 'quebrado-teste'),
+    'entrada de teste removida');
+
+  // --- item do infinito profundo: o teto antigo (99.999/999) apagava
+  // bônus e congelava a escala na leitura
+  let perdeu = 0, escalaOk = true;
+  for (let i = 0; i < 60; i++) {
+    const it = Itens.geraItem(3, 3000, 'guerreiro');
+    const q = Personagem.normalizar({ nome: 'x', equip: {
+      arma: it.slot === 'arma' ? it : null,
+      armadura: it.slot === 'armadura' ? it : null } });
+    const n = it.slot === 'arma' ? q.equip.arma : q.equip.armadura;
+    if (!n) { perdeu++; continue; }
+    for (const k of Object.keys(it.bonus)) {
+      if ((n.bonus[k] || 0) !== it.bonus[k]) perdeu++;
+    }
+    if (n.escala !== it.escala) escalaOk = false;
+  }
+  conf(perdeu === 0, 'bônus de item do mapa 3000 preservado na normalização');
+  conf(escalaOk, 'escala do item do mapa 3000 preservada (não congela em 999)');
+
+  // --- -0 não vira chave fantasma (normalizar idempotente)
+  const pNeg = Personagem.normalizar({
+    nome: 'x',
+    equip: { arma: { nome: 'X', slot: 'arma', bonus: { dano: -0.5 } } }
+  });
+  const pNeg2 = Personagem.normalizar(pNeg);
+  conf(JSON.stringify(pNeg) === JSON.stringify(pNeg2),
+    'normalizar idempotente com bônus -0,5');
+
+  // --- xp sempre < xpProx (o -1 não é representável acima de ~2^53)
+  let xpOk = true;
+  for (const nv of [500, 724, 2000, 9000]) {
+    const q = Personagem.normalizar({ nome: 'x', nivel: nv, xp: 1e300 });
+    if (!(q.xp >= 0 && q.xp < q.xpProx)) xpOk = false;
+  }
+  conf(xpOk, 'xp < xpProx em nível alto (clamp com epsilon relativo)');
+
+  // --- xpAbate finito no modo infinito (curva estoura 1e308 no mapa ~115)
+  conf(Number.isFinite(Batalha.xpAbate(11400, 0)) &&
+       Number.isFinite(Batalha.xpAbate(20000, 10)) &&
+       Batalha.xpAbate(20000, 0) > Batalha.xpAbate(9999, 0),
+    'xpAbate finito e monotônico no infinito (teto 1e300)');
+
+  // --- pisos do dano/HP entram no detalhamento (item amaldiçoado)
+  const maldita = Personagem.normalizar({
+    nome: 'x', classe: 'guerreiro', nivel: 1,
+    atributos: { for: 1, des: 1, con: 1, int: 1, car: 1 },
+    equip: { arma: { nome: 'Maldita', slot: 'arma', rar: 1, up: 0,
+                     escala: 1, afixos: [], bonus: { dano: -100, hp: -100 } },
+             armadura: null }
+  });
+  const sM = Personagem.status(maldita);
+  const dM = Personagem.statusDetalhado(maldita);
+  const md = dM.dano.mult ? dM.dano.mult.v : 1;
+  const mh = dM.hp.mult ? dM.hp.mult.v : 1;
+  conf(sM.dano === 1 && Math.round(somaP(dM.dano) * md) === sM.dano,
+    'piso do dano (1) representado no detalhamento');
+  conf(sM.hpMax === 10 && Math.round(somaP(dM.hp) * mh) === sM.hpMax,
+    'piso do HP (10) representado no detalhamento');
+  conf(typeof Batalha.info().heroi.hpMax === 'number' &&
+       Batalha.info().heroi.hpMax > 0,
+    'info().heroi.hpMax exposto (sonda do fuzz)');
 }
 
 console.log('');

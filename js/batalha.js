@@ -184,10 +184,15 @@ var Batalha = (function () {
   // ratio ln(H)/ln(G) = 0,9166 ≈ 0,9133 (a trajetória nv/onda não
   // muda), mas a renda só estoura 1e308 na onda 11.433 (a antiga, na
   // 7.411 = mapa ~75, cortava a progressão antes do fim da campanha).
+  // No modo INFINITO a curva chega lá (tot ~11.433 = mapa ~115): o teto
+  // 1e300 mantém o valor FINITO (antes virava Infinity no popup de XP;
+  // o ganhaXP já descarta no teto de nível).
   var XP_BASE = 12;
   var XP_H = 1.064;
   function xpAbate(tot, xpExtra) {
-    return Math.round(XP_BASE * Math.pow(XP_H, tot)) + (xpExtra || 0);
+    var v = XP_BASE * Math.pow(XP_H, tot);
+    var base = isFinite(v) ? Math.round(v) : 1e300;
+    return base + (xpExtra || 0);
   }
 
   // ------------------------------------------------------------ cenário
@@ -473,6 +478,19 @@ var Batalha = (function () {
 
   function alternarPausa() { pausada = !pausada; return pausada; }
 
+  // Só teste: posiciona o herói (fixtures de alcance/teleporte no mundo
+  // infinito) — reancora câmera e lista de obstáculos como um teleporte.
+  function posicionaHeroi(x, y) {
+    if (!heroi) return;
+    heroi.x = x;
+    heroi.y = y;
+    var c0 = alvoCamera();
+    cam.x = c0.x;
+    cam.y = c0.y;
+    obstCx = null;
+    atualizaObstAtivos();
+  }
+
   // ------------------------------------------------------------- câmera
   // Alvo: herói SEMPRE centralizado (spec mapa-infinito R-INF-1) —
   // sem clamp de limites do mundo: não há bordas. O teleporte do
@@ -670,7 +688,7 @@ var Batalha = (function () {
     // ondas dos mapas anteriores, então a onda 1 do mapa 2 nasce no
     // mesmo patamar da onda 100 do mapa 1 (antes recomeçava em ~2× o
     // base — as primeiras ondas dos mapas seguintes eram fáceis demais).
-    // A escala do herói (+4 HP/nível +5 pontos/nível) é mais suave,
+    // A escala do herói (+6 HP/nível +1 ponto/nível) é mais suave,
     // senão vira loop. Mapas.forca ficou só nos drops (itens.js).
     var tot = ondaTotal();
     var escHp = 1 + tot * ESC_HP;
@@ -1358,8 +1376,8 @@ var Batalha = (function () {
   }
 
   // Esquiva (ladino: corrida curta) e Teleporte (mago: salto instantâneo):
-  // levam o herói para longe do centro do bando, respeitando limites e
-  // obstáculos do mundo.
+  // levam o herói para longe do centro do bando. Sem limites de mundo
+  // (spec mapa-infinito R-INF-2): só os obstáculos do chunk bloqueiam.
   function foge(sk) {
     var sx = 0, sy = 0, n = 0;
     for (var i = 0; i < inimigos.length; i++) {
@@ -1375,8 +1393,11 @@ var Batalha = (function () {
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
     if (sk.modo === 'blink') {
       Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 0.9);
-      heroi.x = Math.max(8, Math.min(MW - 8, heroi.x + ux * sk.distancia));
-      heroi.y = Math.max(10, Math.min(MH - 8, heroi.y + uy * sk.distancia));
+      // sem clamp de borda (spec mapa-infinito R-INF-2): o mundo não tem
+      // limites — o clamp antigo (MW/MH) arrastava o herói de volta para
+      // o canto 384×268 depois que ele andava para longe
+      heroi.x += ux * sk.distancia;
+      heroi.y += uy * sk.distancia;
       resolve(heroi, 6);
       Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 1.1);
       Efeitos.brasas(heroi.x, heroi.y - 6, sk.cor, 8, 90, 60);
@@ -1762,6 +1783,7 @@ var Batalha = (function () {
           // a onda reduzida renasce sem contar em stats.ondas
           rollbackPend = false;
           inimigos.length = 0;
+          Eventos.reiniciaOnda();   // enxame/gatuno não sobrevivem
           spawnaOnda();
         }
       }
@@ -2133,6 +2155,7 @@ var Batalha = (function () {
       enxame: Eventos.enxameAtivo(),
       heroi: { x: Math.round(heroi ? heroi.x : 0),
                y: Math.round(heroi ? heroi.y : 0),
+               hpMax: heroi ? heroi.hpMax : 0,
                estado: (heroi && heroi.ia) ? heroi.ia.estado : null,
                agu: (heroi && heroi.ia && typeof heroi.ia.agu === 'number')
                  ? Math.round(heroi.ia.agu * 100) / 100 : 0,
@@ -2203,6 +2226,8 @@ var Batalha = (function () {
     escalaMonstros: escalaMonstros, // A/B mundo vs mapa (seção 39)
     fimCampanha: function () { return MAPA_FIM_CAMPANHA; },
     limparEfeitos: limparEfeitos,
-    info: info
+    info: info,
+    // só teste: posiciona o herói (fixtures de teleporte/alcance)
+    _posicionaHeroi: posicionaHeroi
   };
 })();

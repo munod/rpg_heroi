@@ -7,13 +7,34 @@ var Selecao = (function () {
   var blinkT = 0;
   var POR_PAGINA = 5;
 
+  // Cache da lista de heróis: `Salvar.listar` lê o storage, faz parse e
+  // verifica o HMAC de cada save — era chamado em TODO render da seleção
+  // (~0,8ms/frame com 20 heróis). `Salvar.versao()` muda a cada escrita
+  // válida, então o cache só é reconstruído quando algo mudou.
+  var listaT = null, listaV = -1;
+  function listaSel() {
+    if (!listaT || listaV !== Salvar.versao()) {
+      listaT = Salvar.listar();
+      listaV = Salvar.versao();
+    }
+    return listaT;
+  }
+
   function enter() {
     pagina = 0;
     apagando = null;
-    // foca o último herói usado (ou o que já está em memória / um novo)
+    listaT = null;                 // reentrada: relê o storage
     var p = Salvar.ultimo() || Game.personagem || Personagem.novo();
     Game.personagem = p;
     Gravacao.entrar(p);
+    // save rejeitado não pode sumir em silêncio (só havia console.warn):
+    // o dado continua preservado no storage, mas o jogador precisa saber
+    var rej = Salvar.rejeitados();
+    if (rej > 0) {
+      Gravacao.msg(rej + (rej === 1 ? ' save foi rejeitado' :
+        ' saves foram rejeitados') + ' (assinatura inválida) — os dados ' +
+        'continuam no navegador');
+    }
   }
 
   function focar(p) {
@@ -54,7 +75,7 @@ var Selecao = (function () {
   function excluir(id) {
     Salvar.apagar(id);
     apagando = null;
-    var lista = Salvar.listar();
+    var lista = listaSel();
     if (Game.personagem && Game.personagem.id === id) {
       if (lista.length) {
         Game.personagem = lista[0];
@@ -68,7 +89,7 @@ var Selecao = (function () {
     } else {
       Gravacao.msg('Personagem apagado.');
     }
-    var paginas = Math.max(1, Math.ceil(Salvar.listar().length / POR_PAGINA));
+    var paginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
     if (pagina > paginas - 1) pagina = paginas - 1;
     Gravacao.sincronizar(Game.personagem);
   }
@@ -142,7 +163,7 @@ var Selecao = (function () {
   }
 
   function desenhaLista(ctx) {
-    var lista = Salvar.listar();
+    var lista = listaSel();
     var foco = Game.personagem;
 
     if (!lista.length) {

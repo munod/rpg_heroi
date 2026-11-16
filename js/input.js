@@ -129,7 +129,6 @@ var Input = (function () {
   return {
     init: init,
     ajusta: ajusta,
-    isDown: function (code) { return !!down[code]; },
     pressed: function (code) { return !!pressed[code]; },
     typed: typed,
     // deltaY acumulado neste frame (zerado no endFrame — padrão typed)

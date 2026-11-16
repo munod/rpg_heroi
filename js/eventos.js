@@ -4,11 +4,13 @@
 // ordem de carga). Tudo aqui é puro o bastante p/ teste sem arena.
 //
 // - Açougueiro (padrão Diablo 1/4): raro, injusto de propósito, UMA
-//   chance — 1,5% por onda desde a 10, com pity +0,5%/onda sem aparecer
+//   chance — 1,5% por onda desde a 30, com pity +0,5%/onda sem aparecer
 //   (teto 25%) p/ não passar a vida sem vê-lo. Tempo de campo limitado:
-//   quem aguenta 45s ou derruba o herói ganha a cena.
+//   quem aguenta 30s ou derruba o herói ganha a cena.
 // - Gatuno: rouba 15% do ouro e foge; matá-lo a tempo devolve o roubo
-//   ×1,2 (contrajogada pura: build que bate rápido = defesa).
+//   ×1,2 (contrajogada pura: build que bate rápido = defesa). Um por vez.
+// - Enxame/Cofre (spec monstros-novos): pressão em lote (×2 inimigos,
+//   XP/ouro ×1,5) e recompensa pura (ouro + drop garantido).
 var Eventos = (function () {
   // Ajustes de pacing medidos (ritmo.js 50): com o Açougueiro desde a
   // onda10 ele chegava ~min5 (herói fraco → morte ×2 = −10 ondas e
@@ -135,6 +137,7 @@ var Eventos = (function () {
   // nasce o Gatuno? devolve o valor roubado (0 = nada)
   function nasceGat(ouro) {
     if (cooldownGat > 0) { cooldownGat--; return 0; }
+    if (gatEmCampo()) return 0;      // um ladrão por vez (estado coerente)
     if (!(ouro > 0)) return 0;
     if (Math.random() >= GAT_CHANCE) return 0;
     cooldownGat = GAT_COOLDOWN;
@@ -151,6 +154,16 @@ var Eventos = (function () {
     return g;
   }
   function gatFugiu() { gatRoubo = 0; gatT = 0; }
+
+  // Morte com rollback: a onda é refeita do zero e o estado dos eventos
+  // NÃO pode sobreviver a ela — o bônus ×1,5 do Enxame valeria na onda
+  // nova (spawnaOnda não passa por proximaOnda) e o gatuno removido
+  // deixaria gatRoubo > 0, gerando o aviso fantasma "desistiu da fuga"
+  // 30s depois. O roubo não volta: o ladrão escapou na confusão.
+  function reiniciaOnda() {
+    enxAtivo = false;
+    if (gatRoubo > 0) gatFugiu();
+  }
 
   // true = o gatuno desistiu da fuga (emperrado além do tempo limite)
   function atualizaGat(dt) {
@@ -170,6 +183,7 @@ var Eventos = (function () {
     gatEmCampo: gatEmCampo,
     gatAbatido: gatAbatido,
     gatFugiu: gatFugiu,
+    reiniciaOnda: reiniciaOnda,
     atualizaGat: atualizaGat,
     nasceEnxame: nasceEnxame,
     enxameAtivo: enxameAtivo,
