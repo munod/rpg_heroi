@@ -2920,6 +2920,11 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
   // spec gestao-atributos: a curva da vel é SATURANTE — a aceleração
   // existe mas é menor que a antiga linear (DES 300 = 132 px/s, não
   // 946). Ponto distante o suficiente p/ a diferença ser visível.
+  // Corte 1,4 (era 1,5): a razão verdadeira media ~1,55 e o corte no
+  // limite derrubava o teste ~1× em4 rodadas (flake do RNG do atkCd e
+  // da janela "em range" — lição: corte de conf não pode ficar em cima
+  // do ruído). A saturação segue provada: a razão máxima linear seria
+  // ~1,85 e mesmo assim é só 40% acima do piso.
   const r8 = golpesComDes(8);      // vel 70  → recarga 0,50s
   const r300 = golpesComDes(300);  // vel 132 → recarga 0,27s
   const g8 = r8.n, g62 = r300.n;
@@ -2929,7 +2934,7 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
       ' || des300: semInim=' + r300.semInim + ' arma=' + r300.arma +
       ' fim inim=' + r300.inim + ' onda=' + r300.onda);
   }
-  conf(g8 > 4 && g62 >= Math.round(g8 * 1.5),
+  conf(g8 > 4 && g62 >= Math.round(g8 * 1.4),
     'DES acelera o ataque (curva saturante: des8=' + g8 +
     ' golpes/10s, des300=' + g62 + ', razão ' +
     (g62 / Math.max(1, g8)).toFixed(1) + '×)');
