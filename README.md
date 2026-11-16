@@ -33,10 +33,11 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   A campanha tem **10 mundos × 10 mapas × 100 ondas** (Planície Verdejante,
   Cripta Congelada, Ninho Rubro, Deserto Escaldante, Pântano Venenoso,
   Floresta Noturna, Forja Abissal, Ruínas Celestiais, Vazio Abissal e
-  Trono do Caos — **cada mundo tem chão, obstáculos, monstros e chefe
-  próprios**), alvo de **~44h de jogo medido** (antes ~200h com a
-  espera entre ondas — a espera saiu na spec `onda-timer`; a alavanca
-  de duração hoje é a velocidade de clear). Derrubar o chefe do **mundo 10**
+  Trono do Caos — **cada mapa tem chão, obstáculos, monstros e chefe
+  próprios**; os 10 temas ciclam a cada 10 mapas), alvo de **~44h de jogo
+  medido** (antes ~200h com a espera entre ondas — a espera saiu na spec
+  `onda-timer`; a alavanca de duração hoje é a velocidade de clear).
+  Derrubar o chefe do **mundo 10**
   abre a tela de **CAMPANHA CONCLUÍDA** e libera o **modo infinito**
   (os mundos voltam ao início em loop, com a dificuldade seguindo a
   escala). Saves de antes dos mapas migram sozinhos (onda 250 → mapa 3,
@@ -96,13 +97,14 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
 
 - **Atributos** — Força, Destreza, Constituição, Inteligência e Carisma;
   cada ponto muda o dano, a vida, a **velocidade** e o crítico **em tempo real**
-  (a Velocidade também **acelera o ataque**, o Carisma aumenta o **XP ganho
-  por abate** e a Inteligência **refina a IA do herói** em combate). Clique em `+`/`−` para mudar 1 ponto ou **segure** o botão
+  (a Velocidade também **acelera o ataque**, o Carisma aumenta o **ouro
+  ganho por abate** e a Inteligência **refina a IA do herói** em combate).
+  Clique em `+`/`−` para mudar 1 ponto ou **segure** o botão
   para repetir; o seletor `×1`/`×5` muda quantos pontos cada ação gasta.
 - **Progressão** — cada inimigo derrubado dá **XP**; ao subir de **nível**
-  você ganha **+3 pontos** para distribuir e **+4 de vida** (o XP e o nível
+  você ganha **+1 ponto** para distribuir e **+6 de vida** (o XP e o nível
   ficam no cabeçalho). Heróis novos nascem com **0 pontos** (atributos base
-  em 8) — os primeiros +3 vêm já no primeiro nível.
+  em 8) — o primeiro ponto vem já no primeiro nível.
 - **Classe** — Guerreiro, Mago, Ladino ou Clérigo, com bônus e arma próprios;
   trocar no meio da luta altera o herói na hora. O guerreiro briga no
   **corpo a corpo**; mago, ladino e clérigo atacam **à distância** com
@@ -149,6 +151,7 @@ js/
   sprite.js         geração procedural de pixel art (herói, inimigos, cenário)
   anim.js           cache de frames animados
   personagem.js     classes, atributos, status derivados, validação, níveis
+  assinatura.js     HMAC-SHA256 em JS puro (assinatura dos saves)
   salvar.js         localStorage + export/import JSON
   gravacao.js       toast, autosave e save do personagem (compartilhado)
   mapas.js          cada tema (ciclo de 10 por mapa): chão, obstáculos,
@@ -156,15 +159,16 @@ js/
   perlin.js         Perlin Noise com semente do mapa (cenários procedurais)
   itens.js          drops: armas/armaduras, bolsa e auto-equip
   skills.js         skills por classe (procs, ramos e loadout escalonado)
+  opcoes.js         toggles de conforto visual (localStorage, defaults do sistema)
   efeitos.js        efeitos visuais das skills (missis, cortes, motes)
   ia.js             IA tática: Behavior Tree do herói, flocking/influence map + A*
-  eventos.js        eventos aleatórios (Açougueiro, gatuno) — rolagens puras
+  eventos.js        eventos aleatórios (Açougueiro, gatuno, enxame, cofre)
   ranking-config.js config pública do Firebase (preenchida pelo mantenedor)
   ranking.js        ranking global: score, apelido, SDK lazy-load + cena
   cutscene.js       cutscenes: mapa do universo, narração e cena "Universo"
   ui.js             UI visual: paleta/gradientes/cantos arredondados — botões, painéis, barras
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
-  gestao.js         painel de gestão (atributos/aparência/classe) compartilhado
+  gestao.js         painel de gestão (Atrib/Apar/Classe/Itens/Stats) compartilhado
   selecao.js        tela de criação e seleção de personagem (fora da jogatina)
   jogo.js           tela de jogo: arena + gestão + cabeçalho + botões
   loop.js           game loop (requestAnimationFrame)
@@ -180,8 +184,8 @@ altura é fixa e a **largura lógica segue o aspecto da tela** (768 a
 1728) — em telas mais largas que 16:9 (celular em paisagem, com as
 barras do navegador a viewport fica ~3:1) o layout se expande e o jogo
 **preenche a tela sem barra lateral**. O CSS preenche a janela com
-escala **fracionária** e o backing store usa pixels inteiros (DPR)
-para texto e pixel art nascerem nítidos.
+escala **fracionária** e o backing store acompanha a exibição
+(**escala × DPR**, fracionário) para texto e pixel art nascerem nítidos.
 
 O layout é **ancorado**: cabeçalho/rodapé/status/toast ocupam a largura
 toda (XP centrado, "Pontos" e o trio de botões à direita), a arena fica
@@ -200,7 +204,7 @@ a dica **"Gire o celular para jogar"** (o layout é paisagem).
 
 ## Versão, changelog e specs
 
-- **Versão atual: 0.1.0** — publicada em
+- **Versão atual: 0.7.0** — publicada em
   https://munod.github.io/rpg_heroi/ (deploy automático a cada push na
   `main`, via Actions).
 - **[CHANGELOG.md](CHANGELOG.md)** — o que mudou em cada versão, no
@@ -219,7 +223,7 @@ Tudo roda no Node, sem navegador:
 
 ```bash
 node testes/todos.js      # roda todos os testes de uma vez (exit 1 se falhar)
-node testes/fumaca.js     # 732 asserções: sprites, status, UI visual, idle, toque, ranking, mundos, cutscenes, árvore, IA (monstros + herói), respiro, opções, onda-timer
+node testes/fumaca.js     # 755 asserções: sprites, status, UI visual, idle, toque, ranking, mundos, cutscenes, árvore, IA (monstros + herói), respiro, opções, onda-timer, teleporte
 node testes/grade.js      # grade do sprite em ASCII + 17 asserções de pixel
 node testes/previa.js     # gera folhas PNG com todos os sprites
 node testes/cena.js       # screenshots das telas (e um por skill: tela-skill*.png)
@@ -228,16 +232,16 @@ node testes/ampliar.js X.png 4 # amplia um screenshot (vizinho mais próximo)
 node testes/ritmo.js [min] [mundo|mapa] [k] [semente] # mede o ritmo + métricas de combate/economia (tuning; padrão 15min, seed 1; grava resultados/ritmo.json)
 ```
 
-São **750 asserções** no total. Todos os testes que abrem o jogo compartilham
+São **772 asserções** no total. Todos os testes que abrem o jogo compartilham
 o mesmo harness — `testes/carga.js` — com DOM, `localStorage` e canvas
 falsificados, mais o carregamento dos scripts na ordem do `index.html`; é o
 que permite rodar o jogo inteiro dentro do Node.
 
 O teste de fumaça cobre desde a geração dos 180 frames de sprite até o loop
 completo do idle: abrir na **tela de seleção**, entrar na jogatina pelo
-**JOGAR**, limpar a onda 1 sozinho, subir de nível com +3 pontos, trocar de
+**JOGAR**, limpar a onda 1 sozinho, subir de nível com +1 ponto, trocar de
 classe/aparência, pausar, cair e reviver (com a penalidade de ondas/ouro),
-subir de nível com +3 pontos, **trocar de tela** (a batalha fica
+subir de nível com +1 ponto, **trocar de tela** (a batalha fica
 parada fora da arena), autosave, exportação sem manglear acento, progresso
 offline, a **velocidade acelerando o ataque**, a **barra de HP dos inimigos**
 sem contorno que a tapava, o **chefe do fim de mapa** (nasce na onda 100, o

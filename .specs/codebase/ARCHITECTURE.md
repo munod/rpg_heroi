@@ -17,7 +17,7 @@
   `Gestao.update`); o estado (personagem, save, batalha) vive nos globals.
 
 ## Centros de gravidade
-- **`js/batalha.js`** (1445 linhas): cérebro do combate — herói mira/anda/
+- **`js/batalha.js`** (2233 linhas): cérebro do combate — herói mira/anda/
   ataca, ondas/XP/morte/revivescimento, inimigos, cenário
   (`garanteCenario`) e gatilhos das skills.
 - **Dados**: `Personagem` (classes/níveis/status), `Salvar` (persistência),

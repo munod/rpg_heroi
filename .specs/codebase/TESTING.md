@@ -2,8 +2,9 @@
 
 - **Gate**: `node testes/todos.js` — roda `fumaca.js`, `grade.js`,
   `previa.js` e `cena.js` em sequência; exit 1 se qualquer um falhar.
-  É o único gate; rode após qualquer mudança. Total de **193 asserções**.
-- **`fumaca.js`** — 180 confs, **seções 1–23** (nomes reais): 1 geração de
+  É o único gate; rode após qualquer mudança. Total de **755 asserções**
+  na fumaça (772 com as 17 de pixel da `grade.js`).
+- **`fumaca.js`** — 755 asserções, **seções 1–54** (nomes reais de 1–23): 1 geração de
   sprites · 2 status por classe · 3 export/import JSON · 4 boot na seleção +
   entrada na jogatina · 5 exportação · 6 morte/revivescimento/troca de tela ·
   7 autosave/nome do arquivo/carisma · 8 seleção (novo, exclusão em 2 etapas,
@@ -13,8 +14,11 @@
   estado · 15 drops/equipamento/aba Itens · 16 skills automáticas ·
   17 câmera/mundo maior/renascimento · 18 toque, resolução e escala ·
   19 viewport larga ancorada · 20 cenário procedural (Perlin) ·
-  21 estatísticas do jogador · 22 IA tática (herói) · 23 IA dos NPCs.
-- **`grade.js`** — grade do sprite em ASCII + **13 asserções de pixel** em
+  21 estatísticas do jogador · 22 IA tática (herói) · 23 IA dos NPCs ·
+  **24–54** economia, lendários, punitivo, eventos, tooltips, ranking,
+  progressão/mundos, árvore de skills, IA dos monstros, cutscenes,
+  efeitos, virada, respiro, opções, teleporte no mundo infinito e robustez/fuzz.
+- **`grade.js`** — grade do sprite em ASCII + **17 asserções de pixel** em
   coordenadas exatas (mover 1 pixel do sprite quebra de propósito).
 - **`cena.js`** — screenshots rasterizados das telas (inclui `tela-skill*.png`);
   **`previa.js`** — folhas de sprite em PNG. Os PNGs não são versionados.

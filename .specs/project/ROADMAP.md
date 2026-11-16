@@ -317,7 +317,7 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 - Mais mapas/temas no ciclo infinito com mecânicas próprias.
 - Novas skills por classe (ciclo de balanceamento medido).
 - Inimigos à distância em mapas profundos (exige re-medir ritmo).
-- Decompor `js/batalha.js` (1445 linhas) em módulos menores — dívida
+- Decompor `js/batalha.js` (2233 linhas) em módulos menores — dívida
   registrada em `.specs/codebase/CONCERNS.md`.
 - **Regeneração fora de combate ou teto no `recuar`** — impasse raro
   descoberto pelo flake da seção 21: build gênia (INT alta) fraca em

@@ -16,7 +16,9 @@
 ## Comandos
 
 - `node testes/todos.js` — roda **tudo** (exit 1 se falhar). É o único
-  gate de verificação; rode após qualquer mudança.
+  gate de verificação; rode após qualquer mudança. O CI
+  (`.github/workflows/deploy.yml`) roda `node --check` + este gate em
+  push/PR, e o deploy do Pages só acontece na `main` (`needs: test`).
 - `node testes/fumaca.js` — teste de fumaça principal (jogo completo no Node).
 - `node testes/grade.js` — asserções de pixel em coordenadas exatas do sprite.
 - `node testes/previa.js` / `node testes/cena.js` — regeneram os PNGs em
@@ -49,9 +51,11 @@
 - Sistema punitivo (specs `ritmo-punitivo`/`eventos-aleatorios`): morte →
   `penalizaMorte(mult)` — **−10%×mult do ouro** (piso de 1) e **−5×mult
   ondas** (piso: onda 1 do mapa); a onda reduzida só nasce no
-  renascimento (`rollbackPend` → limpa inimigos + `spawnaOnda()`,
-  extração de `proximaOnda`) e **NÃO conta `stats.ondas`**. Regen: 2hp/s
-  constante + **4%/s sem apanhar** (inv=0). Pontos **+3/nível**. O Véu da
+  renascimento (`rollbackPend` → limpa inimigos + `Eventos.reiniciaOnda()`
+  — encerra o Enxame e resolve o Gatuno, nada sobrevive à onda refeita —
+  + `spawnaOnda()`, extração de `proximaOnda`) e **NÃO conta `stats.ondas`**.
+  Regen: 2hp/s constante + **4%/s sem apanhar** (inv=0). Pontos **+1/nível**
+  (`PONTOS_CADA`/`PONTOS_NIVEL`, compensação `PONTO_MULT 3×`). O Véu da
   Fênix (fenix) escapa da penalidade. Leva 2: eventos em `js/eventos.js`
   (Açougueiro chamará `penalizaMorte(2)`). Escalas reequilibradas na
   Leva 1 (medido): ESC_HP 1,30 · ESC_DMG 0,10; hoje (leva
@@ -126,7 +130,10 @@
   batia dos dois lados, só o visual estava preso pra direita.
 - **Curvas de status com teto (spec `gestao-atributos`)** — auditoria
   revelou "teto onde pensaram, sem teto onde não pensaram" (crítico 45
-  e recarga 0,08 têm; vel/XP/HP não tinham). Hoje: **velocidade =
+  e recarga 0,08 têm; vel/XP/HP não tinham). **Exceção deliberada:** o
+  keystone de crítico (`falcao`, `+18C/−10%D`) é aplicado **depois** do
+  teto 45 e o ROMPE (45 → 63) — senão o +18 virava só o custo no late
+  game; os demais keystones não mexem no teto. Hoje: **velocidade =
   `46 + 24×(DES/8)^0,35`** (potência saturante — parte de 70 em DES 8,
   ~241 no fim mono-stat) **+ clamp final 250 px/s** aplicado DEPOIS de
   item+keystone (`VEL_MAX`, sem ele o afixo daria +1.968 no mapa 100 e
@@ -216,7 +223,8 @@
   40-120px do herói** desde o mapa-infinito) e inimigos miram
   no local da morte. `info()` expõe `janela`/`mundo` (**região ativa
   3×3 chunks = 1152×804** desde o mapa-infinito)/`cam`/`heroi`
-  para os testes (seções 17-18).
+  (`hpMax` incluso — sonda do fuzz; `hp` do info é `ceil`, então o
+  máximo autoritativo é `heroi.hpMax`) para os testes (seções 17-18).
 - **Mundos (spec `mundos`)**: campanha **10 mundos × 10 mapas × 100
   ondas** (`FIM_MAPA` intacto — a onda 100 é o chefe; vencido,
   `passaMapa()` faz `mapa++` e volta a onda 1). `Mapas.mundo(n)` =
@@ -276,11 +284,14 @@
   vel≥10/crit≥0). **Economia** (Leva B): `p.ouro` (mataInimigo paga
   `Mapas.forca × onda`, chefe ×8), `vender/sucatear` (bolsa cheia
   sucateia sozinha), `aprimorar` (`custoAprim`, +8%/nível via
-  `pontuarEfet` no auto-equip) e `reroll` (neg sai só com rol positivo);
+  `pontuarEfet` no auto-equip) e `reroll` (normal: o negativo só sai com
+  rol positivo; lendário: o negativo é mantido — é o preço);
   UI na aba Itens: `V`/`S` por linha, `A+`/`R+` nos slots, linha de ouro
-  e legenda. **Lendários (rar 4)**: `LEGENDARIOS` (2 por tema, clamp
-  `Math.min(mapa,3)` como `Mapas.info`), 1% dos drops + 15% no chefe,
-  **1 neg forçado + 1 pos**; efeitos = matemática pura em `Itens`
+  e legenda. **Lendários (rar 4)**: `LEGENDARIOS` (2 por tema; os 3 pools
+  ciclam POR MUNDO via `Itens.temaDe`→`Mapas.mundo`, enquanto o tema do
+  chão é por MAPA — R-INF-9), 1% dos drops + 15% no chefe,
+  **1 neg forçado + 1 pos** (o re-roll do lendário NÃO apaga o negativo);
+  efeitos = matemática pura em `Itens`
   (`temEfeito/multDano/multOuro/pctVamp`) + gatilhos em `Batalha`
   (vampiro em `stat`, fúria no refresh de stats, ouro em `mataInimigo`,
   2ª vida em `danoHeroi`, reset em `proximaOnda`, cura fere em
@@ -312,9 +323,11 @@
   senão o delay nunca completa). Long-press 500ms → caixa retida, clique
   fora fecha. Linhas = `[[texto, cor?], …]`, fonte 13px, sem
   `measureText` (rasterizador). Rodapé: segmentos fixos (HP · Dano ·
-  DPS · Vel · Crít · Alc · XP) com breakdown de
+  DPS · Vel · Crít · Alc · arma) com breakdown de
   `Personagem.statusDetalhado(p)` (partes NUMÉRICAS — UI formata,
-  teste soma: Σpartes × keystone === status); item em `Itens.dicas`;
+  teste soma: Σpartes × keystone === status; os clamps finais entram
+  como linhas: `limite 45%`, `limite 250`, `piso 1/10`, `piso 0%`);
+  item em `Itens.dicas`;
   atributo em `Gestao.dicasAtributo`.
 - Gestão tem 5 abas (Atrib/Apar/Classe/Itens/Stats): botões de 66px com
   passo 70 a partir de x=412, y=40 — centros 445/515/585/655/725 em y=54;
@@ -375,19 +388,29 @@
   `Batalha.passaMapa()` e na morte **antes** de `penalizaMorte` (progresso
   real, não pós-rollback); `passaMapa` está exportado p/ teste. Cena
   `ranking` registrada em `main.js`, botão na seleção (260,306,108,26).
+  **Limite conhecido**: as regras não exigem `request.auth`/App Check e o
+  teto de progressão é global (`mapa <= 30 + minutos/100` desde
+  2026-11-01), então progresso inventado dentro do teto é aceito — é
+  "melhor esforço", não placar competitivo (ver CONCERNS).
   Seção 35: SDK fake é **thenable síncrono** (sem microtasks no
   harness); fake de gravação registra `['set', id, doc]` p/ asserções.
 - Ajustes playtest 2 (spec `ajustes-playtest-2`) + leva `mundos`:
   **teto de nível 9500** (era 1000) — `Personagem.NIVEL_MAX` (fonte
   única); `Batalha.ganhaXP` (exportado p/ teste) DESCARTA o XP no cap e
   zera a sobra; `normalizar` clampa `nivel ≤ 9500` na leitura (save nv
-  36k → 9500, atributos intactos, sem bump de chave); cabeçalho mostra
+  36k → 9500, atributos intactos, sem bump de chave) e o XP em
+  `xpProx − 1` — acima de ~2^53 o `−1` não é representável (nv ~500) e
+  o clamp usa epsilon relativo para manter `xp < xpProx` sempre;
+  cabeçalho mostra
   **"MÁXIMO"**. **9500 = p/ níveis durarem os 200h da campanha**: a
   trajetória é `nv ≈ 0,9166 × ondas` (ratio ln H/ln G) → fim de
   campanha (T=9.999) ≈ nv 9.150 < teto, e as curvas re-baseadas só
   estouram `1e308` muito acima (renda em T≈11.433, custo em nv≈10.441)
   — com as curvas antigas (1,11/1,10) qualquer teto ≤ 6.800 morria ANTES
-  do fim. **`UI.abrev`** cobre >10⁶⁰ com notação científica pt-BR
+  do fim. **No modo infinito** a renda chega ao estouro (T≈11.433 = mapa
+  ~115): `Batalha.xpAbate` devolve **1e300** (finito) em vez de
+  `Infinity` — o popup mostrava "+Infinity XP"; o `ganhaXP` já descarta
+  no teto de nível. **`UI.abrev`** cobre >10⁶⁰ com notação científica pt-BR
   (`1,5e281`). Aba Stats:
   **bloco de cooldowns efetivos** (`IA.skillEfeito` com a agudeza da
   INT — espelho do `aguHeroi`; área ≈ `aCada × recarga atual`) +
@@ -405,7 +428,10 @@
   das seções 32; cada fix de IA/combate vira conf que falhava antes.
   `clampFuga` em `ia.js` limita o destino de fuga a **96px do herói**
   (era: limites do mundo 384×268 — spec mapa-infinito R-INF-3, sem
-  parede a proteção é a distância); em `batalha.js`, destino a <24px = sem espaço → o herói
+  parede a proteção é a distância); o **teleporte/blink** do mago e do
+  clérigo também deixou de clampar em `MW/MH` (o resíduo arrastava o
+  herói para o canto antigo; fumaça seção 53, sonda `_posicionaHeroi`);
+  em `batalha.js`, destino a <24px = sem espaço → o herói
   briga em vez de empurrar parede; a animação do golpe é
   `min(0.36, recarga)` (o `atkT` fixo de 0,36s estagnava a DES em ~17
   pontos). Aba Itens: `p.trava.{arma,armadura}` (fixar slot — só o
@@ -543,10 +569,23 @@
   `rpg_ultimo_id`, `rpg_estado_v1` (e as do ranking: `rpg_rank_nick_v1`,
   `rpg_rank_cache_v1`, `rpg_rank_ultimo_v1`; e a das opções:
   `rpg_opcoes_v1` — toggles de conforto, lida/grava em `js/opcoes.js`
-  com merge defensivo sobre o padrão). Ao alterar o formato do
+  com merge defensivo sobre o padrão; sem escolha salva, respeita
+  `prefers-reduced-motion` (shake/flash desligados)). Ao alterar o formato do
   save, suba o sufixo `_v1` e/ou normalize na leitura (`Personagem.normalizar`) — não
   quebre saves antigos em silêncio (hoje: `p.stats` via
-  `Personagem.normalizaStats`).
+  `Personagem.normalizaStats`). **`normalizar` nunca pode lançar** para
+  JSON arbitrário (o `listar` roda no boot): nome não-string/espaço cai
+  no fallback `Herói`, `xp < xpProx` usa epsilon relativo no nível alto e
+  `listar`/`gravar` isolam/preservam uma entrada que quebre a
+  normalização (nada é apagado).
+- **Tetos de item × mapa infinito**: `normalizaItem` aceita bônus/afixo
+  até **1e9** e `escala` até **1e6** (os antigos 99.999/999 apagavam o
+  bônus e congelavam a escala de itens acima do mapa ~3.000 na leitura).
+- A **assinatura** (`js/assinatura.js`, HMAC com a chave no bundle) é
+  barreira casual, não segredo: o import aceita JSON **sem `_s`**
+  (backup antigo) e apagar `rpg_assinatura_v1` faz `listar()` re-assinar
+  tudo. Save rejeitado é preservado no storage e a seleção avisa (não é
+  destruído); o placar não depende disso (regras do servidor).
 
 ## Versionamento e documentação
 

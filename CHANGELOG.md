@@ -10,6 +10,72 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Teleporte/passo sagrado no mundo infinito** — o blink do mago e do
+  clérigo ainda clampava a posição em `MW/MH` (384×268), arrastando o
+  herói de volta ao canto do mundo antigo depois que ele andava para
+  longe. Agora só `resolve` (obstáculos) limita o salto. Fumaça seção 53.
+- **Keystone de crítico** — `+18C/−10%D` era clampado no teto 45 e virava
+  só o custo no late game; o keystone agora ROMPE o teto (45 → 63) e o
+  detalhamento do rodapé fecha com o status (seção 40). Só afeta o
+  ladino com o keystone comprado; no teto o ganho de DPS (~+12%) fica
+  próximo do −10% de dano (tradeoff preservado, efeito deixa de ser nulo).
+- **Rodapé de status** — os rótulos usam `PONTO_MULT` (diziam 9× com o
+  multiplicador em 3×) e o detalhamento da velocidade inclui a linha do
+  clamp 250 (antes mostrava 321/778 contra 250).
+- **Eventos no rollback de morte** — `Eventos.reiniciaOnda()` encerra o
+  Enxame (o ×1,5 não vale na onda refeita) e resolve o Gatuno (não nasce
+  mais o aviso fantasma "desistiu da fuga" 30s depois); um ladrão por vez.
+- **Relâmpago do chefe** — `Efeitos.raio` usa o y do alvo (mundo infinito);
+  antes desenhava no topo fixo do mundo 384×268.
+- **Tooltip do item** — mostra o teto numérico (`8`) em vez do literal
+  `MAX_UP`; re-roll de lendário mantém o negativo forçado.
+- **Save rejeitado** — a tela de seleção avisa (antes só havia
+  `console.warn`); os dados continuam preservados no storage.
+- **Tooltips de atributo** — FOR/DES/CON descrevem a matemática atual
+  (linear até a base + `PONTO_MULT` no investido; velocidade saturante).
+
+### Fixed — 2ª passada (fuzz de propriedades)
+
+- **Save corrompido derrubava o boot** — `Personagem.normalizar` fazia
+  `String(p.nome).trim()` e um `nome` array/espaço virava vazio, o
+  `validar` lançava "nome ausente" e `Salvar.listar` propagava pelo
+  `ultimo()` do load (canvas morto). Agora nome não-string/espaço cai no
+  fallback `Herói`; `listar` isola a entrada (try/catch) e `gravar`
+  preserva no storage uma entrada assinada que não normaliza.
+- **Teto do xp não era representável em nível alto** — `xpProx - 1`
+  vira `xpProx` acima de ~2^53 (nv ~500) e o `normalizar` devolvia
+  `xp === xpProx`; agora usa epsilon relativo (`xp < xpProx` sempre).
+- **`xpAbate` virava Infinity no modo infinito** — a curva `H^tot`
+  estoura 1e308 no tot ~11.433 (mapa ~115, pós-campanha) e o popup
+  mostrava "Infinity XP"; a renda é limitada a 1e300 (finita).
+- **Tetos de item apagavam bônus no infinito profundo** —
+  `normalizaItem` descartava bônus > 99.999 e congelava `escala` em 999;
+  acima do mapa ~3.000 a leitura/salvamento perdia o bônus do item.
+  Teto agora é 1e9 (bônus/afixo) e 1e6 (escala).
+- **Pisos de dano/HP não apareciam no detalhamento** — item amaldiçoado
+  em herói fraco clampava o status (dano 1 / HP 10) mas o rodapé mostrava
+  Σpartes negativa; as linhas `piso 1`/`piso 10` fecham a conta.
+- **`normalizar` não era idempotente com bônus -0,5** — `Math.ceil(-0,5)`
+  gerava `-0` (chave fantasma que sumia no 2º passe); zero não é mais
+  gravado no bônus.
+- **Sonda `info().heroi.hpMax`** — o fuzz compara `hp` com o máximo
+  autoritativo da arena (o `status` pode ficar 1 frame atrás no
+  auto-equip).
+
+### Changed
+
+- **CI com gate obrigatório** — `.github/workflows/deploy.yml` roda
+  `node --check` + `node testes/todos.js` em push/PR e o deploy do Pages
+  só acontece na `main` com `needs: test`.
+- **Seleção** — cache da lista de saves por versão (`Salvar.versao()`):
+  `listar()` deixou de rodar a cada frame (parse + HMAC de todos os saves).
+- **Opções** — sem escolha salva, respeitam `prefers-reduced-motion`
+  (shake/flash desligados; religável na tela de opções).
+- **Docs** — README/.specs atualizados (25 scripts, 2233 linhas em
+  `batalha.js`, 755 asserções/54 seções, version 0.7.0, tema por mapa).
+
 ## [0.7.0] — 2026-11-15
 
 ### Added

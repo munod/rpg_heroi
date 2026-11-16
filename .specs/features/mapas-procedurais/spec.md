@@ -30,8 +30,8 @@ em qualquer sessão, sem que os testes e screenshots dependem de aleatoriedade.
   `ad65530`.
 
 ## Verificação
-- Gate `node testes/todos.js` (193 asserções no total hoje; 165 na época do
-  commit = 152 de fumaça + 13 da grade).
+- Gate `node testes/todos.js` (na entrega: 193 asserções no total; 165 na
+  época do commit = 152 de fumaça + 13 da grade).
 - `testes/fumaca.js` **seção 20) cenário procedural: Perlin Noise com semente
   do mapa** (+10 confs): mesma semente reproduz exatamente o mesmo campo,
   semente diferente gera outro campo, `ruido(0,0)` na faixa `[-1, 1]`,
