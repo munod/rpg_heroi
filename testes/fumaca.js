@@ -2537,12 +2537,15 @@ console.log('29) evento: o Gatuno (rouba, foge, resgate)');
   p.pontos = 0;
   p.equip = { arma: null, armadura: null };
   p.bolsa = [];
+  // RNG zerado ANTES do spawn: o anel (ângulo/dist) e o atkCd dos
+  // monstros usam Math.random — com vivo, a geometria variava entre
+  // rodadas e o desfecho do resgate flutuava (flake)
+  Math.random = function () { return 0; };
   Batalha.restaurarOnda(1);
   Eventos.limpa();
   p.ouro = 100;
   const o0 = p.ouro;
   jogoCanvas._textos = [];
-  Math.random = function () { return 0; };
   for (let i = 0; i < 5 && !Batalha.info().gatuno; i++) frame(1);
   conf(Batalha.info().gatuno, 'nasce e rouba na arena');
   conf(p.ouro === o0 - 15, 'roubo debitado na hora (100 → ' + p.ouro + ')');
@@ -2574,24 +2577,42 @@ console.log('29) evento: o Gatuno (rouba, foge, resgate)');
   p.atributos.con = 1;
   p.atributos.des = 1;
   p.nivel = 1;
+  // RNG zerado ANTES do spawn (geometria/atkCd fixos — mesma lição da
+  // parte 1): com vivo, o anel variava entre rodadas e o herói às vezes
+  // alcançava o ladrão antes de morrer (flake do "sem resgate")
+  Math.random = function () { return 0; };
   Batalha.restaurarOnda(30);
   Eventos.limpa();
   p.ouro = 100;
   jogoCanvas._textos = [];
-  Math.random = function () { return 0; };
   for (let i = 0; i < 5 && !Batalha.info().gatuno; i++) frame(1);
   conf(Batalha.info().gatuno, 'roubador em campo (tento a fuga)');
   const roubado = p.ouro;
   const mortes1 = p.stats.mortes;
-  let sumiu = false;
+  const rec1 = p.stats.danoRecebido || 0;
+  const cat1 = p.stats.gatunos;
+  let sumiu = false, tSaiu = -1;
   for (let i = 0; i < 9000 && !sumiu; i++) {
     frame(1);
     sumiu = !Batalha.info().gatuno;
+    if (sumiu) tSaiu = i;
   }
   Math.random = rnd;
+  // resumo do ramo (diagnóstico permanente: o desfecho do Gatuno é
+  // corrida entre perseguição do herói e fuga/desistência — ver qual
+  // caminho cada run tomou)
+  const txtos = (jogoCanvas._textos || []).join('|');
+  const desfecho = txtos.indexOf('ESCAPOU') >= 0 ? 'ESCAPOU' :
+    (txtos.indexOf('DESISTIU') >= 0 ? 'DESISTIU' : 'ABATIDO?');
+  const mortes2 = p.stats.mortes - mortes1;
+  console.log('    [gat2] ' + desfecho + ' em ' +
+    (tSaiu * 16.7 / 1000).toFixed(1) + 's | resgates+=' +
+    (p.stats.gatunos - cat1) + ' | mortes+=' + mortes2 + ' | dano+=' +
+    ((p.stats.danoRecebido || 0) - rec1) + ' | ouro ' + roubado + '→' +
+    p.ouro + ' | onda ' + Batalha.info().onda + ' | inim ' +
+    Batalha.info().inimigos + ' | hp ' + Math.round(Batalha.info().hp || 0));
   conf(sumiu, 'some da arena (fuga na borda ou desistência)');
   conf(p.stats.gatunos === 1, 'sem resgate: stats não muda');
-  const mortes2 = p.stats.mortes - mortes1;
   let esperado = roubado;
   for (let k = 0; k < mortes2; k++) {
     esperado -= Math.max(1, Math.floor(esperado * 0.1));
@@ -2854,7 +2875,7 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
   Batalha.restaurarOnda(30);
   e0 = 0;
   while (Batalha.info().morto && e0 < 900) { frame(1); e0++; }
-  let fugas = 0, fora = 0, emRocha = 0;
+  let fugas = 0, fora = 0, emRocha = 0, maxD = 0;
   for (let i = 0; i < 9000; i++) {
     frame(1);
     const f = Batalha.info();
@@ -2863,17 +2884,29 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
       fugas++;
       const d = f.destino;
       // spec mapa-infinito R-INF-3: sem mundo, o teto é a DISTÂNCIA
-      // ao herói (FUGA_MAX = 96; folga p/ arredondamento) — era:
-      // limites com margem 16 no mundo 384×268
+      // ao herói (FUGA_MAX = 96) — era: limites com margem 16 no
+      // mundo 384×268
       const ddx = d.x - f.heroi.x, ddy = d.y - f.heroi.y;
-      if (Math.sqrt(ddx * ddx + ddy * ddy) > 97) fora++;
+      const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+      if (dist > maxD) maxD = dist;
+      if (dist > 97) fora++;
       // evasão de cerco (spec ia-heroi): fuga nunca pousa em rocha
       if (sandbox.IA.celulaObst(d.x, d.y, 6)) emRocha++;
     }
   }
-  conf(fugas > 500 && fora === 0,
-    'destino de fuga sempre perto do herói (' + fugas +
-    ' fugas, ' + fora + ' além de 96px)');
+  // Limiar = clamp por DECISÃO + drift entre TICKs: o destino nasce
+  // ≤96px do herói (clampFuga a cada TICK = 0,2s), mas entre decisões
+  // o herói anda (vel×0,2 — e pode desviar numa rocha, afastando o
+  // destino guardado). Medido (lição: contrato tem que medir o que o
+  // código garante): ~0,3% dos frames levemente acima de 97 = puro
+  // drift; um clamp ROTO daria coordenadas de mundo (200+px) — bem
+  // acima do limiar.
+  const velHer = (Personagem.status(p).vel || 70);
+  const limFuga = 96 + velHer * 0.3 + 6;
+  conf(fugas > 500 && maxD <= limFuga,
+    'destino de fuga sempre perto do herói (' + fugas + ' fugas, máx ' +
+    maxD.toFixed(0) + 'px ≤ ' + limFuga.toFixed(0) + ' = 96 + vel×TICK; ' +
+    fora + ' frame(s) só no drift entre decisões)');
   // tolerância de 1%: a evasão já escolhe fora de rocha (ponto
   // arredondado), mas quando TODOS os candidatos estão bloqueados o
   // fallback é o slot de sempre (documentado na spec) — caso raro
