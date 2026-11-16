@@ -1,29 +1,45 @@
 # Deploy no GitHub Pages: o jogo é 100% estático (sem build, sem npm) —
-# a cada push na main a Actions sobe a raiz inteira (index.html, style.css,
-# js/) e publica em https://munod.github.io/rpg_heroi/
+# a cada push na main a Actions roda o gate e sobe a raiz inteira
+# (index.html, style.css, js/) em https://munod.github.io/rpg_heroi/
 name: Deploy GitHub Pages
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:   # gatilho manual na aba Actions
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# nunca dois deploys concorrendo: o mais novo substitui o anterior
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  pull_request:      # roda o gate em PRs (o deploy só acontece na main)
+  workflow_dispatch: # gatilho manual na aba Actions
 
 jobs:
-  deploy:
+  # Gate obrigatório: nenhum deploy sai com teste vermelho. A suíte é o
+  # único gate do projeto (`node testes/todos.js`) — ver AGENTS.md.
+  test:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Sintaxe (node --check)
+        run: |
+          for f in js/*.js testes/*.js; do node --check "$f"; done
+      - name: Gate
+        run: node testes/todos.js
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    # nunca dois deploys concorrendo: o mais novo substitui o anterior
+    concurrency:
+      group: pages
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
