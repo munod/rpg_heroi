@@ -1,9 +1,10 @@
 # Spec: Onda com cota de tempo — a espera vira pressão
 
-Status: **código completo · A/B fechado** (gate727 confs ·4 seeds
-×240min: mapa9→12, nv777→1050, espera%37→17, **atrasoPct 0,00%** no
-baseline, clear intacto em10,3s, mortes0) · **sim completa em curso**
-(R-TIM-6c: vitória + duração + anti-estol) · Data: 2026-11-15 ·
+Status: **CONCLUÍDA** (gate732 confs · A/B4 seeds ×240min: mapa9→12,
+nv777→1050, espera37→17%, atrasoPct 0,00% · **sim completa:
+VITÓRIA em2.639min = 44,0h · nv final9.170 (modelo9.150) · 0 mortes ·
+clear p95 19s e máx 26s — a cota de30s nunca estourou em9.900
+clears**) · Data: 2026-11-15 ·
 Iniciativa: mantenedor ("remover a espera entre as ondas, pois isso é
 muito ruim e chato" + "x segundos de duração de onda: se o jogador
 exceder, a outra onda já inicia — desafio maior").
@@ -69,6 +70,13 @@ exceder, a outra onda já inicia — desafio maior").
   evento, sem estol;
   (c) **sim completa** (~5.000min — a campanha encurtou, custo ~¼ do
   antigo): vitória + duração final + anti-estol.
+  **RESULTADO (2026-11-15)**: (a) p95=18s/máx34,6s → ONDA_SEG 30;
+  (b) espera37→17%, atrasoPct **0,00%**, mapa9→12, nv777→1050,
+  mortes0; (c) **VITÓRIA em2.639min = 44,0h**, nv final9.170
+  (modelo9.150), **0 mortes**, hpMin41, clear da campanha p95 19s /
+  máx 26,07s — a cota de30s **nunca estourou em9.900 clears** (nem o
+  Enxame no late: build saudável é sempre folgada; a cota puniria só
+  build fraca — exatamente o projeto).
 - **R-TIM-7 (docs)** — AGENTS: a alavanca de duração da campanha deixa
   de ser a espera e passa a ser o **clear** (reescrita do parágrafo do
   respiro + alvos de tempo re-meditados); emendas `mundos` (R-MUN-7) e

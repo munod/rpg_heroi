@@ -34,7 +34,9 @@ Nada de servidor, nada de instalar. Tudo fica salvo no `localStorage`.
   Cripta Congelada, Ninho Rubro, Deserto Escaldante, Pântano Venenoso,
   Floresta Noturna, Forja Abissal, Ruínas Celestiais, Vazio Abissal e
   Trono do Caos — **cada mundo tem chão, obstáculos, monstros e chefe
-  próprios**), alvo de **~200h de jogo**. Derrubar o chefe do **mundo 10**
+  próprios**), alvo de **~44h de jogo medido** (antes ~200h com a
+  espera entre ondas — a espera saiu na spec `onda-timer`; a alavanca
+  de duração hoje é a velocidade de clear). Derrubar o chefe do **mundo 10**
   abre a tela de **CAMPANHA CONCLUÍDA** e libera o **modo infinito**
   (os mundos voltam ao início em loop, com a dificuldade seguindo a
   escala). Saves de antes dos mapas migram sozinhos (onda 250 → mapa 3,

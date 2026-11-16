@@ -120,6 +120,13 @@ vitória + modo infinito em loop** · **teto ~9.500 com re-base das curvas**
     sim completa pós-teto** (medido na leva `balance-dopamina` R-BAL-4/5
     — o número vive no AGENTS e no CHANGELOG da leva). O método
     permanece: calibrar com `ritmo.js` semeado, ≥4 seeds por decisão.
+  - **Desfecho (espec `onda-timer`, 2026-11-15)** — o mantenedor foi
+    adiante e **removeu a espera entre ondas** ("muito ruim e chato"):
+    a alavanca de duração do R-MUN-7 **deixou de ser a espera e passou
+    a ser o clear**. Alvo vigente: **vitória em 44,0h medido**
+    (sim seed1,0 mortes — AGENTS/CHANGELOG). O R-BAL-1/teto foi
+    superado; a emenda acima fica como histórico de como o alvo de
+    200h foi sendo reduzido até a remoção da espera.
 - **R-MUN-8 (lendários por mundo)**: `itens.temaDe` passa a resolver por
   MUNDO com **ciclo dos 3 pools existentes**
   (`tema = ((mundo−1) % 3) + 1`) — mundos 1/4/7/10, 2/5/8, 3/6/9.

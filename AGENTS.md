@@ -178,12 +178,14 @@
   custo exponencial = estol estrutural; a morte −5 amplifica). **O
   `ritmo.js` gasta ouro** (keystone no nv 30 + aprimoramento do slot
   mais barato a cada 10s — o baseline é o do jogador que GERENCIA). Alvos
-  medidos hoje (média de 4 runs, pós-re-base): 1º nível ~47s ·
-  15min = nv 29-33 / onda 43-47 (a banda 33-38 era do G 1,11) ·
-  mapa 1 fechado ~31-33min · **SIM COMPLETA: vitória em 222,5h**
-  (alvo 200h ±20%), nv final 9.167 (modelo 9.150), 65 mortes/222h
-  (eventos), sem estol até o mapa 101 (nv9500 ≤ fim de campanha).
-  Variância
+  medidos hoje (**leva `onda-timer`**: A/B = média de4 seeds ×240min,
+  sim = seed1): nv10 ~3,5min · nv30 ~8,6min · keystone ~9,2min ·
+  15min = nv 60 / onda 75 · mapa 1 fechado ~20min · A/B @240min =
+  mapa 12 / nv 1.050 / **atrasoPct 0** · **SIM COMPLETA: vitória em
+  44,0h** (2.639min), nv final 9.170 (modelo 9.150), **0 mortes**,
+  clear p95 19s (cota30 nunca estourou em9.900 clears). Referências:
+  a config COM espera venceu em136,2h/0 mortes (R-BAL-6) e a pré-
+  compensação estolou no mapa97 (1.357 mortes). Variância
   de RNG: decidir pela média de ≥4 runs.
 - Canvas **768×432 de base com largura adaptativa**: altura fixa,
   `W = clamp(432 × aspecto, 768, 1728)` recalculado em `main.js
@@ -231,7 +233,8 @@
   campo limpo → batida → próxima onda, e **cada onda tem cota de
   `ONDA_SEG` 30s**: não limpou → `ONDA ATRASADA — REFORÇOS!` (sobreviventes + novos; baseline medido nunca estoura: atrasoPct 0,0%;
   clear p95 =18s). A **alavanca de duração** da campanha passou a ser
-  o **clear** (modelo:10.000 × ~12s ≈35h — alvo = sim completa);
+  o **clear** (medido: **44,0h a vitória** — sim seed1; modelo
+  ~35h subestimou o clear do late);
   pós-chefe usa `ESPERA_TRANSICAO` fixo 8s e o kill do
   chefe zera o timer — troca de mapa = 8s únicos, não 16). **Escala de
   monstros**:

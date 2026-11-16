@@ -29,10 +29,10 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
   onda** (expirou → reforços com os sobreviventes = desafio da build);
   chefe isento; HUD `TEMPO Xs`; X por medição (p95=18s →0,00% de
   atraso no baseline); A/B: **mapa9→12, nv777→1050, espera37%→17%**
-- gate **727 confs** (732 pós-onda-timer) · pendências: **sim do
-  onda-timer** (vitória + duração + anti-estol da config SEM espera)
-  — sim2 da candidata R-BAL-6 **CONCLUÍDA: vitória136,2h /0 mortes**
-  (alvo de duração da config COM espera)
+- gate **732 confs** · **medições FECHADAS**: sim do onda-timer
+  **vitória em44,0h /0 mortes /atraso0%** (alvo de duração vigente) ·
+  sim2 da candidata R-BAL-6 **vitória136,2h /0 mortes** (referência
+  da config COM espera)
 
 ### v0.5.0 — 2026-11-15 (ver `CHANGELOG.md`) — série visual, parte 2
 - `visual-heroi-arma` — motor de cor (rampas HSL + luz única), herói

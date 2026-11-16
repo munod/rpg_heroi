@@ -28,7 +28,8 @@ vive em `.specs/features/`.
   A/B (4 seeds ×240min): espera%37→17, **mapa9→12, nv777→1050**,
   clear intacto, mortes0. `ritmo.js` ganha `clearMedio/clearP95/
   clearMax/atrasoPct`. A alavanca de duração da campanha passou a ser
-  o **clear** (~35h modelo — sim completa em curso).
+  o **clear** (medido: **VITÓRIA em 44,0h**,0 mortes — o modelo de
+  ~35h subestimou o clear do late).
 
 
 - **Mapa procedural infinito (spec `mapa-infinito`)** — playtest:

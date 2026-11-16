@@ -581,9 +581,11 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   → implementação com timers preservando os fluxos de
   morte/rollback/troca de mapa → A/B4 seeds (mapa9→12, nv777→1050,
   atraso0%) → sim completa p/ duração. Aceite do mantenedor: campanha
-  ~45-50h (medida tende a ~35h — confirmar na sim), batida de2s
-  mantida, troco de mapa8s mantido. Alavanca de duração da campanha:
-  **deixou de ser a espera e passou a ser o clear** (AGENTS reescrito).
+  ~45-50h (**medida: VITÓRIA em44,0h,0 mortes, atraso0% em9.900
+  clears**), batida de2s mantida, troco de mapa8s mantido. Alavanca de
+  duração da campanha: **deixou ser a espera e passou a ser o clear**
+  (AGENTS reescrito; alvo vigente44,0h — a sim COM espera vale como
+  referência histórica em136,2h).
 
 ## Bloqueios
 
