@@ -1,12 +1,12 @@
 # Deploy no GitHub Pages: o jogo é 100% estático (sem build, sem npm) —
-# a cada push na main a Actions roda o gate e sobe a raiz inteira
-# (index.html, style.css, js/) em https://munod.github.io/rpg_heroi/
+# a cada push na main a Actions roda o gate, empacota a raiz inteira
+# (index.html, style.css, js/) e publica em https://munod.github.io/rpg_heroi/
 name: Deploy GitHub Pages
 
 on:
   push:
     branches: [main]
-  pull_request:      # roda o gate em PRs (o deploy só acontece na main)
+  pull_request:      # roda o gate em PRs (o build/deploy só acontece fora de PR)
   workflow_dispatch: # gatilho manual na aba Actions
 
 jobs:
@@ -25,8 +25,30 @@ jobs:
       - name: Gate
         run: node testes/todos.js
 
-  deploy:
+  # Empacota o site num artifact. Fica num JOB SEPARADO do deploy: o
+  # deploy-pages lista o artifact pelo serviço de artifacts e, no mesmo
+  # job, a consulta podia chegar antes da indexação (falha "Found 0
+  # artifacts" observada em 2026-11-16). Com o job de build concluído
+  # antes, o artifact existe quando o deploy começa.
+  build:
     needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      # raiz do projeto: index.html + style.css + js/ (os PNGs de teste
+      # seguem junto e são inofensivos; .git/.github são excluídos)
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    needs: build
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -41,13 +63,6 @@ jobs:
       group: pages
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      # raiz do projeto: index.html + style.css + js/ (os PNGs de teste
-      # seguem junto e são inofensivos; .git é excluído por padrão)
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
       - name: Publica
         id: deployment
         uses: actions/deploy-pages@v4
