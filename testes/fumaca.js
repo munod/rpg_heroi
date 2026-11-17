@@ -4397,6 +4397,32 @@ console.log('41) monstros novos: espécies com skill, ranged, comum intacto e ev
   const cof = Batalha.info().cofre;
   conf(cof && cof.x === 60 && cof.y === 60,
     'cofre aparece na sonda com a posição certa');
+  // caminhada VERTICAL até o cofre com WALK (bug pré-existente desde
+  // monstros-novos: o bloco do cofre chamava anima(walk) sem fluxo
+  // próprio e o ramo "sem alvo" sobrescrevia com idle — o herói
+  // DESLIZAVA em idle em linha reta; sonda info().heroi.anim p/ pegar)
+  Eventos.colocaCofre(Math.round(Batalha.info().heroi.x),
+    Math.round(Batalha.info().heroi.y) - 100);
+  let subiu = 0, movendo = 0, andandoIdle = 0;
+  let pyV = Batalha.info().heroi.y;
+  for (let i = 0; i < 400; i++) {
+    frame(1);
+    const s = Batalha.info();
+    const dyV = s.heroi.y - pyV;
+    pyV = s.heroi.y;
+    if (dyV < -0.3) {                 // só conta frames EM MOVIMENTO
+      movendo++;
+      subiu -= dyV;
+      if (s.heroi.anim !== 'walk') andandoIdle++;
+    }
+    if (s.cofre === null) break;      // coletou (chegou perto)
+  }
+  // invariant: movimento ⇒ walk (obstáculo no caminho não importa —
+  // o que se mede é a POSE durante o deslocamento, não a distância)
+  conf(movendo >= 8 && andandoIdle === 0,
+    'caminhada vertical p/ o cofre anda com WALK (' +
+    movendo + ' frame(s) em movimento, ' + andandoIdle +
+    ' deles em idle; subiu ' + Math.round(subiu) + 'px)');
   // caminha: sem inimigos, o herói vai até ele (R-MON-4.2)
   let coletou = false;
   for (let i = 0; i < 12000 && !coletou; i++) {

@@ -1503,6 +1503,12 @@ var Batalha = (function () {
     // COFRE ABANDONADO (R-MON-4.2): sem alvo em campo, o herói caminha
     // até ele (o estado "espera" da IA o deixaria parado pra sempre).
     // Guard !atacando: não interrompe um golpe em curso.
+    // `andouCofre` marca que o walk DESTE frame veio daqui: o ramo
+    // "sem alvo" lá embaixo chamava anima(idle) por cima e o herói
+    // DESLIZAVA em idle até o cofre (bug pré-existente desde
+    // monstros-novos, achado no QA da leva visual — sem a flag, o
+    // movimento e a animação ficavam em fluxos de controle distintos)
+    var andouCofre = false;
     if (!alvo && !atacando && !heroi.morto) {
       var cof0 = Eventos.posCofre();
       if (cof0) {
@@ -1513,6 +1519,7 @@ var Batalha = (function () {
             (cdy / cd) * h.stats.vel * dt, 6);
           if (Math.abs(cdx) > 2) h.facing = cdx > 0 ? 1 : -1;
           anima(h, 'walk', dt);
+          andouCofre = true;
         }
       }
     }
@@ -1580,7 +1587,9 @@ var Batalha = (function () {
         } else {
           anima(h, 'idle', dt);
         }
-      } else {
+      } else if (!andouCofre) {
+        // sem alvo: parado em idle — mas NÃO sobrescreve o walk do
+        // cofre desta frame (aí o herói deslizava em idle)
         anima(h, 'idle', dt);
       }
     }
@@ -2179,7 +2188,11 @@ var Batalha = (function () {
                  ? Math.round(heroi.ia.agu * 100) / 100 : 0,
                prof: (heroi && heroi.ia && typeof heroi.ia.prof === 'number')
                  ? heroi.ia.prof : 0,
-               facing: heroi ? heroi.facing : 1 },
+               facing: heroi ? heroi.facing : 1,
+               // sonda de animação (spec visual-heroi-spritecook —
+               // fix do cofre): qual pose o render vai usar
+               anim: heroi ? heroi.anim : null,
+               frame: heroi ? heroi.frame : 0 },
       inimigos: inimigos.length,
       // diagnóstico p/ teste (seções 32): distância do inimigo mais
       // perto, se o golpe está em animação e o destino de fuga atual

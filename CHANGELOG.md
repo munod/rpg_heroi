@@ -38,6 +38,17 @@ vive em `.specs/features/`.
 
 ### Fixed
 
+- **Caminhada do cofre em posição idle** — o bloco do "Cofre
+  Abandonado" em `atualizaHeroi` chamava `anima(walk)` sem fluxo
+  próprio e caía no ramo "sem alvo" da cadeia seguinte, que
+  sobrescrevia com `anima(idle)` na mesma frame: o `mover()` já tinha
+  rodado, então o herói **deslizava em idle** até o cofre (qualquer
+  direção — reproduzido subindo em linha reta, o relato do
+  mantenedor). Bug **pré-existente desde `732d4e7`** (monstros-
+  novos), achado no QA da leva visual. Fix por **flag `andouCofre`**
+  (sem `return` — ele pularia a regeneração de 2hp/s) + sonda
+  `anim`/`frame` em `Batalha.info().heroi` + conf que falhava antes:
+  "83 frames em movimento, 83 em idle" → "80, 0".
 - **Teleporte/passo sagrado no mundo infinito** — o blink do mago e do
   clérigo ainda clampava a posição em `MW/MH` (384×268), arrastando o
   herói de volta ao canto do mundo antigo depois que ele andava para

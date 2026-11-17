@@ -851,3 +851,23 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   aparece na cmdline do comando que o executa → o shell se mata
   (SIGTERM 143) e o resto da linha não roda. Matar processo por PID
   registrado, ou usar padrão que não casar com a própria invocação.
+
+- **Movimento e animação no MESMO fluxo de controle** (fix do cofre,
+  achado no QA da leva visual): um bloco que chama `anima(walk)` sem
+  `return` e é seguido de uma cadeia com `else` final chamando
+  `anima(idle)` = **sobrescrita silenciosa** — o `mover()` já tinha
+  rodado, então o herói DESLIZAVA em idle até o cofre. O relato do
+  mantenedor ("vai para cima em linha reta fica idle") era o caminho
+  RETO do cofre (`mover` direto, sem IA); a perseguição estava
+  correta (verificada:61 frames andando,0 em idle — a cadeia
+  `else if` é exclusiva). Lições: (a) **reproduzir antes de
+  consertar** — log frame a frame de desloc × pose desenhada mostrou
+  `dy=-1/-2` com `idle` em toda frame, e o A/B com o fix revertido
+  provou a causalidade; (b) **não usar `return` como fix** — ele
+  pularia a regeneração de 2hp/s da linha seguinte (o fix é uma
+  flag); (c) a sonda `anim` em `info().heroi` viabilizou o conf que
+  falhava antes ("83 em movimento,83 em idle" → "80,0"); (d) o conf
+  mede o invariante **movimento ⇒ walk** (conta frames em
+  deslocamento, não distância — ortogonal a obstáculo no caminho);
+  (e) o bug era **pré-existente** (`732d4e7`) — as levas visuais
+  só o tornaram perceptível (o walk novo contrasta mais com o idle).
