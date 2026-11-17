@@ -6,7 +6,7 @@ const { carregar, novoCtxCaptura } = require('./carga');
 // só sprite + personagem: o resto do jogo não entra aqui
 const { sandbox } = carregar({
   novoCtx: novoCtxCaptura,
-  scripts: ['js/sprite.js', 'js/personagem.js']
+  scripts: ['js/sprite.js', 'js/assets.js', 'js/personagem.js']
 });
 
 const Sprite = sandbox.Sprite;
@@ -104,3 +104,71 @@ checa('wind: perna dianteira (9,14)', cor(wind, 9, 14), look.cloth);
 checa('wind: bota dianteira (10,18)', cor(wind, 10, 18), couro.base);
 checa('wind: cinto (6,12)', cor(wind, 6, 12), Sprite.cores.couro);
 checa('idle: perna dianteira (9,14)', cor(idle, 9, 14), look.cloth);
+
+// ---- assets gerados (spec visual-heroi-spritecook) ----------------
+// O guerreiro vem de PNGs (grau de liberdade novo); as outras classes
+// seguem procedurais até a leva 2 — o fallback é contrato.
+console.log('\n== assets do guerreiro ==');
+const Assets = sandbox.Assets;
+let cargaOk = false;
+Assets.carga(function () { cargaOk = true; });
+const inf = Assets.info();
+checa('carga encerra síncrona no harness', cargaOk, true);
+checa('guerreiro carregado', inf.carregado.guerreiro, true);
+checa('pendentes zerados', inf.pendentes, 0);
+checa('mago sem asset (cai no procedural)', Assets.temHeroi('mago', 'idle'), false);
+
+const frA = Assets.hero('guerreiro', 'idle', 0);
+checa('frame 43×43', frA ? frA.w + 'x' + frA.h : 'null', '43x43');
+const dA = frA.canvas._data;   // RGBA (convenção do cena.js)
+const pxA = (x, y) => {
+  const o = (y * frA.h + x) * 4;
+  return [dA[o], dA[o + 1], dA[o + 2], dA[o + 3]];
+};
+checa('canto sup-esq transparente', pxA(0, 0)[3], 0);
+checa('canto inf-dir transparente', pxA(frA.w - 1, frA.h - 1)[3], 0);
+let pe42 = false;
+for (let x = 0; x < frA.w; x++) if (pxA(x, 42)[3] > 0) pe42 = true;
+checa('fileira 42 tem conteúdo (pés)', pe42, true);
+let opacos = 0, temPele = false, temContorno = false;
+for (let i = 0; i < frA.w * frA.h; i++) {
+  if (dA[i * 4 + 3] === 0) continue;
+  opacos++;
+  const r = dA[i * 4], g = dA[i * 4 + 1], b = dA[i * 4 + 2];
+  if (r > 150 && g >= 90 && r >= g && g >= b && (r - b) > 35) temPele = true;
+  if (r < 45 && g < 40 && b < 55) temContorno = true;
+}
+checa('corpo opaco (mín 400 px)', opacos >= 400, true);
+checa('tem pele', temPele, true);
+checa('tem contorno escuro', temContorno, true);
+
+// o punho do manifesto cai em cima da mão (a arma ancora nele)
+const pun = Assets.punho('guerreiro', 'idle', 0);
+const pp = pun ? pxA(pun[0], pun[1]) : [0, 0, 0, 0];
+checa('punho do manifesto é pele', pp[3] > 0 && pp[0] > 150 && pp[0] >= pp[1], true);
+
+// raridade: o marcador magenta da arma vira a cor da raridade
+const coresRar = { 1: '#d9a62a', 2: '#4fc3ff', 3: '#b06bff', 4: '#ff5566' };
+[1, 2, 3, 4].forEach(rar => {
+  const a = Assets.arma('guerreiro', 'idle', 0, 'espada', rar);
+  if (!a) { checa('arma rar ' + rar + ' composta', 'null', 'objeto'); return; }
+  const n = parseInt(coresRar[rar].slice(1), 16);
+  const alvo = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  let achou = false;
+  const dd = a.canvas._data;
+  for (let i = 0; i < a.w * a.h && !achou; i++) {
+    if (dd[i * 4 + 3] === 0) continue;
+    if (dd[i * 4] === alvo[0] && dd[i * 4 + 1] === alvo[1] &&
+        dd[i * 4 + 2] === alvo[2]) achou = true;
+  }
+  checa('raridade ' + rar + ' pinta o acento (' + coresRar[rar] + ')',
+    achou, true);
+});
+
+// mapeamento de frames: asset = manifesto, procedural = o de sempre
+checa('qtd walk do guerreiro (asset)', Assets.qtd('guerreiro', 'walk'), 8);
+checa('qtd walk do mago (procedural)', Assets.qtd('mago', 'walk'), 4);
+checa('ataque guerreiro p=0,5 → frame do golpe (5)',
+  Assets.frameAtaque('guerreiro', 0.5), 5);
+checa('ataque mago p=0,5 (procedural = 1)',
+  Assets.frameAtaque('mago', 0.5), 1);

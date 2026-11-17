@@ -5,9 +5,10 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 
-// fumaca e grade têm asserções; previa e cena geram imagens e saem com
-// código diferente de zero se algo quebrar no meio do caminho
-const TESTES = ['fumaca.js', 'grade.js', 'previa.js', 'cena.js'];
+// fumaca e grade têm asserções; previa, previa-assets e cena geram
+// imagens e saem com código diferente de zero se algo quebrar no meio
+const TESTES = ['fumaca.js', 'grade.js', 'previa.js', 'previa-assets.js',
+  'cena.js'];
 
 let falhas = 0;
 for (const arquivo of TESTES) {

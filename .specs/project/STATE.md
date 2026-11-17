@@ -587,6 +587,38 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   (AGENTS reescrito; alvo vigente44,0h — a sim COM espera vale como
   referência histórica em136,2h).
 
+- **Visual do herói via SpriteCook (spec `visual-heroi-spritecook`)**
+  — decisões do mantenedor no levantamento: **pixel art rico (32-48px)**
+  · **look fixo por classe** (a Apar perde Pele/Cabelo/Estilo/Roupa;
+  `p.look` segue no save sem bump) · **arma como sprite separado**
+  (preserva "raridade visível na mão" via recolor do marcador magenta)
+  · **piloto = 1 classe completa** (guerreiro) antes de replicar.
+  **Reversão da decisão "PNG externo descartado"** (STATE da
+  `visual-heroi-arma`) com justificativa: `lerPNG` já existia (ganhou
+  RGBA), o harness ganhou `Image` síncrona e "sem build" não proíbe
+  PNG — é arte commitada. **Degradação por construção**: classe sem
+  asset cai no procedural (mago/ladino/clerigo seguem iguais na leva
+  1), então o piloto nunca deixa o herói sem desenho. Escala: fonte
+  86px → **÷2 vizinho = 43×43** (olhos sobrevivem — conferido no
+  PNG), pés na fileira 42 (ancoragem `y0 = heroi.y − ALT` idêntica à
+  antiga), corpo centrado em x21. O manifesto (`js/assets.js`) é
+  fonte única de frames/âncoras/geometria — os testes leem ele, não
+  duplicam números. Arma: fatiada na nuvem (`auto_slice_asset`),
+  ângulos por `rotate_sprite` (RotSprite grátis), redução ÷4 +
+  recolor das 4 raridades no `testes/prepara-assets.js` (também mede
+  o punho por detecção de pele e gera a folha QA).
+
+- **Geração: preset não basta — a pose precisa de prompt** (mesma
+  spec) — o preset `walk` balançava os DOIS braços (a mão da arma
+  sumia atrás do corpo em metade dos frames) e o preset `attack`
+  punha o punho NA CARA (a espada cruzaria o rosto) + materializou
+  lâminas do "invisible sword". Os dois viraram **animações custom**
+  com a restrição explícita ("braço direito firme no quadril",
+  "punho ao lado da orelha, nunca sobre o rosto") e os fragmentos de
+  lâmina sobraram num **recorte documentado** (`RECORTES_ATAQUE` no
+  `prepara-assets.js`). Lição: animação gerada é POSE, e a pose tem
+  que ser compatível com o que o jogo compõe por cima (a arma).
+
 ## Bloqueios
 
 - Nenhum.
@@ -745,3 +777,34 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   baratas decidiram o caso: **contar px por cor na captura** e
   **isolar a camada com um toggle** — sem elas teríamos "consertado" o
   chão sem nada quebrado, e a spec teria uma justificativa falsa.
+
+- **"PNG corrompido" × display da tool de leitura** (leva
+  `visual-heroi-spritecook`): a folha `previa-assets.png` apareceu
+  como lixo (cara gigante + faixa) em 4 leituras seguidas, inclusive
+  em cópia e re-encodagem — enquanto **dois decodificadores
+  independentes** (parser Python feito do zero + `lerPNG`) liam os
+  pixels certos (o ASCII renderizou os heróis nas células). O display
+  é quem servia conteúdo errado, não o arquivo. Regra: antes de
+  concluir "arquivo corrompido", validar com um decoder
+  INDEPENDENTE — a concordância writer+reader próprios não prova nada
+  (bug simétrico passaria) e a tool de imagem já mostrou servir tela
+  errada para outros PNGs novos (verifiquei `tela-aparencia.png` por
+  recorte Python antes de achar que a aba Apar não abria).
+
+- **Detecção de punho: excluir a cara = componente do pixel de pele
+  mais alto** (mesma leva) — e a mão se FRAGMENTA em blobs (o contorno
+  interno do desenho quebra a conectividade: 2px + 5px), então o
+  merge por proximidade de caixa (≤2px) depois de tirar a cara é o
+  que faz a mão aparecer; em resolução ÷2 a mão fica <4px e some.
+  Dois modos porque um só não serve: no relaxado (idle/walk) o punho
+  erguido do ataque FUNDE com a cara e é excluído junto (perde-se o
+  frame); no estrito (ataque) a mão na sombra fragmenta e some.
+  Quando o detector erra de propósito (mão escondida atrás do corpo
+  no walk), o certo é **override manual documentado** (`OVERRIDE` no
+  `prepara-assets.js`) conferido no QA — não afinar o detector até
+  acertar tudo.
+
+- **`pkill -f` casa com o PRÓPRIO shell** (mesma leva): o padrão
+  aparece na cmdline do comando que o executa → o shell se mata
+  (SIGTERM 143) e o resto da linha não roda. Matar processo por PID
+  registrado, ou usar padrão que não casar com a própria invocação.

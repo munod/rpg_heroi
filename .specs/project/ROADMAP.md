@@ -304,6 +304,22 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     **chip clicável** (linha 444..688, corte 33→29 — `★`/`-15HP`
     intactos). **+2 confs = 708** · screenshot `tela-itens.png` ·
     nenhum clique de teste mudou.
+15. ✅ **`visual-heroi-spritecook`** (2026-11-16) —
+    piloto do visual novo via SpriteCook (pedido: *"trabalhar a arte
+    do game, começando pelos personagens"*): guerreiro **gerado**
+    (43×43 = fonte86÷2, 8 frames × 3 anims, ciclo idêntico ao
+    procedural) + **arma composta no punho** (4 tipos × 3 ângulos ×
+    4 raridades — "raridade visível na mão" preservada por recolor).
+    **Reverte** a decisão "PNG externo descartado" (leva
+    `visual-heroi-arma`) com degradação por construção: mago/ladino/
+    clerigo seguem procedurais até a leva 2. Presets de animação
+    precisaram de **prompt custom** (braço firme / punho ao lado da
+    orelha) + recorte de fragmentos. Infra: `js/assets.js` (manifesto
+    embutido, sem `fetch`), `Image` síncrona no harness,
+    `lerPNG/escreverPNG` RGBA, `prepara-assets.js` (corte/arma/
+    punho/QA). Apar perde as 4 linhas de look; prévia da gestão
+    cresce para 116px. Gate verde com **5 arquivos**
+    (+`previa-assets.js`).
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,

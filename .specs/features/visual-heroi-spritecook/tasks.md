@@ -1,0 +1,59 @@
+# Tasks — visual-heroi-spritecook
+
+Spec: `spec.md` · piloto = guerreiro completo antes de replicar.
+**Status: piloto concluído** (gate verde —5 arquivos).
+
+## Fase A — base de referência
+- [x] A1. `get_credit_balance` (preflight —920 créditos)
+- [x] A2. Folha de referência dos sprites atuais (`previa-zoom.png`)
+- [x] A3. Upload → `spritecook-assets.json` (asset_id/sha12/label)
+
+## Fase B — geração (SpriteCook)
+- [x] B1. Guerreiro base (rota B: `generate_game_art` + referência —
+      3/4 olhando à direita preservado)
+- [x] B2. Animações idle/walk/attack — walk e ataque viraram
+      **custom** (preset: braço balançava / punho na cara);
+      fragmentos de lâmina recortados (`RECORTES_ATAQUE`)
+- [x] B3. 4 armas na horizontal com acento magenta, fatiadas
+      (`auto_slice_asset`) e rotacionadas (`rotate_sprite`, grátis)
+- [x] B4. Download + `assets/fonte/` (fonte commitada p/ reprocesso)
+
+## Fase C — pipeline local
+- [x] C1. Redução (nearest) do guerreiro p/ 43×43 (÷2 — conferido)
+- [x] C2. Variantes de ângulo da arma (RotSprite) + recolor ×4
+      raridades → `assets/armas/` (48 arquivos)
+- [x] C3. Âncora do punho por frame (detecção de pele + override
+      manual + conferência no QA) → manifesto
+
+## Fase D — infra no jogo
+- [x] D1. `lerPNG` RGBA (+PLTE/tRNS) e `escreverPNG` com alfa
+- [x] D2. Stub de `Image` síncrono em `testes/carga.js` (_data RGBA)
+- [x] D3. `js/assets.js` (manifesto embutido + carga + bake) +
+      `index.html`
+- [x] D4. Boot do `main.js` espera `Assets.carga` (fallback)
+- [x] D5. `Anim.hero` com fallback procedural + chaves novas
+- [x] D6. Frames dirigidos pelo manifesto (`batalha.js`,
+      `previaFrame` da gestão — ciclo idêntico ao procedural)
+- [x] D7. `desenhaHeroi`/`desenhaPrevia` com dimensões do manifesto
+      (sombra proporcional, caixa da prévia 216/116)
+- [x] D8. Composite herói+arma + recolor de raridade + espelho
+      (`Assets.desenha`, follow-through espelhado no frame6)
+
+## Fase E — Apar simplificada
+- [x] E1. `desenhaAparencia` sem as 4 linhas (classe + descrição +
+      prévia); `ciclo`/`cicloTras` mortos removidos
+
+## Fase F — testes
+- [x] F1. `fumaca.js`: contrato da Apar remapeado (clique antigo é
+      neutro) + instrumentação do assert de fuga (classifica
+      destino NOVO×antigo — flake nunca reproduziu em 24 runs)
+- [x] F2. `grade.js`: seção nova do asset (43×43, pés, pele,
+      contorno, punho=pele,4 raridades, qtd/frameAtaque)
+- [x] F3. `previa-assets.js` + registro no `todos.js`
+- [x] F4. `cena.js` regenerado e olhado (arena ✓, Apar ✓ — a tool de
+      leitura serviu imagem errada; verificado por recorte Python)
+- [x] F5. Gate `node testes/todos.js` verde (5 arquivos)
+
+## Fase G — docs/commit
+- [x] G1. `STATE.md` (reversão + lições), `CHANGELOG [Unreleased]`
+- [x] G2. Tasks concluídas, commit Conventional Commits pt-BR

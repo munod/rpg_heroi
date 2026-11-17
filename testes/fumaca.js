@@ -306,19 +306,23 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
     ', pts ' + pts1 + '->' + p1.pontos + ')');
 
   // --- abas de gestão
+  // look fixo por classe (spec visual-heroi-spritecook): as linhas de
+  // Pele/Cabelo/Estilo/Roupa saíram da Apar — a coordenada antiga do
+  // botão > não muda mais nada
   clique(515, 50);            // aba Aparência (centro da 2ª aba)
   frame(2);
-  const pele0 = p1.look.skin;
-  clique(706, 96);           // botão > da linha Pele
+  const look0 = JSON.stringify(p1.look);
+  clique(706, 96);           // coordenada antiga do botão > da linha Pele
   frame(2);
-  conf(p1.look.skin !== pele0, 'troca de cor de pele funciona');
+  conf(JSON.stringify(p1.look) === look0,
+    'Apar sem customização de look (clique antigo é neutro)');
 
-  // --- prévia do herói (spec preview-heroi): existe, não cobre as
-  //     linhas (contrato do clique em 706,96) e ANIMA com o tempo
+  // --- prévia do herói (spec preview-heroi): existe, DENTRO do
+  //     painel (contrato de geometria) e ANIMA com o tempo
   const pv0 = sandbox.Gestao.previa();
   conf(pv0.caixa.y > 214 && pv0.caixa.y + pv0.caixa.h <= 336 &&
     pv0.caixa.x >= 412,
-    'caixa da prévia fora das linhas e dentro do painel (' +
+    'caixa da prévia dentro do painel (' +
     pv0.caixa.x + ',' + pv0.caixa.y + ' ' + pv0.caixa.w + 'x' +
     pv0.caixa.h + ')');
   let animou = false;
@@ -2929,6 +2933,7 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
   e0 = 0;
   while (Batalha.info().morto && e0 < 900) { frame(1); e0++; }
   let fugas = 0, fora = 0, emRocha = 0, maxD = 0;
+  let prevDest = null, setsLonge = 0, staleLonge = 0;
   for (let i = 0; i < 9000; i++) {
     frame(1);
     const f = Batalha.info();
@@ -2941,11 +2946,14 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
       // mundo 384×268
       const ddx = d.x - f.heroi.x, ddy = d.y - f.heroi.y;
       const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+      const novoDest = !prevDest || prevDest.x !== d.x || prevDest.y !== d.y;
+      if (dist > 120) { if (novoDest) setsLonge++; else staleLonge++; }
       if (dist > maxD) maxD = dist;
       if (dist > 97) fora++;
       // evasão de cerco (spec ia-heroi): fuga nunca pousa em rocha
       if (sandbox.IA.celulaObst(d.x, d.y, 6)) emRocha++;
-    }
+      prevDest = { x: d.x, y: d.y };
+    } else prevDest = null;
   }
   // Limiar = clamp por DECISÃO + drift entre TICKs: o destino nasce
   // ≤96px do herói (clampFuga a cada TICK = 0,2s), mas entre decisões
@@ -2959,7 +2967,8 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
   conf(fugas > 500 && maxD <= limFuga,
     'destino de fuga sempre perto do herói (' + fugas + ' fugas, máx ' +
     maxD.toFixed(0) + 'px ≤ ' + limFuga.toFixed(0) + ' = 96 + vel×TICK; ' +
-    fora + ' frame(s) só no drift entre decisões)');
+    fora + ' frame(s) só no drift entre decisões; >120px: ' +
+    setsLonge + ' em destino NOVO, ' + staleLonge + ' em destino antigo)');
   // tolerância de 1%: a evasão já escolhe fora de rocha (ponto
   // arredondado), mas quando TODOS os candidatos estão bloqueados o
   // fallback é o slot de sempre (documentado na spec) — caso raro

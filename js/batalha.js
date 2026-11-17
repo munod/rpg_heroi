@@ -1429,10 +1429,13 @@ var Batalha = (function () {
   function anima(ent, anim, dt) {
     ent.anim = anim;
     ent.frameT += dt;
-    if (anim === 'walk') {
-      if (ent.frameT > 0.12) { ent.frameT = 0; ent.frame = (ent.frame + 1) % 4; }
-    } else {
-      if (ent.frameT > 0.35) { ent.frameT = 0; ent.frame = (ent.frame + 1) % 2; }
+    // qtd/duração pelo manifesto (spec visual-heroi-spritecook): com
+    // asset são8 frames; sem, os4/2 de sempre — o CICLO (0,48/0,7s) é
+    // o mesmo, então o ritmo não muda
+    var cl = Game.personagem.classe;
+    if (ent.frameT > Assets.durFrame(cl, anim)) {
+      ent.frameT = 0;
+      ent.frame = (ent.frame + 1) % Assets.qtd(cl, anim);
     }
   }
 
@@ -1520,7 +1523,9 @@ var Batalha = (function () {
       var dur = h.atkDur || 0.36;
       var e2 = dur - Math.max(0, h.atkT);
       h.anim = 'attack';
-      h.frame = Math.max(0, Math.min(2, Math.floor(e2 / (dur / 3))));
+      // frame pelo progresso: asset usa a tabela de inicios do
+      // manifesto (o golpe cai junto com o dano); procedural = floor(p×3)
+      h.frame = Assets.frameAtaque(Game.personagem.classe, e2 / dur);
       if (!h.hitDone && e2 >= Math.min(0.10, dur * 0.5)) {
         h.hitDone = true;
         golpeia();
@@ -1899,21 +1904,24 @@ var Batalha = (function () {
   function desenhaHeroi(ctx) {
     var look = Personagem.lookDe(Game.personagem);
     var c = Anim.hero(look, heroi.anim, heroi.frame);
-    sombra(ctx, heroi.x, heroi.y - 1, 8);
+    // procedural não expõe âncora (20px, centrado em x=8 — os valores
+    // de sempre); o asset novo usa alt=43/cx=21 do manifesto
+    var alt = c.alt || 20, cx = c.cx || 8;
+    sombra(ctx, heroi.x, heroi.y - 1, Math.round(alt * 0.4));
     if (heroi.morto) return;
     if (heroi.inv > 0 && Math.floor(heroi.inv * 16) % 2 === 0) ctx.globalAlpha = 0.45;
-    var x0 = Math.round(heroi.x - 8), y0 = Math.round(heroi.y - 20);
+    var x0 = Math.round(heroi.x - cx), y0 = Math.round(heroi.y - alt);
     if (heroi.facing === -1) {
       // espelha o sprite (desenhado olhando pra direita) — alvo à
-      // esquerda (spec virada-ataque); só o drawImage vira: a sombra
-      // e o alpha do inv ficam fora do save/restore
+      // esquerda (spec virada-ataque); o save/restore envolve herói E
+      // arma (spec visual-heroi-spritecook) — só o drawImage vira
       ctx.save();
       ctx.translate(x0 + c.w, y0);
       ctx.scale(-1, 1);
-      ctx.drawImage(c.canvas, 0, 0, c.w, c.h);
+      Assets.desenha(ctx, 0, 0, c);
       ctx.restore();
     } else {
-      ctx.drawImage(c.canvas, x0, y0, c.w, c.h);
+      Assets.desenha(ctx, x0, y0, c);
     }
     ctx.globalAlpha = 1;
   }

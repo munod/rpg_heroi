@@ -1,0 +1,54 @@
+{
+  "base_heroi_atual": {
+    "asset_id": "f11fa840-b559-458f-ad31-b8c5da9d0102",
+    "sha12": "663efe9a603f",
+    "label": "Base heroi atual (poses x4)",
+    "origem": "testes/previa-zoom.png"
+  },
+  "guerreiro": {
+    "base": {
+      "asset_id": "adb9ea12-8097-413d-ad9c-ec4c59d2df72",
+      "label": "guerreiro-base"
+    },
+    "idle": {
+      "asset_id": "37ec5ea3-13ac-4deb-8c07-dbc956990e92",
+      "label": "guerreiro-base Idle",
+      "local": "assets/fonte/guerreiro-idle.png"
+    },
+    "walk": {
+      "asset_id": "9b55a3fe-29dc-4ed1-b678-1a5565ed713e",
+      "label": "guerreiro custom Walk (braço da arma firme)",
+      "local": "assets/fonte/guerreiro-walk.png"
+    },
+    "ataque": {
+      "asset_id": "b6d14ef9-7177-400c-8c75-f1f2aec838ea",
+      "label": "guerreiro custom Attack (punho ao lado da orelha)",
+      "local": "assets/fonte/guerreiro-ataque.png",
+      "nota": "o preset trouxe o punho na cara (lâmina cruzaria o rosto) e materializou fragmentos de lâmina — recorte em testes/prepara-assets.js (RECORTES_ATAQUE)"
+    }
+  },
+  "armas": {
+    "folha": {
+      "asset_id": "fa933ff1-f1f3-43d5-b24e-6cc7fcce15c6",
+      "label": "4 armas na horizontal, acento magenta",
+      "local": "assets/fonte/armas-folha.png"
+    },
+    "fatias": {
+      "espada": "20f43bce-1c48-4273-b097-fb2c830e1556",
+      "adaga": "63f13c01-29b7-4e77-93db-59c403725207",
+      "cajado": "9e3a6d65-0693-40d6-8f48-729da3d91282",
+      "martelo": "d7fccf45-dd8b-48fa-a69a-e7d82d3dbfc2"
+    },
+    "rotacoes": {
+      "espada_cima": "000c4e5c-67c7-4c69-817c-47106d4a0159",
+      "espada_baixo": "871935be-a60f-410b-91ef-fec7db4c04a0",
+      "adaga_cima": "4f7268fa-717e-41c7-b711-f5ba70d76dde",
+      "adaga_baixo": "cc28bfc5-43e1-4bdc-b611-129374adae60",
+      "cajado_cima": "e85b85d1-fdce-4640-8886-f035565bb810",
+      "cajado_baixo": "7e2ff901-8aad-4d2d-ae61-4a7efdfd7c96",
+      "martelo_cima": "cd38d5f2-6787-40fe-ad6b-eeca492712e2",
+      "martelo_baixo": "a5c805f7-f9f6-4cd5-b3b6-10670bd1a094"
+    },
+    "nota": "variantes de ângulo via rotate_sprite (RotSprite, grátis); o recorte/local, a redução ÷4 e o recolor das 4 raridades são do testes/prepara-assets.js"
+  }
+}

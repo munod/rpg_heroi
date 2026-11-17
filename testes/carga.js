@@ -19,7 +19,48 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
+const { lerPNG } = require('./png');
+
 const RAIZ = path.join(__dirname, '..');
+
+// ------------------------------------------------------------ Image stub
+// Usado pelo js/assets.js (spec visual-heroi-spritecook): ao receber
+// `src`, lê o PNG do disco e dispara onload de forma SÍNCRONA (o
+// harness não roda microtasks — um onload async deixaria o boot
+// esperando para sempre). Expõe _data RGBA (convenção do cena.js) e
+// width/height. Arquivo ausente/inválido → onerror.
+class ImageStub {
+  constructor() {
+    this.width = 0;
+    this.height = 0;
+    this._data = null;
+    this.onload = null;
+    this.onerror = null;
+    this._src = '';
+  }
+  get src() { return this._src; }
+  set src(v) {
+    this._src = v;
+    const alvo = path.join(RAIZ, v);
+    try {
+      const img = lerPNG(fs.readFileSync(alvo));
+      this.width = img.w;
+      this.height = img.h;
+      const d = Buffer.alloc(img.w * img.h * 4);
+      for (let i = 0, j = 0; i < img.w * img.h; i++, j += 4) {
+        d[j] = img.px[i * 3];
+        d[j + 1] = img.px[i * 3 + 1];
+        d[j + 2] = img.px[i * 3 + 2];
+        d[j + 3] = img.al[i];
+      }
+      this._data = d;
+      if (this.onload) this.onload();
+    } catch (e) {
+      if (this.onerror) this.onerror(e);
+      else throw e;
+    }
+  }
+}
 
 // ------------------------------------------------------------ contextos
 
@@ -178,6 +219,7 @@ function carregar(opcoes) {
     window: windowStub,
     document: documentStub,
     localStorage: localStorageStub,
+    Image: ImageStub,
     performance: { now: () => relogio },
     requestAnimationFrame: cb => { rafCb = cb; return 1; },
     setTimeout: (fn) => { fn(); return 1; },

@@ -37,8 +37,13 @@ var Game = (function () {
     // celular nem sempre dispara resize na rotação (só orientationchange)
     window.addEventListener('orientationchange', resize);
 
-    setScene('selecao');
-    Loop.start();
+    // sprites gerados (spec visual-heroi-spritecook): a carga encerra
+    // SEMPRE (sucesso ou falha → fallback procedural), e no harness ela
+    // é síncrona — nenhum teste espera por nada
+    Assets.carga(function () {
+      setScene('selecao');
+      Loop.start();
+    });
   }
 
   // Escala responsiva em duas camadas:

@@ -13,18 +13,11 @@ var Gestao = (function () {
   var prevT = 0;           // relógio da prévia da aba Apar (spec preview-heroi)
   // caixa da prévia: canto direito-de-baixo do painel — EM BAIXO das 4
   // linhas (y 104..214, contrato de clique) e à direita das dicas (x416)
-  var PREVIA = { x: 616, y: 232, w: 132, h: 96, esc: 3 };
-
-  function ciclo(arr, atual) {
-    var i = arr.indexOf(atual);
-    return arr[(i + 1) % arr.length];
-  }
-
-  function cicloTras(arr, atual) {
-    var i = arr.indexOf(atual);
-    if (i < 0) i = 0;
-    return arr[(i - 1 + arr.length) % arr.length];
-  }
+  // caixa da prévia: cresceu p/ o sprite novo (43px × esc2 = 86px —
+  // o antigo 96px de altura não cabia); a escala é calculada por frame
+  // (procedural ×3, asset ×2) e a geometria segue o contrato da
+  // fumaça (y > 214, y+h ≤ 336, x ≥ 412)
+  var PREVIA = { x: 616, y: 216, w: 132, h: 116 };
 
   function quebra(texto, max) {
     var palavras = texto.split(' ');
@@ -258,110 +251,69 @@ var Gestao = (function () {
       { color: '#6f678a' });
   }
 
-  // Ciclo da prévia (spec preview-heroi): 3s de idle (2 × 0,35s) + 1s
-  // de ataque (3 × 0,36s) — só visual, sem relação com a recarga real.
-  function previaFrame() {
+  // Ciclo da prévia (spec preview-heroi): 3s de idle (ciclo 0,7s) +
+  // 1s de ataque — só visual, sem relação com a recarga real. A qtd
+  // de frames vem do manifesto (asset =8; procedural = 2/3).
+  function previaFrame(p) {
     var f = prevT % 4;
-    if (f < 3) return { anim: 'idle', quadro: Math.floor((f % 0.7) / 0.35) };
-    return { anim: 'attack',
-      quadro: Math.min(2, Math.floor((f - 3) / 0.36)) };
+    var cl = (p && p.classe) || 'guerreiro';
+    if (f < 3) {
+      var qi = Assets.qtd(cl, 'idle');
+      return { anim: 'idle', quadro: Math.floor((f % 0.7) / (0.7 / qi)) % qi };
+    }
+    return { anim: 'attack', quadro: Assets.frameAtaque(cl, (f - 3) / 0.36) };
   }
 
   // Sonda p/ teste (e p/ uso futuro): o que a prévia está mostrando.
   function previa() {
-    var pv = previaFrame();
+    var pv = previaFrame(Game.personagem);
     return { anim: pv.anim, quadro: pv.quadro,
       caixa: { x: PREVIA.x, y: PREVIA.y, w: PREVIA.w, h: PREVIA.h } };
   }
 
   // Prévia do herói: mesmo caminho do desenho da arena (lookDe + Anim.hero
-  // — mesma cache, mesma chave), sprite ×3 com pé na base da caixa.
+  // — mesma cache, mesma chave), sprite com pé na base da caixa.
   function desenhaPrevia(ctx, p) {
-    var pv = previaFrame();
+    var pv = previaFrame(p);
     var c = Anim.hero(Personagem.lookDe(p), pv.anim, pv.quadro);
     UI.panel(PREVIA.x, PREVIA.y, PREVIA.w, PREVIA.h, 'Prévia');
     var cx = PREVIA.x + 66;
     var base = PREVIA.y + PREVIA.h - 6;
+    var alt = c.alt || 20, centro = c.cx || 8;
+    // procedural (20px) segue ×3 de sempre; o asset novo (43px) ×2
+    var esc = alt > 30 ? 2 : 3;
     ctx.globalAlpha = 0.4;
     ctx.fillStyle = '#000000';
     ctx.beginPath();
-    ctx.ellipse(cx, base, 22, 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, base, Math.round(alt * esc * 0.37),
+      Math.round(alt * esc * 0.115), 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
-    // corpo centrado em x=8 da grade (mesma âncora da arena)
-    ctx.drawImage(c.canvas, Math.round(cx - 8 * PREVIA.esc),
-      Math.round(base - 20 * PREVIA.esc),
-      20 * PREVIA.esc, 20 * PREVIA.esc);
+    Assets.desenha(ctx, Math.round(cx - centro * esc),
+      Math.round(base - alt * esc), c, esc);
   }
 
   function desenhaAparencia(ctx, p, o) {
-    var estiloIds = Personagem.ESTILOS.map(function (e) { return e.id; });
-    var estiloNomes = {};
-    Personagem.ESTILOS.forEach(function (e) { estiloNomes[e.id] = e.nome; });
-
-    var linhas = [
-      {
-        rot: 'Pele', swatch: true,
-        get: function () { return p.look.skin; },
-        muda: function (d) {
-          p.look.skin = d > 0
-            ? ciclo(Personagem.CORES_PELE, p.look.skin)
-            : cicloTras(Personagem.CORES_PELE, p.look.skin);
-        }
-      },
-      {
-        rot: 'Cabelo', swatch: true,
-        get: function () { return p.look.hair; },
-        muda: function (d) {
-          p.look.hair = d > 0
-            ? ciclo(Personagem.CORES_CABELO, p.look.hair)
-            : cicloTras(Personagem.CORES_CABELO, p.look.hair);
-        }
-      },
-      {
-        rot: 'Estilo', swatch: false,
-        nome: function () { return estiloNomes[p.look.estilo] || '?'; },
-        muda: function (d) {
-          p.look.estilo = d > 0
-            ? ciclo(estiloIds, p.look.estilo)
-            : cicloTras(estiloIds, p.look.estilo);
-        }
-      },
-      {
-        rot: 'Roupa', swatch: true,
-        get: function () { return p.look.cloth; },
-        muda: function (d) {
-          p.look.cloth = d > 0
-            ? ciclo(Personagem.CORES_ROUPA, p.look.cloth)
-            : cicloTras(Personagem.CORES_ROUPA, p.look.cloth);
-        }
-      }
-    ];
-
-    linhas.forEach(function (lin, i) {
-      var y = 104 + i * 32;
-      UI.text(lin.rot, 416, y, {});
-      if (UI.button(508, y - 14, 24, 28, '<')) lin.muda(-1);
-      if (lin.swatch) {
-        UI.swatch(544, y - 14, 140, 28, lin.get());
-      } else {
-        UI.swatch(544, y - 14, 140, 28, '#241f33');
-        UI.text(lin.nome(), 614, y, { align: 'center', color: '#c9c2dd' });
-      }
-      if (UI.button(692, y - 14, 24, 28, '>')) lin.muda(1);
-    });
+    // look fixo por classe (spec visual-heroi-spritecook): as linhas
+    // de Pele/Cabelo/Estilo/Roupa saíram — o visual vem do asset
+    // gerado (guerreiro) ou do procedural da classe; sobram nome +
+    // classe + prévia
+    var c = Personagem.CLASSES[p.classe] || Personagem.CLASSES.guerreiro;
+    UI.text('Classe', 416, 104, {});
+    UI.text(c.nome, 416, 128, { color: '#c9c2dd' });
+    UI.text(c.desc, 416, 152, { color: '#9a90b8' });
 
     desenhaPrevia(ctx, p);
 
     // dicas curtas: a caixa da prévia começa em x616 (o texto tem que
     // caber à esquerda — 16px monospace ≈ 9,6px por caractere)
-    UI.text('Muda em tempo real', 416, 248, { color: '#9a90b8' });
     if (o && o.criacao) {
       // na tela de seleção o nome se digita no cabeçalho
-      UI.text('Nome: tecle no topo', 416, 280, { color: '#6f678a' });
-      UI.text('Enter entra na arena', 416, 308, { color: '#6f678a' });
+      UI.text('Nome: tecle no topo', 416, 248, { color: '#6f678a' });
+      UI.text('Enter entra na arena', 416, 280, { color: '#6f678a' });
     } else {
-      UI.text('Enter salva o look', 416, 280, { color: '#6f678a' });
+      UI.text('Visual da classe', 416, 248, { color: '#6f678a' });
+      UI.text('Enter salva', 416, 280, { color: '#6f678a' });
     }
   }
 

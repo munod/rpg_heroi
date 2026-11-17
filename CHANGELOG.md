@@ -10,6 +10,25 @@ vive em `.specs/features/`.
 
 ## [Unreleased]
 
+### Added
+
+- **Visual do herói via SpriteCook (spec `visual-heroi-spritecook`)** —
+  o guerreiro passa a usar sprites **gerados** (43×43, 8 frames por
+  animação, ciclo igual ao procedural) com a **arma composta no punho**
+  (âncora por frame + acento recolorido pela raridade, 4 tipos × 3
+  ângulos × 4 raridades). Infra nova: `js/assets.js` (manifesto
+  embutido — sem `fetch`, funciona em `file://` — e carga com
+  fallback), stub de `Image` síncrono no harness, `lerPNG`/`escreverPNG`
+  RGBA e `testes/prepara-assets.js` (pipeline de corte/redução/recolor).
+  **Reversão registrada**: o PNG externo era "descartado" desde a
+  `visual-heroi-arma`; agora é arte commitada com degradação por
+  construção — classe sem asset (mago/ladino/clerigo) segue
+  procedural, e o piloto convive com as duas fontes. Aba Apar perde
+  Pele/Cabelo/Estilo/Roupa (look fixo por classe) e a prévia da
+  gestão cresce (caixa 116px, escala ×2 para o asset / ×3 para o
+  procedural). Gate: `node testes/todos.js` (5 arquivos — entrou
+  `previa-assets.js`).
+
 ### Fixed
 
 - **Teleporte/passo sagrado no mundo infinito** — o blink do mago e do

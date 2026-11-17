@@ -42,6 +42,26 @@
 - Save/toast/autosave das telas vive em `js/gravacao.js` (instância única;
   o `enter()` de cada tela zera com `Gravacao.entrar(p)`) — mudanças de
   gravação vão para lá, não duplicadas nas telas.
+- **Herói com assets gerados (spec `visual-heroi-spritecook`)** —
+  `js/assets.js` (entre `sprite.js` e `anim.js` no `index.html`)
+  carrega PNGs do SpriteCook: `assets/herois/` (guerreiro 43×43, 8
+  frames × 3 anims) e `assets/armas/` (4 tipos × 3 ângulos × 4
+  raridades). Manifesto **embutido** (sem `fetch` — o jogo abre em
+  `file://`), `Assets.carga(cb)` roda no boot ANTES das cenas
+  (síncrona no harness) e **fallback procedural por classe**: quem não
+  tem asset (mago/ladino/clerigo na leva 1, arquivo faltando) cai no
+  grid de texto antigo — ninguém fica sem desenho. `Anim.hero`
+  escolhe o caminho; `Assets.desenha` compõe **herói + arma**
+  (âncora `punho[frame]` e ângulo saem do manifesto; frame de
+  follow-through espelha a arma com `scale(-1,1)` próprio);
+  `batalha.js` lê `Assets.qtd/durFrame/frameAtaque` — os ciclos são
+  idênticos aos do procedural (idle 0,7s · walk 0,48s), só a contagem
+  muda (8 frames). O manifesto é **fonte única** de geometria: teste
+  lê ele, não duplica número. Reprocessar arte:
+  `node testes/prepara-assets.js` (corte ÷2, armas ÷4 + recolor de
+  raridade, detecção de punho com override, folha QA) e
+  `node testes/previa-assets.js` (folha no gate). Arte-fonte em
+  `assets/fonte/`, IDs em `spritecook-assets.json`.
 - Botões de atributo (`+`/`−`) aplicam em `Gestao.update(dt, p)` (clique na
   hora + segurar-repetir + seletor ×1/×5); os demais botões do jogo agem no
   render, pelo retorno de `UI.button`.
@@ -542,6 +562,11 @@
 - Se o código do jogo passar a usar uma API de navegador que não está stubada
   ali (`setInterval`, `Image`, `crypto`...), os testes quebram com
   `ReferenceError` — adicione o stub no sandbox de `carga.js`.
+  O **stub de `Image`** decodifica PNG do disco de forma **síncrona**
+  (onload dispara dentro do `src`) e expõe `_data` RGBA — convenção
+  do `cena.js`; `grade.js`/`previa-assets.js` leem esse buffer com
+  stride 4. `testes/png.js` lê e grava RGB **e RGBA** (o sprite do
+  jogo tem alfa).
 - No sandbox, `setTimeout` executa o callback **sincronamente** (sem atraso),
   o rAF é acionado manualmente com `frame(n)` e `performance.now()` só avança
   via `frame()`.

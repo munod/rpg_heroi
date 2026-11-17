@@ -1062,6 +1062,7 @@ var Sprite = (function () {
   return {
     shade: shade,
     rampa: rampa,
+    corArma: corArma,
     cores: {
       contorno: COR_CONTORNO, couro: COR_COURO, metal: COR_METAL,
       ouro: COR_OURO, madeira: COR_MADEIRA
