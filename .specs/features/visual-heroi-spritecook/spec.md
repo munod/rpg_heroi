@@ -217,13 +217,35 @@ cada classe."* Causas técnicas confirmadas na análise:
   firme**) + explícito **"the sword stays in his RIGHT hand in every
   frame"**.
 
+## Leva 2 (2026-11-17) — as outras3 classes
+
+- **R-VHS-12** — **mago (cajado), ladino (adaga) e clérigo
+  (martelo)** no mesmo pipeline do guerreiro: base com a arma da
+  classe na mão direita (`generate_game_art` com o guerreiro novo
+  como referência de estilo) + 3 animações custom com o mesmo
+  vocabulário de prompt ("a arma fica na mão direita em todo frame",
+  "braço firme" no walk, golpe com arco no attack). Design canônico
+  por classe: mago = **roxo `#5a4ac0`** com capuz e cajado de
+  madeira com gema; ladino = **verde `#3a7a4a`** com colete de couro
+  e adaga; clérigo = **ocre `#b8913a`** com estola e martelo. O
+  manifesto (`js/assets.js`) ganha as3 classes — nenhum outro código
+  muda (tudo dirigido pelo manifesto).
+- **R-VHS-13** — **fallback procedural MANTIDO** (decisão da leva 2):
+  continua sendo a rede de segurança (PNG ausente/quebrado nunca deixa
+  o herói sem desenho), é o que os testes de arte procedural cobrem
+  (`grade` seção1, `previa.js`) e custa zero em runtime; removê-lo
+  só ganharia linhas e perderia a degradação por construção. Teste do
+  fallback passa a usar **classe inexistente** (`Assets.qtd` cai nos
+  contadores4/2/3) já que todas as reais terão asset.
+- **R-VHS-14** — `inicios` do ataque **por classe** (o frame do golpe
+  depende da pose gerada — medida por classe, não copiada).
+
 ## Fora de escopo (próximas levas)
 
-- **Leva 2**: mago/ladino/clerigo (3 gerações + animações), decisão
-  sobre remover o código procedural (ou mantê-lo como fallback
-  permanente), fechamento da Apar.
-- Monstros (3 formas × 10 espécies) · cenário · ícones de item ·
-  demais usos de `p.look` (corpo/rosto do herói nas cutscenes etc.).
+- ~~Leva 2~~ → **concluída na seção acima** (R-VHS-12/13/14).
+- Monstros (3 formas × 10 espécies) · cenário (além do ×2) ·
+  ícones de item · demais usos de `p.look` (corpo/rosto do herói
+  nas cutscenes etc.).
 
 ## Verificação
 

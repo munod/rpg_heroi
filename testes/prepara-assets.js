@@ -24,6 +24,7 @@ const final = !process.argv.includes('--sem-final');
 
 const FATOR_H = 2;      // herói: 86 → 43
 const ANIMS = ['idle', 'walk', 'ataque'];   // arquivos da fonte
+const CLASSES = ['guerreiro', 'mago', 'ladino', 'clerigo'];
 
 // ------------------------------------------------------------- utilidades
 function carrega(caminho) {
@@ -84,33 +85,41 @@ function caixa(img) {
 if (final) fs.mkdirSync(DIR_HEROI, { recursive: true });
 
 const relatorio = { herois: {} };
-const framesFinais = {};   // anim → [img] (em memória, p/ QA)
+const framesFinais = {};   // 'classe|anim' → [img] (em memória, p/ QA)
 
-for (const anim of ANIMS) {
-  const sheet = carrega(path.join(FONTE, 'guerreiro-' + anim + '.png'));
-  const frames = fatia(sheet, 8);
-  relatorio.herois[anim] = [];
-  framesFinais[anim] = [];
-  frames.forEach((fr, i) => {
-    const red = reduz(fr, Math.round(fr.w / FATOR_H), Math.round(fr.h / FATOR_H));
-    relatorio.herois[anim].push({ i, caixa: caixa(red), tam: red.w + 'x' + red.h });
-    framesFinais[anim].push(red);
-    if (final) {
-      escreverPNG(path.join(DIR_HEROI, 'guerreiro-' + anim + '-' + i + '.png'),
+for (const classe of CLASSES) {
+  framesFinais[classe] = {};
+  relatorio.herois[classe] = {};
+  for (const anim of ANIMS) {
+    const sheet = carrega(path.join(FONTE, classe + '-' + anim + '.png'));
+    const frames = fatia(sheet, 8);
+    relatorio.herois[classe][anim] = [];
+    framesFinais[classe][anim] = [];
+    frames.forEach((fr, i) => {
+      const red = reduz(fr, Math.round(fr.w / FATOR_H), Math.round(fr.h / FATOR_H));
+      relatorio.herois[classe][anim].push(
+        { i, caixa: caixa(red), tam: red.w + 'x' + red.h });
+      framesFinais[classe][anim].push(red);
+      if (final) {
+        escreverPNG(path.join(DIR_HEROI,
+          classe + '-' + anim + '-' + i + '.png'),
         red.w, red.h, red.px, red.al);
-    }
-  });
+      }
+    });
+  }
 }
 
 console.log(JSON.stringify(relatorio, null, 1));
 
 // ------------------------------------------------------------------- QA
-// folha: 3 linhas (anim) × 8 frames ×4 — p/ conferir pose, mão da
-// arma e alinhamento dos pés
+// folha: classes × anims (12 linhas) × 8 frames — p/ conferir pose,
+// mão da arma e alinhamento dos pés de TODAS as classes
 const ESC = 4, MARG = 6;
 const ALT = 43;
 const CEL = (ALT + MARG) * ESC;
-const W = 8 * CEL, H = ANIMS.length * CEL;
+const LINHAS = [];
+CLASSES.forEach(cl => ANIMS.forEach(a => LINHAS.push([cl, a])));
+const W = 8 * CEL, H = LINHAS.length * CEL;
 const out = Buffer.alloc(W * H * 3);
 const BG = [[46, 40, 64], [38, 33, 54]];
 for (let y = 0; y < H; y++) {
@@ -137,10 +146,11 @@ function cola(img, ox, oy) {
     }
   }
 }
-ANIMS.forEach((anim, li) => {
-  framesFinais[anim].forEach((fr, i) => {
+LINHAS.forEach(([cl, anim], li) => {
+  framesFinais[cl][anim].forEach((fr, i) => {
     cola(fr, i * CEL + MARG * ESC, li * CEL + MARG * ESC);
   });
 });
 escreverPNG('/tmp/qa-heroi.png', W, H, out);
-console.log('QA: /tmp/qa-heroi.png (' + W + 'x' + H + ')');
+console.log('QA: /tmp/qa-heroi.png (' + W + 'x' + H + ') — ' +
+  CLASSES.length + ' classes × ' + ANIMS.length + ' anims');

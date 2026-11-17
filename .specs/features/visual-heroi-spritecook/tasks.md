@@ -21,6 +21,24 @@ Spec: `spec.md` · piloto = guerreiro completo antes de replicar.
       ataque sem troca de mão)
 - [x] E7. Docs (CHANGELOG/STATE/AGENTS/ROADMAP) + commit
 
+## Leva 2 — as3 classes restantes (2026-11-17)
+- [x] L1. Spec R-VHS-12/13/14 (pipeline por classe, fallback
+      mantido, `inicios` por classe)
+- [x] L2. Bases do mago/ladino/clerigo com a arma da classe
+      (referência = guerreiro com espada) — cores canônicas
+      conferidas por histograma (roxo/verde/ocre ✓)
+- [x] L3.9 animações custom (3 por classe, "arma na mão direita
+      sempre" + "braço firme" no walk)
+- [x] L4. Prep estendido p/4 classes →96 frames (4×3×8)
+- [x] L5. `inicios` medido por classe (max-x por frame: guerreiro e
+      ladino = golpe em f5; mago e clérigo = golpe em f6)
+- [x] L6. Testes: grade cobre as4 classes + tabelas por classe +
+      fallback por classe inexistente; previa-assets =12 linhas
+- [x] L7. QA programático (paleta, presença/continuidade da arma,
+      pés na fileira42, extensões do golpe) — visual final pendente
+      (display de imagem da sessão travado)
+- [x] L8. Gate verde (5 arquivos) + docs + commit
+
 ## Fase A — base de referência
 - [x] A1. `get_credit_balance` (preflight —920 créditos)
 - [x] A2. Folha de referência dos sprites atuais (`previa-zoom.png`)

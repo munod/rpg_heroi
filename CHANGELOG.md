@@ -13,21 +13,25 @@ vive em `.specs/features/`.
 ### Added
 
 - **Visual do herói via SpriteCook (spec `visual-heroi-spritecook`)** —
-  o guerreiro passa a usar sprites **gerados** (43×43, 8 frames por
-  animação, ciclo igual ao procedural) com a **arma da classe
-  embutida na arte** (emenda do veredito: a "arma separada" do piloto
-  não resolvia grip nem a mão que trocava no meio do ataque — a pose
+  **todas as4 classes** usam sprites **gerados** (43×43, 8 frames por
+  animação, ciclo igual ao procedural) com a **arma da classe embutida
+  na arte** (emenda do veredito: a "arma separada" do piloto não
+  resolvia grip nem a mão que trocava no meio do ataque — a pose
   nasce com o objeto; a "raridade visível na mão" sai junto, itens de
-  arma viram números). Infra nova: `js/assets.js` (manifesto embutido
-  — sem `fetch`, funciona em `file://` — e carga com fallback), stub
-  de `Image` síncrono no harness, `lerPNG`/`escreverPNG` RGBA e
-  `testes/prepara-assets.js` (corte ÷2 + folha QA). **Reversão
-  registrada**: o PNG externo era "descartado" desde a
-  `visual-heroi-arma`; agora é arte commitada com degradação por
-  construção — classe sem asset (mago/ladino/clerigo) segue
-  procedural. **Cenário ×2 só visual** (`ESC_CENARIO`: árvore 40×52,
-  pedra 28×22, colisão intacta) restaurando a proporção herói <
-  árvore. Aba Apar perde Pele/Cabelo/Estilo/Roupa (look fixo por
+  arma viram números). Leva 2: **mago (roxo+cajado), ladino
+  (verde+adaga) e clérigo (ocre+martelo)** no mesmo pipeline, com
+  `inicios` de ataque **medido por classe** (golpe em f5 p/ guerreiro
+  e ladino, f6 p/ mago e clérigo — o frame alinhado ao momento do
+  dano). **Fallback procedural mantido** como rede de segurança
+  (classe sem PNG nunca fica sem desenho). Infra nova: `js/assets.js`
+  (manifesto embutido — sem `fetch`, funciona em `file://` — e carga
+  com fallback), stub de `Image` síncrono no harness,
+  `lerPNG`/`escreverPNG` RGBA e `testes/prepara-assets.js` (corte ÷2
+  + folha QA). **Reversão registrada**: o PNG externo era "descartado"
+  desde a `visual-heroi-arma`; agora é arte commitada com degradação
+  por construção. **Cenário ×2 só visual** (`ESC_CENARIO`: árvore
+  40×52, pedra 28×22, colisão intacta) restaurando a proporção herói
+  < árvore. Aba Apar perde Pele/Cabelo/Estilo/Roupa (look fixo por
   classe) e a prévia da gestão cresce (caixa 116px, escala ×2 para o
   asset / ×3 para o procedural). Gate: `node testes/todos.js` (5
   arquivos — entrou `previa-assets.js`).

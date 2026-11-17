@@ -25,7 +25,9 @@ var Assets = (function () {
   // frames por animação; `inicios` (só ataque) = fração do tempo em
   // que cada frame COMEÇA — o golpe cai em ~0,30 ≈ o momento do dano
   // (min(0,10; dur×0,5)/dur em dur 0,20-0,36 = 0,28-0,50): o número
-  // sobe JUNTO com a lâmina
+  // sobe JUNTO com a lâmina. `inicios` é POR CLASSE (R-VHS-14: o
+  // frame do golpe depende da pose gerada — medido no QA de cada
+  // attack; a tabela abaixo é a do guerreiro, referência).
   var HEROIS = {
     guerreiro: {
       idle: { qtd: 8 },
@@ -33,6 +35,35 @@ var Assets = (function () {
       ataque: {
         qtd: 8,
         inicios: [0, 0.07, 0.13, 0.19, 0.25, 0.30, 0.55, 0.78]
+      }
+    },
+    mago: {
+      idle: { qtd: 8 },
+      walk: { qtd: 8 },
+      ataque: {
+        qtd: 8,
+        // medido no QA: wind-up f2-f5 (gema p/ trás) → GOLPE em f6
+        // (gema p/ baixo-direita) → recuperação f7 — o golpe começa
+        // em 0,28 ≈ o momento do dano (0,278 em dur 0,36)
+        inicios: [0, 0.04, 0.08, 0.12, 0.16, 0.22, 0.28, 0.70]
+      }
+    },
+    ladino: {
+      idle: { qtd: 8 },
+      walk: { qtd: 8 },
+      ataque: {
+        qtd: 8,
+        inicios: [0, 0.07, 0.13, 0.19, 0.25, 0.30, 0.55, 0.78]
+      }
+    },
+    clerigo: {
+      idle: { qtd: 8 },
+      walk: { qtd: 8 },
+      ataque: {
+        qtd: 8,
+        // medido (max-x por frame): wind-up f2-f5 (martelo recuado,
+        // f5 cai p/ 67) → GOLPE em f6 (extensão máxima 76)
+        inicios: [0, 0.04, 0.08, 0.12, 0.16, 0.22, 0.28, 0.70]
       }
     }
   };

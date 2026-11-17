@@ -114,9 +114,16 @@ let cargaOk = false;
 Assets.carga(function () { cargaOk = true; });
 const inf = Assets.info();
 checa('carga encerra síncrona no harness', cargaOk, true);
-checa('guerreiro carregado', inf.carregado.guerreiro, true);
+['guerreiro', 'mago', 'ladino', 'clerigo'].forEach(cl => {
+  checa(cl + ' carregado', inf.carregado[cl], true);
+});
 checa('pendentes zerados', inf.pendentes, 0);
-checa('mago sem asset (cai no procedural)', Assets.temHeroi('mago', 'idle'), false);
+// fallback procedural (R-VHS-13): classe sem manifesto cai nos
+// contadores de sempre (4/2/3) e sem sprite
+checa('classe inexistente sem sprite',
+  Assets.temHeroi('xena', 'idle'), false);
+checa('fallback: walk procedural = 4', Assets.qtd('xena', 'walk'), 4);
+checa('fallback: ataque procedural = 3', Assets.qtd('xena', 'attack'), 3);
 
 const frA = Assets.hero('guerreiro', 'idle', 0);
 checa('frame 43×43', frA ? frA.w + 'x' + frA.h : 'null', '43x43');
@@ -160,10 +167,15 @@ const lamGolpe = contaLamina(Assets.hero('guerreiro', 'attack', 5));
 checa('lâmina embutida no idle (>30 px)', lamIdle > 30, true);
 checa('golpe estica a lâmina (> idle)', lamGolpe > lamIdle, true);
 
-// mapeamento de frames: asset = manifesto, procedural = o de sempre
+// mapeamento de frames: asset = manifesto (com `inicios` POR CLASSE —
+// R-VHS-14), procedural = o de sempre
 checa('qtd walk do guerreiro (asset)', Assets.qtd('guerreiro', 'walk'), 8);
-checa('qtd walk do mago (procedural)', Assets.qtd('mago', 'walk'), 4);
+checa('qtd walk do mago (asset)', Assets.qtd('mago', 'walk'), 8);
 checa('ataque guerreiro p=0,5 → frame do golpe (5)',
   Assets.frameAtaque('guerreiro', 0.5), 5);
-checa('ataque mago p=0,5 (procedural = 1)',
-  Assets.frameAtaque('mago', 0.5), 1);
+checa('ataque mago p=0,5 → golpe em f6 (tabela própria)',
+  Assets.frameAtaque('mago', 0.5), 6);
+checa('ataque ladino p=0,5 → golpe em f5 (tabela padrão)',
+  Assets.frameAtaque('ladino', 0.5), 5);
+checa('ataque clérigo p=0,5 → golpe em f6 (tabela própria)',
+  Assets.frameAtaque('clerigo', 0.5), 6);

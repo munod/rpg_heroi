@@ -13,33 +13,59 @@
     "base_com_espada": {
       "asset_id": "a2bda922-6746-4748-8429-e7e8b6509246",
       "label": "guerreiro-base com espada na mão direita",
-      "local": "assets/fonte/guerreiro-base-espada.png",
-      "nota": "gerada com reference_asset_id = base_design; fonte das animações abaixo"
+      "local": "assets/fonte/guerreiro-base-espada.png"
     },
     "idle": {
       "asset_id": "0b9a04f2-55b7-4f07-9a2a-faf2a0b8c451",
-      "label": "guerreiro custom Idle (espada na mão)",
       "local": "assets/fonte/guerreiro-idle.png"
     },
     "walk": {
       "asset_id": "04c6503c-2566-49f8-9101-7613a5f543db",
-      "label": "guerreiro custom Walk (braço da arma firme)",
       "local": "assets/fonte/guerreiro-walk.png"
     },
     "ataque": {
       "asset_id": "6cc20c3a-0eee-48c2-adba-ce1be9e53c91",
-      "label": "guerreiro custom Attack (golpe de espada, mão direita sempre)",
       "local": "assets/fonte/guerreiro-ataque.png"
-    },
-    "substitui": {
-      "idle_antigo": "37ec5ea3-13ac-4deb-8c07-dbc956990e92",
-      "walk_antigo": "9b55a3fe-29dc-4ed1-b678-1a5565ed713e",
-      "ataque_antigo": "b6d14ef9-7177-400c-8c75-f1f2aec838ea",
-      "nota": "gerações sem a arma embutida (composição separada — abandonada na emenda do veredito)"
     }
+  },
+  "mago": {
+    "base": {
+      "asset_id": "320c3f3b-5f83-4ad1-bbf9-6a0a4338bbba",
+      "label": "mago-base (cajado na mão direita)",
+      "local": "assets/fonte/mago-base.png"
+    },
+    "idle": { "asset_id": "507e47d9-ceb5-4667-8d1c-41de835b1912", "local": "assets/fonte/mago-idle.png" },
+    "walk": { "asset_id": "ead716c2-bcdd-414c-8016-35cdb0347b96", "local": "assets/fonte/mago-walk.png" },
+    "ataque": { "asset_id": "b02f8421-2b93-403d-be7e-36bb1b26e89c", "local": "assets/fonte/mago-ataque.png" }
+  },
+  "ladino": {
+    "base": {
+      "asset_id": "3bac533f-d8ef-4f15-b0d1-37d3221747c3",
+      "label": "ladino-base (adaga na mão direita)",
+      "local": "assets/fonte/ladino-base.png"
+    },
+    "idle": { "asset_id": "62c618b0-865c-40dd-b1ed-f351be633620", "local": "assets/fonte/ladino-idle.png" },
+    "walk": { "asset_id": "4cf9fe67-1670-4ff9-913d-c83faceb4a36", "local": "assets/fonte/ladino-walk.png" },
+    "ataque": { "asset_id": "3ae8d20a-e53b-4014-97d7-f0f0fd9f6313", "local": "assets/fonte/ladino-ataque.png" }
+  },
+  "clerigo": {
+    "base": {
+      "asset_id": "933d18e9-121c-4306-9f35-6af84194c182",
+      "label": "clerigo-base (martelo na mão direita)",
+      "local": "assets/fonte/clerigo-base.png"
+    },
+    "idle": { "asset_id": "a9054e82-6df0-4996-ba63-2c994b93a70f", "local": "assets/fonte/clerigo-idle.png" },
+    "walk": { "asset_id": "89c07479-4a26-403d-b5a6-fdb068d2c4e7", "local": "assets/fonte/clerigo-walk.png" },
+    "ataque": { "asset_id": "ca5b2833-86e5-473a-91f5-2cae199a8ffe", "local": "assets/fonte/clerigo-ataque.png" }
+  },
+  "geracoes_substituidas": {
+    "nota": "piloto sem arma embutida (composição separada — abandonada na emenda do veredito)",
+    "idle_antigo": "37ec5ea3-13ac-4deb-8c07-dbc956990e92",
+    "walk_antigo": "9b55a3fe-29dc-4ed1-b678-1a5565ed713e",
+    "ataque_antigo": "b6d14ef9-7177-400c-8c75-f1f2aec838ea"
   },
   "armas_separadas": {
     "removido": true,
-    "nota": "a arma virou parte da arte da classe (emenda visual-heroi-spritecook); folha/fatias/rotações e os 48 PNGs de assets/armas/ foram apagados. IDs antigos: folha fa933ff1-f1f3-43d5-b24e-6cc7fcce15c6"
+    "nota": "a arma virou parte da arte da classe (emenda visual-heroi-spritecook); IDs antigos: folha fa933ff1-f1f3-43d5-b24e-6cc7fcce15c6"
   }
 }

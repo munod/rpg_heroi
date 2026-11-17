@@ -641,6 +641,27 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   desconhecida e minhas medições por cor confundiram tronco com
   grama.
 
+- **Leva 2: as3 classes restantes + `inicios` por classe + fallback
+  mantido** — mago/ladino/clerigo gerados no mesmo pipeline (base com
+  a arma da classe na mão, prompts custom com a lição do "braço
+  firme"). **`inicios` do ataque é POR CLASSE** (R-VHS-14): o frame
+  do golpe depende da pose gerada — medido por `max-x` por frame
+  (guerreiro e ladino: transição wind→forward em f5 = tabela padrão;
+  mago e clérigo: golpe em f6 = tabela própria `[0,.04,.08,.12,.16,
+  .22,.28,.70]`, golpe começando em 0,28 ≈ o momento do dano em
+  dur 0,36). **Fallback procedural MANTIDO** (decisão da leva 2):
+  continua a rede de segurança (PNG ausente nunca deixa o herói sem
+  desenho), é o que a seção1 da fumaça e o `previa.js` cobrem, e
+  custa zero em runtime — removê-lo só ganharia linhas. O teste do
+  fallback migrou para **classe inexistente** (`Assets.qtd('xena')`
+  cai em 4/2/3), já que todas as reais têm asset agora. Lição nova:
+  com o display de imagem da sessão TRAVADO (a tool servia a MESMA
+  imagem para qualquer arquivo), a QA visual virou programática —
+  paleta por histograma, presença/continuidade da arma por contagem
+  (frame ≠ <55% da mediana), pés na fileira42, `max-x` do golpe —
+  e a conferência a olho ficou pendente para o mantenedor
+  (`testes/previa-assets.png`,12 linhas).
+
 ## Bloqueios
 
 - Nenhum.

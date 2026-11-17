@@ -20,8 +20,11 @@ let pronto = false;
 Assets.carga(() => { pronto = true; });
 if (!pronto) throw new Error('previa-assets: carga não terminou');
 const inf = Assets.info();
-if (!inf.carregado.guerreiro) {
-  throw new Error('previa-assets: guerreiro sem asset (roda o prepara-assets)');
+const faltando = ['guerreiro', 'mago', 'ladino', 'clerigo']
+  .filter(cl => !inf.carregado[cl]);
+if (faltando.length) {
+  throw new Error('previa-assets: sem asset de ' + faltando.join(', ') +
+    ' (roda o prepara-assets)');
 }
 
 const ESC = 4;
@@ -29,9 +32,12 @@ const MARG = 6;
 const ALT = Assets.ALT;
 const CEL = (ALT + MARG) * ESC;
 const COLS = 8;
+const CLASSES = ['guerreiro', 'mago', 'ladino', 'clerigo'];
 const ANIMS = ['idle', 'walk', 'attack'];
+const LINHAS = [];
+CLASSES.forEach(cl => ANIMS.forEach(a => LINHAS.push([cl, a])));
 const W = COLS * CEL;
-const H = ANIMS.length * CEL;
+const H = LINHAS.length * CEL;
 const folha = Buffer.alloc(W * H * 3);
 
 // fundo xadrez (mesmo tom do previa.js)
@@ -64,10 +70,10 @@ function cola(img, ox, oy) {
   }
 }
 
-ANIMS.forEach((anim, li) => {
+LINHAS.forEach(([cl, anim], li) => {
   for (let i = 0; i < 8; i++) {
-    const c = Assets.hero('guerreiro', anim, i);
-    if (!c) throw new Error('sem frame ' + anim + '/' + i);
+    const c = Assets.hero(cl, anim, i);
+    if (!c) throw new Error('sem frame ' + cl + '/' + anim + '/' + i);
     cola(c.canvas, i * CEL + MARG * ESC, li * CEL + MARG * ESC);
   }
 });
@@ -75,4 +81,5 @@ ANIMS.forEach((anim, li) => {
 const saida = path.join(__dirname, 'previa-assets.png');
 escreverPNG(saida, W, H, folha);
 console.log('gerado: ' + saida + ' (' + W + 'x' + H + ')');
-console.log('linhas: ' + ANIMS.join(', ') + ' — 8 frames cada');
+console.log('linhas: ' + CLASSES.join(', ') + ' × ' + ANIMS.join('/') +
+  ' — 8 frames cada');

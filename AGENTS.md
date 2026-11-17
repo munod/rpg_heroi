@@ -44,16 +44,17 @@
   gravação vão para lá, não duplicadas nas telas.
 - **Herói com assets gerados (spec `visual-heroi-spritecook`)** —
   `js/assets.js` (entre `sprite.js` e `anim.js` no `index.html`)
-  carrega PNGs do SpriteCook: `assets/herois/` (guerreiro 43×43, 8
-  frames × 3 anims, **arma da classe embutida na arte** — emenda do
-  veredito abandonou a arma separada e a "raridade na mão"). Manifesto
-  **embutido** (sem `fetch` — o jogo abre em `file://`),
-  `Assets.carga(cb)` roda no boot ANTES das cenas (síncrona no
-  harness) e **fallback procedural por classe**: quem não tem asset
-  (mago/ladino/clerigo na leva 1, arquivo faltando) cai no grid de
-  texto antigo — ninguém fica sem desenho. `Anim.hero` escolhe o
-  caminho; `Assets.desenha` é um draw puro (o espelhamento do
-  `facing` é externo, camada única); `batalha.js` lê
+  carrega PNGs do SpriteCook: `assets/herois/` (**as4 classes**, 8
+  frames × 3 anims cada — 43×43, **arma da classe embutida na
+  arte**; `inicios` do ataque é **por classe**, medido no QA de cada
+  geracao). Manifesto **embutido** (sem `fetch` — o jogo abre em
+  `file://`), `Assets.carga(cb)` roda no boot ANTES das cenas
+  (síncrona no harness) e **fallback procedural**: qualquer classe
+  sem manifesto ou com PNG faltando cai no grid de texto antigo —
+  ninguém fica sem desenho (decisão da leva 2: manter o procedural
+  como rede de segurança; o teste usa classe inexistente). `Anim.hero`
+  escolhe o caminho; `Assets.desenha` é um draw puro (o espelhamento
+  do `facing` é externo, camada única); `batalha.js` lê
   `Assets.qtd/durFrame/frameAtaque` — os ciclos são idênticos aos do
   procedural (idle 0,7s · walk 0,48s), só a contagem muda (8 frames).
   O manifesto é **fonte única** de geometria: teste lê ele, não

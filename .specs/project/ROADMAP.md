@@ -322,7 +322,13 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
     embutido, sem `fetch`), `Image` síncrona no harness,
     `lerPNG/escreverPNG` RGBA, `prepara-assets.js` (corte + QA). Apar
     perde as 4 linhas de look; prévia da gestão cresce para 116px.
-    Gate verde com **5 arquivos** (+`previa-assets.js`).
+    **Leva 2 (2026-11-17)**: mago/ladino/clerigo no mesmo pipeline
+    (base com a arma da classe +3 anims custom cada), `inicios` de
+    ataque **medido por classe** (golpe em f5 p/ guerreiro/ladino, f6
+    p/ mago/clérigo) e **fallback procedural mantido** como rede de
+    segurança (teste migrou p/ classe inexistente). Gate verde com
+    **5 arquivos** (+`previa-assets.js`, agora12 linhas =4 classes ×
+    3 anims).
 8. ⬜ **`visual-efeitos`** — `Docs/efeitos.md`: hit-stop, shake com
    fórmula, flash/vinheta/perigo de vida, receitas com valores
    exatos, catálogo de partículas, glow/anel cacheados, 2 camadas,
