@@ -1870,13 +1870,23 @@ var Batalha = (function () {
     ctx.strokeRect(cx - 8.5, cy - 11.5, 17, 13);
   }
 
+  // escala do cenário (emenda visual-heroi-spritecook): o herói de
+  // 43px ficou maior que as árvores (26) — cenário ×2 SÓ VISUAL,
+  // ancorado na base (o ponto de colisão `o.x,o.y` e `obst.r` não
+  // mudam; proporções herói: árvore 0,6→1,2 · pedra 0,26→0,51)
+  var ESC_CENARIO = 2;
+
   function desenhaObst(ctx, o) {
     if (o.tipo === 'tree') {
       var t = Anim.tree();
-      ctx.drawImage(t.canvas, Math.round(o.x - 10), Math.round(o.y - 26), 20, 26);
+      var tw = 20 * ESC_CENARIO, th = 26 * ESC_CENARIO;
+      ctx.drawImage(t.canvas, Math.round(o.x - tw / 2),
+        Math.round(o.y - th), tw, th);
     } else {
       var r = Anim.rock();
-      ctx.drawImage(r.canvas, Math.round(o.x - 7), Math.round(o.y - 11), 14, 11);
+      var rw = 14 * ESC_CENARIO, rh = 11 * ESC_CENARIO;
+      ctx.drawImage(r.canvas, Math.round(o.x - rw / 2),
+        Math.round(o.y - rh), rw, rh);
     }
   }
 
@@ -1913,8 +1923,8 @@ var Batalha = (function () {
     var x0 = Math.round(heroi.x - cx), y0 = Math.round(heroi.y - alt);
     if (heroi.facing === -1) {
       // espelha o sprite (desenhado olhando pra direita) — alvo à
-      // esquerda (spec virada-ataque); o save/restore envolve herói E
-      // arma (spec visual-heroi-spritecook) — só o drawImage vira
+      // esquerda (spec virada-ataque); a arma está embutida na arte,
+      // então é UMA camada só (emenda visual-heroi-spritecook)
       ctx.save();
       ctx.translate(x0 + c.w, y0);
       ctx.scale(-1, 1);

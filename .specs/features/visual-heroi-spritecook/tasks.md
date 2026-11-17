@@ -1,7 +1,25 @@
 # Tasks — visual-heroi-spritecook
 
 Spec: `spec.md` · piloto = guerreiro completo antes de replicar.
-**Status: piloto concluído** (gate verde —5 arquivos).
+**Status: piloto + emenda concluídos** (gate verde —5 arquivos).
+
+## Emenda do veredito (2026-11-17)
+- [x] E1. Spec emenda (veredito +3 causas + R-VHS-6/7/10/11)
+- [x] E2. Nova base do guerreiro **com espada** (referência = base
+      canônica) +3 animações custom ("espada na mão direita sempre",
+      "braço firme") — QA: sem troca de mão, sem lâmina duplicada
+- [x] E3. Prep simplificado (corte ÷2 + folha QA; saíram composição,
+      detecção de punho e recortes)
+- [x] E4. Código: `assets.js` sem ARMAS/punho/ângulos, `Anim.hero`
+      sem composição, `desenhaHeroi` camada única, **`ESC_CENARIO=2`**
+      (árvore 40×52, pedra 28×22 — args do drawImage capturados e
+      conferidos)
+- [x] E5. Testes: grade sem punho/raridade (+ lâmina embutida),
+      previa-assets simplificado, `assets/armas/` (48) e
+      `fonte/armas/` (13) apagados, manifesto de IDs atualizado
+- [x] E6. Gate verde + QA visual (proporção árvore>herói>pedra,
+      ataque sem troca de mão)
+- [x] E7. Docs (CHANGELOG/STATE/AGENTS/ROADMAP) + commit
 
 ## Fase A — base de referência
 - [x] A1. `get_credit_balance` (preflight —920 créditos)

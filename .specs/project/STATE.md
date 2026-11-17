@@ -619,6 +619,28 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   `prepara-assets.js`). Lição: animação gerada é POSE, e a pose tem
   que ser compatível com o que o jogo compõe por cima (a arma).
 
+- **Emenda do veredito: arma EMBUTIDA + cenário ×2 + raridade fora**
+  — o mantenedor avaliou o piloto e apontou3 defeitos, todos
+  confirmados na análise: (1) herói ~40px > árvore 26px (proporção
+  invertida); (2) o follow-through cruzava o punho e a composição
+  ESPERELHAVA a arma = "muda de mão"; (3) âncora por centroide +
+  ângulos discretos = "não segura". **Decisões**: abandonar a arma
+  separada e **embutir a arma padrão da classe na arte** (a geração
+  pede o objeto na mão — grip, mão única e arco do golpe nascem na
+  pose; some `assets/armas/` inteiro, âncoras, ângulos e espelhamento
+  de composição) · **"raridade visível na mão" abandonada** para o
+  herói novo (itens de arma viram números; mantida no procedural e
+  nos ícones) · **cenário ×2 só visual** (`ESC_CENARIO = 2` em
+  `desenhaObst`, ancorado na base — `obst.r` intocado, sem remedaça;
+  proporções restauradas: árvore/herói 0,6→1,2 [original 1,37],
+  pedra/herói 0,26→0,51 [original 0,58]). A geração custom confirmou
+  as lições do piloto no prompt ("espada visível o tempo todo", "braço
+  firme") — e o ataque novo nasceu com **arco de corte** no frame do
+  golpe. Verificação por **captura dos args do drawImage** (40×52 /
+  28×22), não por olho — a tool de leitura serviu imagens com escala
+  desconhecida e minhas medições por cor confundiram tronco com
+  grama.
+
 ## Bloqueios
 
 - Nenhum.

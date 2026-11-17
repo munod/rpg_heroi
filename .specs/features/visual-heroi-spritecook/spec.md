@@ -1,8 +1,8 @@
 # Spec: Visual do herói via SpriteCook — arte gerada + pipeline de assets
 
-Status: **piloto concluído** (gate verde = `node testes/todos.js`
-com 5 arquivos — entrou o `previa-assets.js`) ·
-Data: 2026-11-16 ·
+Status: **piloto + emenda concluídos** (gate verde =
+`node testes/todos.js` com 5 arquivos — entrou o `previa-assets.js`) ·
+Data: 2026-11-16 · Emenda: 2026-11-17 ·
 Iniciativa: mantenedor — *"Vamos trabalhar a arte do game, começando
 pelos personagens. Analise os sprites dos personagens para montarmos
 uma base que servirá para o spritecook, e assim criaremos o visual
@@ -176,6 +176,46 @@ redesenhado com mais detalhe: **couro `#6b4a2e`** (botas/cinto),
 (túnica), **contorno `#1b1424`**, pele `#e0a878`, cabelo castanho
 curto; luz única **topo-esquerda**; **3/4 olhando à direita**; mão
 direita fechada (segurar a arma composta); **sem arma no sprite**.
+
+## Emenda do veredito (2026-11-17) — arma embutida + cenário ×2
+
+O mantenedor avaliou o piloto: *"Ficou bom, mas … as proporções
+ficaram estranhas, pois o personagem ficou maior que as árvores. A
+arma muda de mão no meio do ataque, e ele não segura ela muito bem.
+Pensei em abandonar a ideia de arma separada e fazer a arma padrão de
+cada classe."* Causas técnicas confirmadas na análise:
+
+1. **Proporção** — herói ~40px de conteúdo vs árvore 26 / pedra 11
+   (antes: herói 19 — árvore era 1,4× o herói, virou 0,6×);
+2. **Muda de mão** — o frame de follow-through cruzava o punho p/ a
+   esquerda e a composição ESPERLHAVA a arma (frame `esp`) — o salto
+   de lado era da composição, não da animação; somou-se o detector
+   de punho oscilando (x26→x37);
+3. **Não segura** — âncora = centroide da pele detectada (±2-3px) +
+   ângulos discretos (3 variantes de 45°) — o cabo nunca casava com
+   a empunhadura e os ângulos pulavam.
+
+**Decisões do mantenedor na emenda:**
+
+- **R-VHS-6 (reversão)** — **arma embutida no sprite**, a arma
+  **padrão da classe** (guerreiro = espada): a geração passa a pedir
+  o objeto na mão, então o grip, a mão única e o arco do golpe nascem
+  na POSE. Some todo o mecanismo de composição (âncoras, ângulos,
+  espelhamento, `assets/armas/`); itens de arma viram só números
+  (o visual da mão é o da classe);
+- **R-VHS-7 (reversão parcial)** — **"raridade visível na mão"
+  abandonada** para o herói novo (o recolor de acento sai junto com
+  a arma separada); mantida no fallback procedural e nos ícones;
+- **R-VHS-10 (novo)** — **cenário ×2 só visual**: `desenhaObst`
+  desenha árvore 40×52 e pedra 28×22 ancoradas NA BASE (o ponto de
+  colisão continua o mesmo, `obst.r` intocado — sem remedaça de
+  ritmo). Proporções restauradas: árvore/herói 0,6→1,2 (original
+  1,37) · pedra/herói 0,26→0,51 (original 0,58);
+- **R-VHS-11 (novo)** — o ataque ganha **frame de golpe alinhado ao
+  dano** (tabela `inicios` re-medida contra `min(0,10; dur×0,5)`),
+  e o prompt do walk mantém a lição do piloto (**braço da arma
+  firme**) + explícito **"the sword stays in his RIGHT hand in every
+  frame"**.
 
 ## Fora de escopo (próximas levas)
 

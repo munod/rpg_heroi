@@ -142,28 +142,23 @@ checa('corpo opaco (mín 400 px)', opacos >= 400, true);
 checa('tem pele', temPele, true);
 checa('tem contorno escuro', temContorno, true);
 
-// o punho do manifesto cai em cima da mão (a arma ancora nele)
-const pun = Assets.punho('guerreiro', 'idle', 0);
-const pp = pun ? pxA(pun[0], pun[1]) : [0, 0, 0, 0];
-checa('punho do manifesto é pele', pp[3] > 0 && pp[0] > 150 && pp[0] >= pp[1], true);
-
-// raridade: o marcador magenta da arma vira a cor da raridade
-const coresRar = { 1: '#d9a62a', 2: '#4fc3ff', 3: '#b06bff', 4: '#ff5566' };
-[1, 2, 3, 4].forEach(rar => {
-  const a = Assets.arma('guerreiro', 'idle', 0, 'espada', rar);
-  if (!a) { checa('arma rar ' + rar + ' composta', 'null', 'objeto'); return; }
-  const n = parseInt(coresRar[rar].slice(1), 16);
-  const alvo = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  let achou = false;
-  const dd = a.canvas._data;
-  for (let i = 0; i < a.w * a.h && !achou; i++) {
-    if (dd[i * 4 + 3] === 0) continue;
-    if (dd[i * 4] === alvo[0] && dd[i * 4 + 1] === alvo[1] &&
-        dd[i * 4 + 2] === alvo[2]) achou = true;
+// a arma da classe está EMBUTIDA na arte (emenda do veredito):
+// contagem de pixels de lâmina (metal frio, mais azulado que a
+// pele/dourado) — presente em idle e maior no golpe
+function contaLamina(img) {
+  const d = img.canvas._data;
+  let n = 0;
+  for (let i = 0; i < img.w * img.h; i++) {
+    if (d[i * 4 + 3] === 0) continue;
+    const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+    if (r > 140 && g > 150 && b > 160 && b >= r) n++;
   }
-  checa('raridade ' + rar + ' pinta o acento (' + coresRar[rar] + ')',
-    achou, true);
-});
+  return n;
+}
+const lamIdle = contaLamina(Assets.hero('guerreiro', 'idle', 0));
+const lamGolpe = contaLamina(Assets.hero('guerreiro', 'attack', 5));
+checa('lâmina embutida no idle (>30 px)', lamIdle > 30, true);
+checa('golpe estica a lâmina (> idle)', lamGolpe > lamIdle, true);
 
 // mapeamento de frames: asset = manifesto, procedural = o de sempre
 checa('qtd walk do guerreiro (asset)', Assets.qtd('guerreiro', 'walk'), 8);

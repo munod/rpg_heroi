@@ -10,19 +10,16 @@ var Anim = (function () {
 
   function hero(look, anim, frame) {
     // caminho novo (spec visual-heroi-spritecook): classe com asset
-    // carregado → sprite do manifesto + arma composta no punho; sem
-    // asset (classes da leva 1, arquivo faltando) → procedural
+    // carregado → frame do manifesto (a arma da classe está embutida
+    // na arte — emenda do veredito); sem asset (classes da leva 1,
+    // arquivo faltando) → procedural
     if (Assets.temHeroi(look.classe, anim)) {
       var q = Assets.qtd(look.classe, anim);
       var f = ((frame % q) + q) % q;
-      var kn = ['nov', look.classe, anim, f, look.weapon, look.rar].join('|');
+      var kn = ['nov', look.classe, anim, f].join('|');
       if (!heroCache[kn]) {
         var base = Assets.hero(look.classe, anim, f);
-        if (base) {
-          base.arma = Assets.arma(look.classe, anim, f,
-            look.weapon, look.rar);
-          heroCache[kn] = base;
-        }
+        if (base) heroCache[kn] = base;
       }
       if (heroCache[kn]) return heroCache[kn];
     }

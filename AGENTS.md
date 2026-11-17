@@ -45,21 +45,22 @@
 - **Herói com assets gerados (spec `visual-heroi-spritecook`)** —
   `js/assets.js` (entre `sprite.js` e `anim.js` no `index.html`)
   carrega PNGs do SpriteCook: `assets/herois/` (guerreiro 43×43, 8
-  frames × 3 anims) e `assets/armas/` (4 tipos × 3 ângulos × 4
-  raridades). Manifesto **embutido** (sem `fetch` — o jogo abre em
-  `file://`), `Assets.carga(cb)` roda no boot ANTES das cenas
-  (síncrona no harness) e **fallback procedural por classe**: quem não
-  tem asset (mago/ladino/clerigo na leva 1, arquivo faltando) cai no
-  grid de texto antigo — ninguém fica sem desenho. `Anim.hero`
-  escolhe o caminho; `Assets.desenha` compõe **herói + arma**
-  (âncora `punho[frame]` e ângulo saem do manifesto; frame de
-  follow-through espelha a arma com `scale(-1,1)` próprio);
-  `batalha.js` lê `Assets.qtd/durFrame/frameAtaque` — os ciclos são
-  idênticos aos do procedural (idle 0,7s · walk 0,48s), só a contagem
-  muda (8 frames). O manifesto é **fonte única** de geometria: teste
-  lê ele, não duplica número. Reprocessar arte:
-  `node testes/prepara-assets.js` (corte ÷2, armas ÷4 + recolor de
-  raridade, detecção de punho com override, folha QA) e
+  frames × 3 anims, **arma da classe embutida na arte** — emenda do
+  veredito abandonou a arma separada e a "raridade na mão"). Manifesto
+  **embutido** (sem `fetch` — o jogo abre em `file://`),
+  `Assets.carga(cb)` roda no boot ANTES das cenas (síncrona no
+  harness) e **fallback procedural por classe**: quem não tem asset
+  (mago/ladino/clerigo na leva 1, arquivo faltando) cai no grid de
+  texto antigo — ninguém fica sem desenho. `Anim.hero` escolhe o
+  caminho; `Assets.desenha` é um draw puro (o espelhamento do
+  `facing` é externo, camada única); `batalha.js` lê
+  `Assets.qtd/durFrame/frameAtaque` — os ciclos são idênticos aos do
+  procedural (idle 0,7s · walk 0,48s), só a contagem muda (8 frames).
+  O manifesto é **fonte única** de geometria: teste lê ele, não
+  duplica número. Cenário: **`ESC_CENARIO = 2`** em `desenhaObst`
+  (árvore 40×52, pedra 28×22, ancoradas na base — só visual,
+  colisão `obst.r` intacta). Reprocessar arte:
+  `node testes/prepara-assets.js` (corte ÷2 + folha QA) e
   `node testes/previa-assets.js` (folha no gate). Arte-fonte em
   `assets/fonte/`, IDs em `spritecook-assets.json`.
 - Botões de atributo (`+`/`−`) aplicam em `Gestao.update(dt, p)` (clique na
