@@ -143,6 +143,12 @@ var Personagem = (function () {
   // base 8 é fixa, então o EARLY fica idêntico ao medido: nv1 = 9 de
   // dano, 50 de HP em qualquer build).
   var PONTO_MULT = 3;
+  // ---- soft cap por atributo (spec economia-de-pontos R-EDP-2) -------
+  // Acima de ATRIB_LIM pontos INVESTIDOS (acima da base) o mult decai
+  // suave de PONTO_MULT até o piso 1× — mono-stat dump vira jogada
+  // ruim; build espalhada (~1.830/atributo na campanha) nunca cruza e
+  // segue linear × linear (invariante anti-estol intacto).
+  var ATRIB_LIM = 3500;
   var ATRIB_MAX = 1000000;  // pontos em cada atributo
 
   function novo() {
@@ -276,9 +282,24 @@ var Personagem = (function () {
   //    compensação dos pontos escassos (1 por nível = 3× menos pontos
   //    que os 3/nível antigos, e o mult acompanha: pontos × mult =
   //    constante, então o poder MEDIDO fica idêntico).
+  //  · SOFT CAP (spec economia-de-pontos R-EDP-2): a parte investida
+  //    passa por `valorInvestido` — ÚNICA fonte da fórmula (os
+  //    espelhos de statusDetalhado usam ela; Σpartes do rodapé fecha
+  //    por construção).
+  function valorInvestido(investido, porPonto) {
+    var inv = Math.max(0, investido);
+    if (inv <= ATRIB_LIM) return inv * porPonto * PONTO_MULT;
+    // acima do limiar o mult decai SUAVE de PONTO_MULT até 1× (k = 1,
+    // contínuo no limiar): o primeiro ponto acima vale quase 3×, o
+    // último do teto vale ~1× — dumping mono-stat perde força, mas
+    // quem está abaixo do limiar NÃO é nerfado (baseline intacta)
+    var exc = inv - ATRIB_LIM;
+    var mult = 1 + (PONTO_MULT - 1) * ATRIB_LIM / (ATRIB_LIM + exc);
+    return ATRIB_LIM * porPonto * PONTO_MULT + exc * porPonto * mult;
+  }
+
   function ganhoAtributo(at, at0, porPonto) {
-    return Math.min(at, at0) * porPonto +
-      Math.max(0, at - at0) * porPonto * PONTO_MULT;
+    return Math.min(at, at0) * porPonto + valorInvestido(at - at0, porPonto);
   }
 
   // Multiplicador de Ouro do Carisma (spec gestao-atributos) —
@@ -396,11 +417,13 @@ var Personagem = (function () {
     var at0D = 8 + (c.bonus[c.danoMod] || 0);
     var con0D = 8 + (c.bonus.con || 0);
     var des0D = 8 + (c.bonus.des || 0);
-    // espelho da mesma partição de ganhoAtributo (Σpartes = status)
+    // mesma partição de ganhoAtributo — a parte investida vem da
+    // FONTE ÚNICA valorInvestido (soft cap R-EDP-2; Σpartes = status
+    // por construção, seções 38/40/43 conferem)
     var danoBase = Math.min(a[c.danoMod], at0D) * 0.5;
-    var danoInv = Math.max(0, a[c.danoMod] - at0D) * 0.5 * PONTO_MULT;
+    var danoInv = valorInvestido(a[c.danoMod] - at0D, 0.5);
     var hpBase = Math.min(a.con, con0D) * 4;
-    var hpInv = Math.max(0, a.con - con0D) * 4 * PONTO_MULT;
+    var hpInv = valorInvestido(a.con - con0D, 4);
     var partesDano = [
       { v: c.danoBase, rot: 'base ' + c.nome },
       { v: Math.floor(danoBase + danoInv),
@@ -801,6 +824,7 @@ var Personagem = (function () {
     OURO_MAX: OURO_MAX,
     PONTOS_MAX: PONTOS_MAX,
     ATRIB_MAX: ATRIB_MAX,
+    ATRIB_LIM: ATRIB_LIM,
     keystoneDe: keystoneDe,
     comprarKeystone: comprarKeystone,
     alternarKeystone: alternarKeystone,

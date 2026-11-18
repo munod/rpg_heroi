@@ -138,6 +138,13 @@ var Gestao = (function () {
       out.push(['Hoje: agudeza ' + agu.toFixed(2) +
         ' (0 burro · 1 gênio)', '#9a90b8']);
     }
+    // soft cap (R-EDP-2): avisa quando o investido cruzou o limiar —
+    // a partir daí cada ponto vale menos (3× → piso 1×). Investido =
+    // efetivo − (8 + bônus) = v − 8 (o bônus da classe cancela).
+    if (v - 8 > Personagem.ATRIB_LIM) {
+      out.push(['acima de ' + Personagem.ATRIB_LIM +
+        ' investidos: retornos reduzidos (3× → 1×)', '#ffb066']);
+    }
     return out;
   }
 

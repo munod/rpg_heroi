@@ -6063,6 +6063,84 @@ console.log('55) economia de pontos: respec pago, soft cap e nível de skill (sp
     'MAX − para por saldo esgotado ou piso do atributo (ouro ' +
     p.ouro + ' / for ' + p.atributos.for + ')');
   clique(708, 234); frame(2);       // ciclo fecha: MAX → ×1
+
+  // ---------- A) retornos decrescentes (R-EDP-2) ----------
+  const classeA = p.classe;
+  p.classe = 'guerreiro';           // danoMod 'for' p/ isolar a fórmula
+  const clA = Personagem.CLASSES[p.classe];
+  const at0A = 8 + (clA.bonus.for || 0);
+  const eqA = p.equip, ksA = p.keystoneOn, nvA = p.nivel;
+  p.equip = { arma: null, armadura: null };
+  p.keystoneOn = false;
+  p.nivel = 10;
+  // helper de mouse local (mm das seções 30/41 não é global)
+  const mm = (x, y) => (jogoCanvas._listeners.mousemove || [])
+    .forEach(fn => fn({ clientX: x * 2, clientY: y * 2 }));
+  // fórmula ANTIGA (linear 3×) escrita literal p/ comparar
+  const velho = (at, a0, pp) => Math.min(at, a0) * pp +
+    Math.max(0, at - a0) * pp * Personagem.PONTO_MULT;
+  const somaD = (d) => d.partes.reduce((q, x) => q + x.v, 0);
+
+  // --- A1) baseline intacta: investido ≤ ATRIB_LIM = fórmula antiga
+  // (efetivos soma o bônus da classe — o esperado usa o EFETIVO, como
+  // o status faz; o bônus cancela no investido: eff − (8 + bônus))
+  const effDe = (raw) => Math.max(1, Math.round(raw + (clA.bonus.for || 0)));
+  p.atributos.for = 1000;
+  const dAbaixo = Personagem.status(p).dano;
+  conf(dAbaixo === Math.max(1, clA.danoBase +
+      Math.floor(velho(effDe(p.atributos.for), at0A, 0.5))),
+    'soft cap: abaixo do limiar a fórmula é idêntica à antiga (' +
+    dAbaixo + ')');
+
+  // --- A2) acima do limiar: MENOS que a linear antiga (dump punido)
+  p.atributos.for = 5000;
+  const dCima = Personagem.status(p).dano;
+  const dLinear = Math.max(1, clA.danoBase +
+    Math.floor(velho(effDe(p.atributos.for), at0A, 0.5)));
+  conf(dCima < dLinear,
+    'soft cap: acima do limiar o dump rende menos (' + dCima + ' < ' +
+    dLinear + ')');
+
+  // --- A3) propriedade central: o marginal DECAI (mesmo +1000 vale
+  // menos acima do limiar que abaixo dele)
+  p.atributos.for = at0A + 500;
+  const m1 = Personagem.status(p).dano;
+  p.atributos.for = at0A + 1500;
+  const m2 = Personagem.status(p).dano;
+  p.atributos.for = at0A + 3500 + 500;
+  const m3 = Personagem.status(p).dano;
+  p.atributos.for = at0A + 3500 + 1500;
+  const m4 = Personagem.status(p).dano;
+  conf((m4 - m3) < (m2 - m1),
+    'marginal decrescente: +1000 acima do limiar vale menos (' +
+    (m4 - m3) + ' < ' + (m2 - m1) + ')');
+
+  // --- A4) Σpartes fecha com dano/HP/crítico ACIMA do limiar
+  // (espelho usa a mesma fonte única valorInvestido)
+  p.atributos.con = 8 + (clA.bonus.con || 0) + 5000;
+  const sA = Personagem.status(p);
+  const detA = Personagem.statusDetalhado(p);
+  const mD = detA.dano.mult ? detA.dano.mult.v : 1;
+  const mH = detA.hp.mult ? detA.hp.mult.v : 1;
+  conf(Math.round(somaD(detA.dano) * mD) === sA.dano,
+    'Σpartes do dano fecha com for acima do limiar');
+  conf(Math.round(somaD(detA.hp) * mH) === sA.hpMax,
+    'Σpartes do HP fecha com con acima do limiar');
+  conf(Math.round(somaD(detA.crit)) === sA.crit,
+    'Σpartes do crítico fecha (espelho chama ganhoAtributo)');
+
+  // --- A5) dica avisa quando o investido cruzou o limiar
+  jogoCanvas._textos = [];
+  mm(500, 96);                      // hover no rótulo da linha FOR
+  for (let i = 0; i < 25; i++) frame(1);
+  conf((jogoCanvas._textos || []).some(
+    t => t.indexOf('retornos reduzidos') >= 0),
+    'dica do atributo avisa "retornos reduzidos" acima do limiar');
+  mm(150, 150);                     // sai do rótulo
+
+  // restaura o estado (era o fim da ficha — higiene)
+  p.equip = eqA; p.keystoneOn = ksA; p.nivel = nvA;
+  p.classe = classeA;
 }
 if (falhas) {
   console.log(falhas + ' FALHA(S)');
