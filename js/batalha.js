@@ -704,14 +704,17 @@ var Batalha = (function () {
   function spawn(def) {
     var t = TIPOS[def.tipo] || TIPOS.slime;
     var raio = t.raio || 6;
-    // nasce fora da janela, ao redor do herói: mantém o ritmo das ondas
-    // (sem clamp de borda — spec mapa-infinito R-INF-2: o anel é
-    // relativo ao herói e o terreno é gerado onde ele estiver)
-    var fora = 110;                                // ~fora da tela do herói
+    // nasce FORA da janela visível em qualquer direção (R-MF-2): o raio
+    // é dinâmico — canto da tela + folga (≈460 em 16:9; era 110-132,
+    // que nasce DENTRO da tela full screen). O anel é alvo de RITMO:
+    // medido com ritmo.js na fase B da spec mundo-fullscreen (sem
+    // clamp de borda — spec mapa-infinito R-INF-2: o anel é relativo
+    // ao herói e o terreno é gerado onde ele estiver)
+    var fora = raioSpawn();
     var x = heroi.x, y = heroi.y, dx = 0, dy = 0, tent = 0;
     do {
       var ang = Math.random() * Math.PI * 2;
-      var dist = fora + Math.random() * 22;        // 110..132px do herói
+      var dist = fora + Math.random() * 22;        // ≈460..482px do herói
       x = heroi.x + Math.cos(ang) * dist;
       y = heroi.y + Math.sin(ang) * dist;
       dx = x - heroi.x;
@@ -1676,16 +1679,20 @@ var Batalha = (function () {
       }
 
       // Gatuno (evento): não briga — corre NA DIREÇÃO MAIS LONGE DO
-      // HERÓI com o ouro; passar de 240px = perda (spec mapa-infinito
+      // HERÓI com o ouro; passar do limite = perda (spec mapa-infinito
       // R-INF-4 — sem bordas a fuga é por distância; o tempo do
-      // Eventos continua desemperrando o emperrado)
+      // Eventos continua desemperrando o emperrado). O limite deriva
+      // do ANEL + 120px (era 240 fixo no anel 110-132): teto fixo com
+      // o anel full screen (≈460) faria o ladrão nascer "escapado"
+      // (R-MF-2)
       if (en.gatuno) {
         var gx = en.x - heroi.x, gy = en.y - heroi.y;
         var gd = Math.sqrt(gx * gx + gy * gy) || 1;
         var pv = en.vel * dt;
         mover(en, (gx / gd) * pv, (gy / gd) * pv, en.raio || 6);
         gx = en.x - heroi.x; gy = en.y - heroi.y;
-        if (gx * gx + gy * gy > 240 * 240) {
+        var limGat = raioSpawn() + 120;
+        if (gx * gx + gy * gy > limGat * limGat) {
           var perdido = en.roubo || 0;
           Eventos.gatFugiu();
           inimigos.splice(i, 1);

@@ -313,13 +313,15 @@ clique(120, 388);
 frame(4);
 salvar('tela-jogo.png');
 
-// deixa a batalha automática rodar até ter inimigos em campo e luta começada
+// deixa a batalha automática rodar até ter inimigos em campo e luta
+// começada — o anel full screen (≈460px, R-MF-2) soma ~5s de
+// aproximação: 150 frames não davam tempo do primeiro golpe
 let info = sandbox.Batalha.info();
 for (let i = 0; i < 3000 && info.inimigos < 2; i++) {
   frame(1);
   info = sandbox.Batalha.info();
 }
-for (let i = 0; i < 150; i++) frame(1);
+for (let i = 0; i < 360; i++) frame(1);
 salvar('tela-jogo-luta.png');
 console.log('luta: ' + JSON.stringify(sandbox.Batalha.info()));
 
@@ -369,18 +371,19 @@ clique(585 + dxL, 50);   // aba Classe
 frame(4);
 salvar('tela-classe.png');
 
-// boss da onda 100
+// boss da onda 100 (anel full screen: o chefe precisa de ~6s p/ chegar)
 sandbox.Batalha.restaurarOnda(100);
 for (let i = 0; i < 60 && sandbox.Batalha.info().onda < 100; i++) frame(1);
-for (let i = 0; i < 30; i++) frame(1);
+for (let i = 0; i < 360; i++) frame(1);
 salvar('tela-boss.png');
 console.log('boss: ' + JSON.stringify(sandbox.Batalha.info()));
 
-// mapa 2: cripta com chão e monstros próprios
+// mapa 2: cripta com chão e monstros próprios (anel full screen:
+// monstros precisam de ~5s p/ chegar perto do herói)
 sandbox.Batalha.restaurarMapa(2);
 sandbox.Batalha.restaurarOnda(6);
 for (let i = 0; i < 60 && sandbox.Batalha.info().inimigos === 0; i++) frame(1);
-for (let i = 0; i < 40; i++) frame(1);
+for (let i = 0; i < 330; i++) frame(1);
 salvar('tela-mapa2.png');
 console.log('mapa 2: ' + JSON.stringify(sandbox.Batalha.info()));
 

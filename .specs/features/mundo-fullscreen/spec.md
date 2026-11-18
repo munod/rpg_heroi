@@ -38,7 +38,6 @@ lindão!"*
    **O anel é alvo de ritmo**: medir com `ritmo.js` (≥4 seeds) e
    reportar drift ao mantenedor ANTES de qualquer reequilíbrio
    (rebalance = decisão separada; levers documentados no AGENTS).
-
 ## Requisitos
 
 ### R-MF-1 — Mundo full screen sem zoom (Fase A)
@@ -84,7 +83,9 @@ lindão!"*
   mapa1 ~20min · clear p95 · atrasoPct 0). **Relatório de drift ao
   mantenedor antes de qualquer reequilíbrio.**
 - Geometria da seção do gatuno (`fumaca`, spawn a 110px com RNG
-  zerado) reajustada ao anel novo.
+  zerado) reajustada ao anel novo — e o **limite de fuga do Gatuno
+  deriva do anel** (`raioSpawn() + 120`, era `240` fixo no anel
+  110-132; teto fixo faria o ladrão nascer "escapado").
 
 ### R-MF-3 — Janela flutuante + menu de abas (Fase C)
 

@@ -2578,8 +2578,8 @@ console.log('29) evento: o Gatuno (rouba, foge, resgate)');
   Math.random = rnd;
 
   // --- resgate ao vivo: RNG zerado → geometria e ouro exatos.
-  // spawn a 110px (clamp ≥70 das bordas) e for 999: o golpe alcança
-  // antes da borda (2,0s de perseguição vs ≥2,8s de fuga)
+  // spawn no anel full screen (≈460px com RNG zerado; limite de fuga =
+  // anel+120 — R-MF-2) e for 999: o herói alcança antes da fuga
   p.classe = 'guerreiro';
   p.nivel = 10;
   p.atributos.for = 999;
@@ -4228,9 +4228,10 @@ console.log('41) monstros novos: espécies com skill, ranged, comum intacto e ev
   // 62 frames (não 2): o herói nasce em iniciar() com inv: 1 (graça de
   // 1s) e a onda 1 só nasce no frame 60 — rodar até aqui deixa o inv
   // zerado SEM combate (os bichos nascem no último frame e ainda estão
-  // a 110+px). Sem isso o 1º tiro do atirador pousa na janela de graça
-  // e machucaHeroi engole o dano (o 2º tiro vem a 2,2s = fora da espera
-  // do teste) — flake medido: 3 falhas em 5 runs.
+  // a 460+px do anel full screen). Sem isso o 1º tiro do atirador
+  // pousa na janela de graça e machucaHeroi engole o dano (o 2º tiro
+  // vem a 2,2s = fora da espera do teste) — flake medido: 3 falhas
+  // em 5 runs.
   frame(62);
   if (Batalha.info().pausada) Batalha.alternarPausa();
 
@@ -4389,7 +4390,12 @@ console.log('41) monstros novos: espécies com skill, ranged, comum intacto e ev
   const antesOuro = p.ouro || 0;
   const antesItens = p.stats.itens;
   // leva o herói até o cofre: ele caminha sozinho sem inimigos em campo
-  Batalha.restaurarOnda(1);
+  // — iniciar() dá ~1s de campo vazio (tOnda 1,0) e poe o herói no
+  // centro do chunk; restaurarOnda(1) nascia a onda já no frame 1 e o
+  // anel full screen (≈460px) atrasou tanto a aproximação que o herói
+  // passava a janela toda perseguindo monstros p/ leste (7 frames de
+  // subida — FALHA medida na fase B)
+  Batalha.iniciar();
   frame(1);
   Math.random = rnd;
   Eventos.cofreColetado();
