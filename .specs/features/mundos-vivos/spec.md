@@ -35,6 +35,25 @@ do jogo. Fonte em `assets/fonte/`, IDs em `spritecook-assets.json`.
 4. **Vila rara por mapa, colidente** — cluster de 2-3 casas + 1
    fogueira; casas bloqueiam como pedra.
 
+## Correção pós-QA do mantenedor (2026-11-18)
+
+5. **Vila em fachada FRONTAL reta** — a primeira folha (preset
+   Character & Props, "front three-quarter view") saiu **isométrica**
+   e "não combina com o projeto (top-down)": regenerada com prompt
+   explícito de fachada reta **sem perspectiva isométrica**
+   (`65f61f50`; a isométrica `ced61759` → `geracoes_substituidas`).
+   Casas 33×28 → **66×56 mundo** (≈1,3× o herói). A fusão de
+   fragmentos do `prepara-cenario` subiu 12 → **50** (a lenha solta
+   da fogueira, n=44, precisa fundir; a menor peça real é folhagem
+   com n=93).
+6. **Proporções dos animais** — coelho/pássaro/sapo estavam quase
+   do tamanho do herói (33×37/33×30/32×28 vs 43): campo `altos`
+   no `prepara-cenario.js` (altura-alvo proporcional, nearest,
+   paralelo ao `pega`) → **pássaro 14×13 · coelho 14×16 · sapo
+   13×11 · veado mantido 36×42** ("o veado ficou bom"). Arte NÃO
+   regenerada — só redimensionada. Asserção ≤18px na fumaça 20b e
+   linha dos animais no `previa-assets`.
+
 ## Requisitos
 
 ### R-MV-1 — Folhagem por chunk (Fase 1)

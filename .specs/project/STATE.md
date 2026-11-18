@@ -710,6 +710,19 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   hoje); Chrome indisponível no ambiente — QA visual via PNGs +
   PIL (o display da sessão serviu imagem errada 2×: sempre copiar
   p/ caminho novo).
+- **Correção pós-QA (mesmo dia)** — mantenedor reprovou a vila
+  ("isométrica, o projeto é top-down") e as proporções dos animais
+  ("coelhos/sapos/pássaros grandes; o veado ficou bom"). Correções:
+  (a) vila regenerada com prompt de **fachada frontal reta, NO
+  isometric perspective** (`65f61f50`) — casas 66×56 mundo; (b) campo
+  **`altos`** no `prepara-cenario.js` (altura-alvo por peça, nearest,
+  paralelo ao `pega`) → pássaro 14×13 · coelho 14×16 · sapo 13×11 ·
+  veado mantido — sem regenerar arte (0 créditos); (c) fusão de
+  fragmentos 12 → 50 (lenha da fogueira n=44); (d) asserção ≤18px na
+  fumaça 20b + linha dos animais no previa-assets. **Lições**: pedir
+  a VISTA de forma explícita no prompt (o preset Character & Props é
+  three-quarter por padrão) e medir a proporção contra o herói
+  (43px) ANTES de integrar.
 
 ## Bloqueios
 

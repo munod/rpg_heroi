@@ -16,6 +16,7 @@ Status: ⬜ pendente / ✅ feito · `[P]` paralelo
 | T10 | **Fase 4**: grade Tiny pixel monsters gerada e arquivada (`assets/fonte/` + ID + nota adiado) | T9 | ✅ (`9dade27`) |
 | T11 | **Fase 4**: QA visual (previa/cena/ampliar, `JANELA=1280x400`) + docs (AGENTS/CHANGELOG/STATE/README) + spec/tasks concluídos | T10 | ✅ (telas verdes em 16:9 e 1280×400 — vila/vidas/ícones conferidos a olho) |
 | T12 | Gate `todos.js` verde ao fim de CADA fase · Push (só com aval do mantenedor) | T11 | ✅ gate (4 fases) · ⬜ push |
+| T13 | **Correção pós-QA**: vila frontal reta (regeneração `65f61f50`, fusão 12→50) + `altos` nos animais (14×13/14×16/13×11) + asserção ≤18px + linha de animais no previa + docs da emenda | T12 | ✅ (gate verde; decisão 5-6 na spec) |
 
 ## Verificação por task
 

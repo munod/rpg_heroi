@@ -29,8 +29,13 @@ vive em `.specs/features/`.
   manifesto `{dir,qtd}` no `Assets` (92 peças na mesma carga, sem
   `fetch`), `testes/prepara-cenario.js` (corte por alfa conectado +
   `pega`/`quadro`) e seção de cenário+ícones no `previa-assets` do
-  gate. Grade *Tiny pixel monsters* gerada e **adiada** (futura leva
-  de espécies). Gate: `node testes/todos.js` (5 arquivos).
+  gate. **Correção pós-QA do mantenedor**: a vila saiu isométrica →
+  regenerada em **fachada frontal reta** (preset com "NO isometric
+  perspective") e os animais estavam desproporcionais → `altos` no
+  prepara (**pássaro/coelho/sapo 14×13/14×16/13×11**, veado mantido,
+  asserção ≤18px). Grade *Tiny pixel monsters* gerada e **adiada**
+  (futura leva de espécies). Gate: `node testes/todos.js` (5
+  arquivos).
 - **Mundo full screen + UI flutuante (spec `mundo-fullscreen`)** —
   referência: UI do **Leveling Idle 2D**. O mundo cobre a tela
   inteira **sem zoom (k=1)** — 1 un. de mundo = 1 px, canvas `W×432`
