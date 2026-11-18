@@ -188,8 +188,10 @@
   (**`12 × 1,064^ondaTotal`**, harmônica com o custo → tempo/nível
   estável). Combate em `Batalha`: `ESC_HP 1,25 · ESC_DMG 0,037 ·
   onda-timer` (**spec `onda-timer`**: sem espera entre ondas — o clear
-  dá a batida de `BEAT 2s` e cada onda tem cota de `ONDA_SEG 30s`
-  (expirou → reforços com os sobreviventes); a alavanca de duração da
+  dá a batida de `BEAT 2s` e cada onda tem cota de `ONDA_SEG 20s`
+  (era 30; mantenedor reduziu p/ 15 e recusou — virou fluxo contínuo;
+  20 = "mundo-fullscreen" medido: atraso ~20%, espera ~9% —
+  expirou → reforços com os sobreviventes); a alavanca de duração da
   campanha passou a ser o **clear**) + `HP_POR_NIVEL 6` em
   `personagem.js` (fonte única — NÃO espelhe fórmula em
   `statusDetalhado`). Mudou algum? Meça com
@@ -215,38 +217,71 @@
   clear p95 19s (cota30 nunca estourou em9.900 clears). Referências:
   a config COM espera venceu em136,2h/0 mortes (R-BAL-6) e a pré-
   compensação estolou no mapa97 (1.357 mortes). Variância
-  de RNG: decidir pela média de ≥4 runs.
+  de RNG: decidir pela média de ≥4 runs. **Esses alvos são do
+  PRE-fullscreen** — a leva `mundo-fullscreen` (anel 460 + cota 20s)
+  mediu: nv10 5,8min · keystone ~15min · 15min = nv 31 / onda 45 ·
+  @240min = mapa 8 / nv 664 / atraso ~20% / 0 mortes (campanha
+  estimada ~70-75h) — A/B de 4 vias em
+  `.specs/features/mundo-fullscreen/relatorio-ritmo-final.md`;
+  **decisão do mantenedor: aceitar sem reequilíbrio** (2026-11-18).
 - Canvas **768×432 de base com largura adaptativa**: altura fixa,
   `W = clamp(432 × aspecto, 768, 1728)` recalculado em `main.js
   resize()` (também no `orientationchange`); `Game.W` expõe a largura
   vigente e `Input.ajusta` acompanha o mapeamento do ponteiro. Em 16:9
   **W = 768 e tudo cai exatamente nas coordenadas de referência** (os
   cliques dos testes seguem válidos); em tela larga o layout se
-  expande **ancorado**: cabeçalho/rodapé/status/toast em largura toda
-  (centro = `W/2`), arena à esquerda, gestão à direita — o painel
+  expande **ancorado**: top bar/rodapé/status/toast em largura toda
+  (centro = `W/2`), mundo ao fundo, gestão à direita — o painel
   direito inteiro desloca com `ctx.translate(dx)` + `UI.deslocar(dx)`
   (dx = W − 768) e `Gestao.update` desconta dx do ponteiro (retângulos
-  são locais ao painel). × escala de exibição: `resize()` também calcula
+  são locais ao painel); a **barra de abas centraliza** (desloca dx/2). × escala de exibição: `resize()` também calcula
   escala fracionária que preenche a janela (CSS) e
   `esc = escala × devicePixelRatio` (**fracionário** — o backing
   nasce na resolução da exibição: texto/vetores nítidos em qualquer
   escala, sem reamostragem CSS; spec `ajustes-playtest-3`) —
   `ctx.setTransform(esc,...)` por frame. **Nunca** desenhar em
   coordenadas de tela cheia: tudo é coordenada de jogo (W × 432).
-- Mundo × janela: `VW/VH` (192×134, janela do painel — o layout NÃO muda)
-  × `MW/MH` (384×268, mundo). A janela é desenhada com `k = vw/VW`
-  (=2 na tela nova): `translate(vx,vy) → scale(k) → translate(-cam)`.
-  Física/câmera/ritmo vivem em unidades de mundo e NÃO mudam com k.
-  Câmera `cam` com lerp em `atualizaCamera` (roda até pausada, é
-  apresentação; teleporte >96px trava). Obstáculos de `mapas.js` valem
-  na base 192×134 e são escalados em `obstChunk`; inimigos nascem em
-  anel de 110-132px do herói (fora da janela — mudar isso muda o
-  ritmo); renascimento em `posicaoAleatoriaSegura()` (**anel de
-  40-120px do herói** desde o mapa-infinito) e inimigos miram
-  no local da morte. `info()` expõe `janela`/`mundo` (**região ativa
-  3×3 chunks = 1152×804** desde o mapa-infinito)/`cam`/`heroi`
+- Mundo × janela (**spec `mundo-fullscreen` — k=1, sem zoom**):
+  `VW/VH` são DINÂMICOS (largura = `Game.W`, altura fixa 432;
+  `janelaOK()` sincroniza antes de cada leitura) — a tela inteira É
+  a janela (`Batalha.desenhar(ctx, 0, 0, W, 432)`, `k = vw/VW` = 1:
+  `translate(vx,vy) → scale(k) → translate(-cam)`). Física/câmera/
+  ritmo vivem em unidades de mundo. Câmera `cam` com lerp em
+  `atualizaCamera` centraliza o herói no **CENTRO DA TELA** (roda até
+  pausada, é apresentação; teleporte >96px trava) — `info().janela` =
+  `{768, 432}`. Obstáculos de `mapas.js` valem na base 192×134 e são
+  escalados em `obstChunk`; inimigos nascem em anel DINÂMICO
+  `raioSpawn()` ≈ **460px** (canto mais distante da tela + folga; era
+  110-132 — **mudar isso muda o ritmo**, medido em
+  `relatorio-ritmo-final.md`); renascimento em
+  `posicaoAleatoriaSegura()` (**anel de 40-120px do herói**) e
+  inimigos miram no local da morte. `info()` expõe `janela`/`mundo`
+  (**região ativa com raio dinâmico = 5×5 chunks = 1920×1340** em
+  16:9, derivada de `max(VW/2, raioSpawn())` — `atualizaObstAtivos`
+  reconstrói no resize e `info()` se auto-sincroniza)/`cam`/`heroi`
   (`hpMax` incluso — sonda do fuzz; `hp` do info é `ceil`, então o
   máximo autoritativo é `heroi.hpMax`) para os testes (seções 17-18).
+- **Tela de jogo (spec `mundo-fullscreen`)**: o mundo é o FUNDO e os
+  elementos flutuam por cima. **Top bar** `faixaTopo(34)` de largura
+  total: `NOME — MAPA n` (cursor) · `Nv` · XP · `Pontos` · botão
+  **Opções dentro** em `(W−72, 8, 64, 24)` (coords de clique
+  antigas valem) + linha de XP de 2px na base da faixa. **Sem dica
+  persistente** (a `Combate 100% automático` saiu; só toasts
+  transitórios de `Gravacao.msg` — `desenharAviso(ctx, dica, y,
+  minX)`: jogo usa `minX=408` p/ não cobrir o título, seleção usa
+  `y=340` na faixa livre acima do rodapé). **HP do herói SOBRE A
+  CABEÇA** no espaço de mundo (`desenhaHeroi`: barra fina `alt×0,8` ×
+  3px, ~6px acima do sprite, **só quando machucado**, sem número —
+  estilo inimigo; a barra/texto antigos do HUD saíram). **Onda/cota
+  no canto superior esquerdo** (`x=8, y=46/64` — único canto livre).
+  Janela da Gestão flutuante à direita (retângulo intacto 408,36 ·
+  352×300; `UI.janela` translúcida α0,88 + título = nome da aba +
+  **X fecha**; estado `aberta` padrão ABERTO, `Gestao.update` ignora
+  cliques de conteúdo fechada) e **barra de abas centrada no rodapé**
+  (`Gestao.barra`: botões 68px/passo 72, centros
+  `240/312/384/456/528` · y=418 em W=768, desloca **dx/2** em tela
+  larga — desenhada ANTES da janela p/ a aba trocar no MESMO frame
+  do clique; geometria em `Gestao.abasGeom()`).
 - **Mundos (spec `mundos`)**: campanha **10 mundos × 10 mapas × 100
   ondas** (`FIM_MAPA` intacto — a onda 100 é o chefe; vencido,
   `passaMapa()` faz `mapa++` e volta a onda 1). `Mapas.mundo(n)` =
@@ -261,8 +296,10 @@
   `BEAT` de 2s** (spec `onda-timer` — era `esperaOnda()` com rampa até
   111s, removida por decisão do mantenedor: "muito ruim e chato") — o
   campo limpo → batida → próxima onda, e **cada onda tem cota de
-  `ONDA_SEG` 30s**: não limpou → `ONDA ATRASADA — REFORÇOS!` (sobreviventes + novos; baseline medido nunca estoura: atrasoPct 0,0%;
-  clear p95 =18s). A **alavanca de duração** da campanha passou a ser
+  `ONDA_SEG` 20s** (era 30; 15s medido e recusou — virou fluxo
+  contínuo): não limpou → `ONDA ATRASADA — REFORÇOS!` (sobreviventes + novos; medido com anel 460: atraso ~20%, espera
+  ~9%, clear p95 ~41s; pré-fullscreen com cota30: atraso 0,0%,
+  clear p95 18s). A **alavanca de duração** da campanha passou a ser
   o **clear** (medido: **44,0h a vitória** — sim seed1; modelo
   ~35h subestimou o clear do late);
   pós-chefe usa `ESPERA_TRANSICAO` fixo 8s e o kill do
@@ -333,7 +370,10 @@
   por **duplo preenchimento** — `strokeRect` não acompanha canto e
   `stroke()` é no-op — + faixa `[8,8,0,0]`), `button` (4 estados do
   doc; **só o desenho muda — o retângulo de clique é contrato**),
-  `bar` (degradê + brilho; guarda `h>=4` intacta), tooltip/swatch
+  **`janela`/`barra`** (flutuantes translúcidas α0,88 + barra de
+  título — spec `mundo-fullscreen`: janela da Gestão, top bar e
+  contêiner da barra de abas), `bar` (degradê + brilho; guarda
+  `h>=4` intacta), tooltip/swatch
   r=4. **Testes veem quadrado/chapado, navegador vê
   arredondado/gradiente.** CSS com moldura do "monitor" (fio dourado
   + anel + halo) em `style.css`. Fumaça seção 46.
@@ -351,9 +391,13 @@
   como linhas: `limite 45%`, `limite 250`, `piso 1/10`, `piso 0%`);
   item em `Itens.dicas`;
   atributo em `Gestao.dicasAtributo`.
-- Gestão tem 5 abas (Atrib/Apar/Classe/Itens/Stats): botões de 66px com
-  passo 70 a partir de x=412, y=40 — centros 445/515/585/655/725 em y=54;
-  testes que clicam abas dependem dessa grade.
+- Gestão tem 5 abas (Atrib/Apar/Classe/Itens/Stats): os botões
+  saíram de dentro do painel (grade antiga x=412+passo70, y=40) para
+  a **barra inferior centrada** `Gestao.barra` — centros
+  240/312/384/456/528 em y=418 (W=768), passo 72, **dx/2** em tela
+  larga; `Gestao.abasGeom()` expõe centros/`fechar`/`aberta`; testes
+  que clicam abas dependem dessa grade (remapeada na leva
+  `mundo-fullscreen`).
 - Skills automáticas em `js/skills.js` (procs por classe; **8 skills**
   em **5/15/25/35/45/60/150/400**) com **loadout escalonado**
   (`Skills.limite(nivel)` = 3 → **4 no nv 50** → **5 no nv 150**;

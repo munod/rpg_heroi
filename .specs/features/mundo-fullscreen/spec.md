@@ -1,7 +1,8 @@
 # Spec: Mundo full screen + UI flutuante (referência: Leveling Idle 2D)
 
-Status: **em execução** (gate = `node testes/todos.js`, 5 arquivos) ·
-Data: 2026-11-17 ·
+Status: **concluída** (gate = `node testes/todos.js`, 5 arquivos;
+ritmo medido em 4 vias e **aceito pelo mantenedor sem reequilíbrio**) ·
+Data: 2026-11-17 · Emenda rodada 2: 2026-11-18 ·
 Iniciativa: mantenedor — *"Vamos agora trabalhar no visual da UI e do
 mundo do jogo. O mundo agora vai ser full screen, sem zoom para não
 distorcer. As janelas devem ser flutuantes e a HUD continua na tela do

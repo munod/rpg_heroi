@@ -661,6 +661,30 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   (frame ≠ <55% da mediana), pés na fileira42, `max-x` do golpe —
   e a conferência a olho ficou pendente para o mantenedor
   (`testes/previa-assets.png`,12 linhas).
+- **Mundo full screen + UI flutuante (Leva `mundo-fullscreen`,
+  2026-11-18)** — referência do mantenedor: UI do **Leveling Idle 2D**.
+  Decisões em 2 rodadas: (1) **k=1 sem zoom** (tela = `W×432`,
+  1 un. = 1 px), **barra de abas fixa no rodapé**, **janela da Gestão
+  à direita na mesma posição** (conteúdo/cliques intactos) e **anel de
+  spawn aumentado** (110-132 → `raioSpawn()` ≈460px — fora da tela;
+  alvo de ritmo: A/B ≥4 seeds e relatório ANTES de reequilíbrio);
+  (2) após o 1º relatório: **herói no CENTRO da tela** (abandonou a
+  área livre — brigas atrás da janela α0,88, X fecha), **HP sobre a
+  cabeça** estilo inimigo (sem número), **top bar** no lugar do card
+  (NOME — MAPA · Nv · XP · Pontos · Opções dentro + linha de XP),
+  **sem dica persistente**, **Onda no canto sup. esq.**, cota
+  `ONDA_SEG` 30→15→**20s**. Ritmo final (4 vias × 4 seeds): anel460 +
+  cota20 = mapa 8 / nv 664 @240min (−36% vs baseline, atraso ~20%,
+  espera ~9%, clear p95 41s, **0 mortes**, campanha ~70-75h) —
+  **mantenedor: "Opção 1. Eu gostei muito" — aceito SEM
+  reequilíbrio** (relatórios em
+  `.specs/features/mundo-fullscreen/relatorio-ritmo-{faseB,final}.md`).
+  Lições: cota 15s virou fluxo contínuo (atraso 82%, clear p95 260s,
+  batida sumiu) — cota precisa ficar ≥ clear p95; flakes novos de
+  fixture com anel longo (morte > cota, cofre fora da clareira);
+  `garanteCenario` perdeu o early-return (semente do Perlin podia
+  divergir no meio do run) e `info()` passou a auto-sincronizar a
+  lista ativa de obstáculos.
 
 ## Bloqueios
 

@@ -5,7 +5,23 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Entregue
 
-### Unreleased — 2026-11-15 — leva "ritmo/dopamina" (1-4 + onda-timer)
+### Unreleased — 2026-11-18 — leva "mundo-fullscreen" (UI Leveling Idle 2D)
+- **Fase A** — mundo k=1 full screen (`VW/VH` dinâmicos, janela =
+  tela), câmera na área livre (depois corrigida p/ centro), região
+  ativa 5×5, título no canto, fonte `big` dobrou, poeira 36→150
+- **Fase B** — anel `raioSpawn()` ≈460px + limite de fuga do Gatuno
+  derivado do anel; A/B `ritmo.js` (4×15 + 4×240) com relatório de
+  drift **antes** de qualquer reequilíbrio
+- **Fase C** — `UI.janela`/`UI.barra`, janela da Gestão flutuante
+  (título=X, X fecha, estado `aberta`), barra de abas centrada no
+  rodapé (`Gestao.barra`/`abasGeom`), card→top bar, Opções dentro,
+  toast topo-centro, `linhaStatus` com fundo; ~36 cliques de aba
+  remapeados; flakes de fixture corrigidos (cota/rollback, clareira
+  do cofre)
+- **Rodada 2 (mantenedor)** — herói no centro da tela, HP sobre a
+  cabeça (estilo inimigo), top bar completa sem dica persistente,
+  Onda no canto sup. esq., `ONDA_SEG` 30→15→**20s** (15 medido e
+  recusado); A/B final de 4 vias — **aceito sem reequilíbrio**
 - **`ritmo.js` vira instrumento** (fase 1) — seed mulberry32 (4º arg,
   padrão 1) = run determinístico com **eventos ATIVOS**, sondas por
   frame (espera%, inimigos, hpMin, uptime), métricas de combate

@@ -12,6 +12,31 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Mundo full screen + UI flutuante (spec `mundo-fullscreen`)** —
+  referência: UI do **Leveling Idle 2D**. O mundo cobre a tela
+  inteira **sem zoom (k=1)** — 1 un. de mundo = 1 px, canvas `W×432`
+  (era janela 192×134 com k=2 dentro do painel) — e a câmera
+  centraliza o herói no **centro da tela**. Anel de spawn
+  110-132px → **`raioSpawn()` ≈460px** (fora da tela nova; limite de
+  fuga do Gatuno deriva do anel) e cota da onda 30s → **20s** (15s
+  medido e recusado: virou fluxo contínuo — atraso 82%). **Layout
+  novo**: top bar de largura total (`NOME — MAPA n` · Nv · XP ·
+  Pontos · **Opções dentro** + linha de XP fina na base), janela da
+  Gestão **flutuante** (título = nome da aba, botão X, α0,88 —
+  conteúdo interno e coords de clique intactos), **barra de abas
+  centrada no rodapé** (centros 240/312/384/456/528 · y=418, dx/2 em
+  tela larga; `Gestao.abasGeom()`), **HP do herói sobre a cabeça**
+  estilo inimigo (3px, só quando machucado, sem número), **Onda/cota
+  no canto superior esquerdo**, toast topo-centro e **sem dica
+  persistente**. Ritmo medido (4 seeds × 15min + 4 × 240min, A/B de
+  4 vias): o baseline reproduz os alvos documentados; anel460+cota20
+  = mapa 8 / nv 664 @240min (−36% vs baseline, atraso ~20%, espera
+  ~9%, **0 mortes**) — **decisão do mantenedor: aceitar sem
+  reequilíbrio** (`.specs/features/mundo-fullscreen/
+  relatorio-ritmo-final.md`). Receitas novas `UI.janela`/`UI.barra`;
+  `garanteCenario` sem early-return (determinismo do Perlin) e
+  `info()` auto-sincronizando a lista ativa de obstáculos. Gate:
+  `node testes/todos.js` (5 arquivos).
 - **Visual do herói via SpriteCook (spec `visual-heroi-spritecook`)** —
   **todas as4 classes** usam sprites **gerados** (43×43, 8 frames por
   animação, ciclo igual ao procedural) com a **arma da classe embutida

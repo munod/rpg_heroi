@@ -187,13 +187,14 @@ barras do navegador a viewport fica ~3:1) o layout se expande e o jogo
 escala **fracionária** e o backing store acompanha a exibição
 (**escala × DPR**, fracionário) para texto e pixel art nascerem nítidos.
 
-O layout é **ancorado**: cabeçalho/rodapé/status/toast ocupam a largura
-toda (XP centrado, "Pontos" e o trio de botões à direita), a arena fica
-à esquerda e o painel de gestão à direita. Em 16:9 a largura é 768 e
-tudo cai exatamente nas coordenadas de referência. A arena é uma **janela de 192×134 (unidades de mundo,
-ampliadas ×2 na tela) sobre um terreno procedural INFINITO por chunks
-de 384×268** — a câmera fica **sempre centralizada no herói** (sem
-bordas de mundo) — e os sprites são
+O layout é **ancorado**: a **top bar** (nome/mapa, nível, XP, pontos e
+Opções) e o rodapé ocupam a largura toda, o **mundo cobre a tela
+inteira sem zoom** (1 unidade de mundo = 1 px) e o painel de gestão
+fica à direita com a **barra de abas centrada no rodapé**. Em 16:9 a
+largura é 768 e tudo cai exatamente nas coordenadas de referência. O
+terreno é **procedural INFINITO por chunks de 384×268** — a câmera
+fica **sempre centralizada no herói** (sem bordas de mundo; os
+inimigos nascem fora da tela, a ~460px) — e os sprites são
 grades de pixels desenhadas por código e escaladas com `imageSmoothing`
 desligado.
 

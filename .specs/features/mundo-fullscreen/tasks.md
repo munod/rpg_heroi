@@ -11,8 +11,8 @@ Status: ⬜ pendente / ✅ feito · `[P]` paralelo
 | T5 | **Fase B**: anel de spawn dinâmico (`raioSpawn()`, ≈460 em 16:9) + limite de fuga do Gatuno = anel+120 + geometria do gatuno/cofre + `ritmo.js` ≥4 seeds (A/B vs `c983d2e`) + **relatório de drift ao mantenedor** | T4 | ✅ (relatório em `relatorio-ritmo-faseB.md`; **3 vias finais** em `relatorio-ritmo-final.md` p/ decisão; reequilíbrio = ⬜ do mantenedor) |
 | T6 | **Fase C**: `UI.janela`/`UI.barra` · `Gestao` flutuante (título=X, botão X, estado `aberta`) + `Gestao.barra`/`abasGeom` · barra de abas no rodapé · card flutuante no lugar da faixaTopo · Opções no canto (W−72,8) · toast topo-centro · `linhaStatus` com fundo | T5 | ✅ |
 | T7 | **Fase C**: remapear ~56+10 cliques de aba (barra centrada, dx/2 em wide) + conf X fecha/reabre | T6 | ✅ |
-| T8 | **Fase D**: QA visual (cena/ampliar/previa-assets), `CHANGELOG [Unreleased]`, `STATE`, `AGENTS` (contrato das abas, janela 192×134, anel 110-132), `README` | T7 | ⬜ |
-| T9 | Gate `todos.js` verde ao fim de CADA fase | T2-T8 | ✅ (A) ⬜ (B-D) |
+| T8 | **Fase D**: QA visual (cena/ampliar/previa-assets), `CHANGELOG [Unreleased]`, `STATE`, `AGENTS` (contrato das abas, janela 192×134, anel 110-132), `README` | T7 | ✅ |
+| T9 | Gate `todos.js` verde ao fim de CADA fase | T2-T8 | ✅ (todas as fases + rodada 2 + cota20) |
 | T10 | Push (só com aval do mantenedor) | T9 | ⬜ |
 
 ## Verificação por task
