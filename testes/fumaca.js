@@ -1208,9 +1208,11 @@ console.log('17) câmera sempre centralizada, região ativa e renascimento');
   const p = Game.personagem;
   let inf = Batalha.info();
 
-  conf(inf.janela.w === 192 && inf.janela.h === 134 &&
-       inf.mundo.w === 1152 && inf.mundo.h === 804,
-    'região ativa 3×3 chunks (1152×804) com a janela 192×134 intacta');
+  // spec mundo-fullscreen R-MF-1: janela = área livre (Game.W−360) e
+  // região ativa dinâmica 5×5 chunks (era 3×3 na janela 192×134)
+  conf(inf.janela.w === 408 && inf.janela.h === 432 &&
+       inf.mundo.w === 1920 && inf.mundo.h === 1340,
+    'região ativa 5×5 chunks (1920×1340) com a janela-livre 408×432 intacta');
 
   // --- câmera: pausa congela o mundo (mas não a câmera) e ela assenta
   // SEMPRE centralizada no herói — sem clamp, sem bordas (spec

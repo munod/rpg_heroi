@@ -1,8 +1,30 @@
 // Batalha automática (idle): o herói mira, anda e ataca sozinho.
 // O jogador não controla nada aqui — só assiste e administra o personagem.
 var Batalha = (function () {
-  var VW = 192, VH = 134;       // janela da arena no painel (não muda)
-  var MW = 384, MH = 268;       // mundo 2×; a câmera desliza sobre ele
+  // Janela visível (spec mundo-fullscreen R-MF-1): DINÂMICA — largura =
+  // Game.W (canvas inteiro, acompanha resize), altura = design 432.
+  // k=1: 1 unidade de mundo = 1 px de jogo (sem zoom, sem distorção).
+  // janelaOK() sincroniza antes de cada leitura de VW/VH.
+  var VW = 768, VH = 432;
+  var MW = 384, MH = 268;       // chunks do mundo; a câmera desliza sobre ele
+
+  function janelaOK() {
+    if (typeof Game !== 'undefined' && Game && Game.W) VW = Game.W;
+    VH = 432;
+  }
+
+  // Área livre à esquerda da janela da Gestão (408 em 16:9; a coluna
+  // 408..760 fica coberta pelo painel flutuante). A câmera centraliza o
+  // herói AQUI — a briga toda fica visível atrás/ao lado da janela.
+  function livre() { return Game.W - 360; }
+
+  // Raio do anel de spawn (R-MF-2): nasce FORA da janela visível em
+  // qualquer direção — canto mais distante do herói + folga.
+  // Em 16:9 ≈ 460px (era 110-132, que nasce dentro da tela nova).
+  function raioSpawn() {
+    janelaOK();
+    return Math.sqrt((VW / 2) * (VW / 2) + (VH / 2) * (VH / 2)) + 20;
+  }
   var cam = { x: 0, y: 0 };     // posição da janela no mundo
   var morte = { x: 0, y: 0 };   // onde o herói caiu (inimigos miram aqui)
 
@@ -16,7 +38,6 @@ var Batalha = (function () {
   var pausada = false;
   var donoId = null;         // personagem dono da batalha em memória
   var mapa = 1;              // mapa atual (ciclo de FIM_MAPA ondas)
-  var cenarioMapa = 0;       // mapa para o qual chao/obst já foram construídos
   var skillsVigentes = [];    // skills ativas do herói (recomputadas por frame)
   var skillsEstado = {};      // contadores/timers por skill (zerado em iniciar)
   var ultimaSkill = null;     // última skill de posicionamento/medo disparada
@@ -288,6 +309,7 @@ var Batalha = (function () {
   // obstáculos em qualquer sessão — determinismo preservado).
   var obstCache = {};                  // 'cx,cy' → lista do chunk
   var obstCx = null, obstCy = null;    // chunk dono da lista ativa
+  var obstNcx = 2, obstNcy = 2;        // raio em chunks da lista ativa
 
   function obstChunk(cx, cy) {
     var chave = cx + ',' + cy;
@@ -337,17 +359,28 @@ var Batalha = (function () {
     return out;
   }
 
-  // Lista ATIVA = 3×3 chunks em volta do herói (raio cobre a janela +
-  // o anel de spawn 110..132px). Reconstruída quando o herói muda de
-  // chunk ou o mapa muda — colideObst/resolve/desenho leem obst[].
+  // Lista ATIVA = raio dinâmico de chunks em volta do herói (R-MF-1):
+  // cobre a janela visível inteira (herói central na área livre) + o
+  // anel de spawn + folga de sprite — em 16:9 = 5×5 chunks (1920×1340,
+  // era 3×3). Reconstruída quando o herói muda de chunk, o RAIO muda
+  // (resize) ou o mapa muda — colideObst/resolve/desenho leem obst[].
   function atualizaObstAtivos() {
     if (!heroi) return;
+    janelaOK();
+    // metades necessárias: canto mais distante da janela visível
+    // (herói em livre/2 da tela) e do anel de spawn, + folga
+    var alvo = raioSpawn();
+    var ncx = Math.ceil((Math.max((VW + 360) / 2, alvo) + 64) / MW);
+    var ncy = Math.ceil((Math.max(VH / 2, alvo) + 64) / MH);
     var hx = Math.floor(heroi.x / MW), hy = Math.floor(heroi.y / MH);
-    if (obstCx === hx && obstCy === hy) return;
+    if (obstCx === hx && obstCy === hy && obstNcx === ncx && obstNcy === ncy) {
+      return;
+    }
     obstCx = hx; obstCy = hy;
+    obstNcx = ncx; obstNcy = ncy;
     var out = [];
-    for (var dy = -1; dy <= 1; dy++) {
-      for (var dx = -1; dx <= 1; dx++) {
+    for (var dy = -ncy; dy <= ncy; dy++) {
+      for (var dx = -ncx; dx <= ncx; dx++) {
         var l = obstChunk(hx + dx, hy + dy);
         for (var i = 0; i < l.length; i++) out.push(l[i]);
       }
@@ -355,19 +388,20 @@ var Batalha = (function () {
     obst = out;
   }
 
-  // (re)constrói cenário quando o mapa muda: limpa os caches de chunks
-  // (chão e obstáculos são gerados sob demanda — spec mapa-infinito
-  // R-INF-5/6) e reconstrói a lista ativa na hora (o teste lê
-  // info().obst sem rodar frame)
+  // (re)constrói o cenário: semente do mapa SEMPRE reaplicada + caches
+  // limpos (chão e obstáculos gerados sob demanda — spec mapa-infinito
+  // R-INF-5/6) + lista ativa reconstruída na hora (o teste lê
+  // info().obst sem rodar frame). SEM early-return: o ruído ambiente
+  // do Perlin pode ter sido trocado no meio do run (o teste de
+  // determinismo reseedeia) e um chunk gerado com a semente errada
+  // quebraria "semente = nº do mapa" (fumaca seção 20)
   function garanteCenario() {
-    if (cenarioMapa === mapa) return;
     var tem = Mapas.info(mapa);
     Perlin.definirSemente(mapa);   // terreno/obstáculos = f(mapa)
     chaoCache = {};
     obstCache = {};
     obstCx = null; obstCy = null;
     atualizaObstAtivos();
-    cenarioMapa = mapa;
   }
 
   function colideObst(x, y, raio) {
@@ -461,8 +495,11 @@ var Batalha = (function () {
   // Semente única em iniciar() — atualizar só move (simulação offline
   // não aloca).
   function semearPoeira() {
+    janelaOK();
     poeira = [];
-    for (var i = 0; i < 36; i++) {
+    // 150 motes (era 36 na janela 192×134): densidade visual coerente
+    // com a tela cheia (R-MF-1), sem virar "neve"
+    for (var i = 0; i < 150; i++) {
       poeira.push({
         x: cam.x + Math.random() * VW, y: cam.y + Math.random() * VH,
         vx: (Math.random() - 0.5) * 3, vy: -(1 + Math.random() * 2),
@@ -492,11 +529,14 @@ var Batalha = (function () {
   }
 
   // ------------------------------------------------------------- câmera
-  // Alvo: herói SEMPRE centralizado (spec mapa-infinito R-INF-1) —
-  // sem clamp de limites do mundo: não há bordas. O teleporte do
-  // renascimento continua com o trava-rápido no atualizaCamera.
+  // Alvo: herói centralizado na ÁREA LIVRE (R-MF-1 — a janela da
+  // Gestão cobre a direita; sem isso a briga acontecia atrás dela);
+  // a centralização sem clamp continua valendo (spec mapa-infinito
+  // R-INF-1 — não há bordas). O teleporte do renascimento continua
+  // com o trava-rápido no atualizaCamera.
   function alvoCamera() {
-    return { x: heroi.x - VW / 2, y: heroi.y - VH / 2 };
+    janelaOK();
+    return { x: heroi.x - livre() / 2, y: heroi.y - VH / 2 };
   }
 
   // Suaviza o deslize (lerp); teleporte grande (renascimento) trava na
@@ -514,12 +554,13 @@ var Batalha = (function () {
     cam.y += dy * k;
   }
 
-  // Aviso grande (onda/chefe/mapa) ancorado no centro da janela atual —
+  // Aviso grande (onda/chefe/mapa) ancorado na área livre da tela —
   // nums vive em coordenadas de mundo, e a câmera muda.
   function aviso(txt, cor) {
-    // em espaço de mundo: 34 un. = 25% da janela visível (≈68px na tela
-    // com k=2), a mesma altura de sempre
-    numero(cam.x + VW / 2, cam.y + 34, txt, cor, true);
+    janelaOK();
+    // k=1: 30% da altura ≈ 130 un. — abaixo do cabeçalho flutuante,
+    // centrado na área livre (fora da janela da Gestão)
+    numero(cam.x + livre() / 2, cam.y + VH * 0.3, txt, cor, true);
   }
 
   // Retoma a onda gravada no save (reabertura/progresso offline).
@@ -1748,7 +1789,8 @@ var Batalha = (function () {
   // ausência (progresso offline) em jogo.js não é tempo jogado
   function atualizar(dt, contaTempo) {
     if (!heroi) return;
-    atualizaObstAtivos();      // lista ativa = 3×3 chunks do herói
+    janelaOK();              // VW/VH = tela atual (wrap da poeira, etc)
+    atualizaObstAtivos();      // lista ativa = raio dinâmico de chunks
                                // (spec mapa-infinito R-INF-6 — antes
                                // dos resolves deste frame)
     atualizaCamera(dt);        // é apresentação: segue mesmo pausada
@@ -1998,11 +2040,12 @@ var Batalha = (function () {
     }
   }
 
-  // desenha a arena dentro do retângulo (vx, vy, vw, vh) da tela — o
-  // mundo continua em unidades de 192×134 de janela; k = vw/VW amplia
-  // tudo (física, câmera e ritmo intactos, só o desenho escala)
+  // desenha o mundo no retângulo (vx, vy, vw, vh) da tela — com k=1
+  // (R-MF-1) o canvas inteiro É a janela: 1 unidade de mundo = 1 px de
+  // jogo, sem ampliação e sem distorção (escala uniforme preservada).
   function desenhar(ctx, vx, vy, vw, vh) {
-    var k = vw / VW;
+    janelaOK();
+    var k = vw / VW;          // = 1 no layout full screen (vw = Game.W)
     ctx.save();
     ctx.beginPath();
     ctx.rect(vx, vy, vw, vh);
@@ -2016,8 +2059,8 @@ var Batalha = (function () {
     var so = Efeitos.shakeOffset();
     if (so) ctx.translate(so.x, so.y);
 
-    // terreno: chunks visíveis sob demanda (1-4 por frame — a janela
-    // 192×134 cabe em no máximo 2×2 chunks de 384×268)
+    // terreno: chunks visíveis sob demanda — a janela full screen
+    // 768×432 cabe em no máximo 3×3 chunks de 384×268 (9 desenhos)
     var cx0 = Math.floor(cam.x / MW), cy0 = Math.floor(cam.y / MH);
     var cx1 = Math.floor((cam.x + VW) / MW), cy1 = Math.floor((cam.y + VH) / MH);
     for (var icy = cy0; icy <= cy1; icy++) {
@@ -2081,40 +2124,43 @@ var Batalha = (function () {
     // flash/vinheta de evento/perigo — espaço de JANELA (spec visual-efeitos)
     Efeitos.desenharTela(ctx, vx, vy, vw, vh);
 
-    // ---- HUD do herói (espaço de tela, por cima da arena): offsets e
-    // fontes proporcionais a k — com a janela nova (k=2) vira 16px
-    UI.bar(vx + 4 * k, vy + 4 * k, 54 * k, 6 * k,
+    // ---- HUD do herói (espaço de tela, por cima do mundo; k=1): as
+    // colunas vivem na ÁREA LIVRE — HP sob o cabeçalho à esquerda,
+    // onda/cota alinhados na borda direita da área livre
+    // (Game.W−360−8) para nunca passar por baixo da janela da Gestão
+    var dirX = vx + livre() - 8;      // 400 em 16:9
+    UI.bar(vx + 8, vy + 58, 108, 12,
       heroi.hp / heroi.hpMax, '#d84a4a');
     UI.text(Math.ceil(heroi.hp) + '/' + heroi.hpMax,
-      vx + 62 * k, vy + 7 * k, {
-        color: '#ffffff', font: 'bold ' + (8 * k) + 'px monospace'
+      vx + 122, vy + 64, {
+        color: '#ffffff', font: 'bold 13px monospace'
       });
     UI.text('Onda ' + onda + ' (' + inimigos.length + ')',
-      vx + vw - 4 * k, vy + 7 * k, { align: 'right', color: '#e8c86a' });
+      dirX, vy + 46, { align: 'right', color: '#e8c86a' });
     // B1/R-TIM-4: contagem visível — na batida (campo vazio) e na
     // COTA da onda (campo cheio; vermelho ≤5s = alerta de expiração)
     if (inimigos.length === 0 && tOnda > 0 && !heroi.morto) {
       UI.text('PRÓXIMA ONDA EM ' + Math.max(1, Math.ceil(tOnda)) + 's',
-        vx + vw - 4 * k, vy + 17 * k,
+        dirX, vy + 66,
         { align: 'right', color: '#8ce08c' });
     } else if (inimigos.length > 0 && tCota > 0 && !heroi.morto) {
       UI.text('TEMPO ' + Math.max(1, Math.ceil(tCota)) + 's',
-        vx + vw - 4 * k, vy + 17 * k,
+        dirX, vy + 66,
         { align: 'right', color: tCota <= 5 ? '#ff6b6b' : '#e8c86a' });
     }
 
     if (heroi.morto) {
       ctx.fillStyle = 'rgba(5,3,10,0.5)';
-      ctx.fillRect(vx, vy + vh / 2 - 12 * k, vw, 24 * k);
+      ctx.fillRect(vx, vy + vh / 2 - 24, livre(), 48);
       UI.text('CAIU — revivendo em ' + Math.max(1, Math.ceil(heroi.revT)) + 's',
-        vx + vw / 2, vy + vh / 2, { align: 'center', color: '#ff6b6b' });
+        vx + livre() / 2, vy + vh / 2, { align: 'center', color: '#ff6b6b' });
     }
 
     if (pausada) {
       ctx.fillStyle = 'rgba(5,3,10,0.55)';
-      ctx.fillRect(vx, vy, vw, vh);
-      UI.text('PAUSADO', vx + vw / 2, vy + vh / 2, {
-        align: 'center', color: '#e8c86a', font: 'bold ' + (8 * k) + 'px monospace'
+      ctx.fillRect(vx, vy, livre(), vh);
+      UI.text('PAUSADO', vx + livre() / 2, vy + vh / 2, {
+        align: 'center', color: '#e8c86a', font: 'bold 16px monospace'
       });
     }
   }
@@ -2128,6 +2174,12 @@ var Batalha = (function () {
   }
 
   function info() {
+    janelaOK();
+    // lista sempre no estado atual: o raio dinâmico (resize) e o chunk
+    // do herói podem ter mudado sem frame — o teste lê info().obst sem
+    // rodar frame e precisa do resultado fiel (garanteCenario só
+    // rebuilda quando o MAPA muda)
+    atualizaObstAtivos();
     var p = Game.personagem;
     var boss = false;
     for (var i = 0; i < inimigos.length; i++) {
@@ -2150,10 +2202,13 @@ var Batalha = (function () {
       espera: Math.max(0, tOnda),
       // cota da onda (spec onda-timer R-TIM-4): −1 = sem cota (chefe)
       cota: tCota,
-      janela: { w: VW, h: VH },
-      // região ativa = 3×3 chunks de 384×268 ao redor do herói
-      // (spec mapa-infinito R-INF-5/10 — o mundo não tem bordas)
-      mundo: { w: MW * 3, h: MH * 3 },
+      // janela da CÂMERA = área livre à esquerda da Gestão (408×432
+      // em 16:9 — o herói centraliza aqui, R-MF-1)
+      janela: { w: livre(), h: VH },
+      // região ativa = raio dinâmico de chunks ao redor do herói
+      // (5×5 = 1920×1340 em 16:9; spec mapa-infinito R-INF-5/10 —
+      // o mundo não tem bordas)
+      mundo: { w: MW * (2 * obstNcx + 1), h: MH * (2 * obstNcy + 1) },
       cam: { x: Math.round(cam.x), y: Math.round(cam.y) },
       // sonda dos inimigos (spec monstros-novos — seção 41 mede
       // skill de espécie: hp do regenerador, chave do atirador, etc)

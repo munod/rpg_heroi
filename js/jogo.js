@@ -1,4 +1,5 @@
-// Tela de jogo (modo idle): arena automática à esquerda, gestão (atributos,
+// Tela de jogo (modo idle): mundo full screen ao fundo (k=1, spec
+// mundo-fullscreen — sem zoom, HUD sobre o mundo), gestão (atributos,
 // aparência, classe) à direita, progressão no cabeçalho e botões embaixo.
 // A criação/seleção de personagem vive em outra tela (Selecao): daqui só
 // se troca de herói saindo explicitamente para a tela de seleção.
@@ -274,6 +275,11 @@ var Jogo = (function () {
 
     UI.fundo(ctx);
 
+    // ---------------- mundo full screen (fundo da cena — R-MF-1):
+    // k=1, 1 un. de mundo = 1 px, sem zoom e sem distorção; o mundo
+    // ocupa o canvas inteiro e os demais elementos flutuam por cima
+    Batalha.desenhar(ctx, 0, 0, W, 432);
+
     // ---------------- cabeçalho: nível, XP (centrado) e pontos (direita)
     UI.faixaTopo(ctx, 30);
     UI.text('HERÓI IDLE', 6, 16, { color: '#e8c86a', font: 'bold 16px monospace' });
@@ -296,11 +302,14 @@ var Jogo = (function () {
       opAbriuAgora = true;
     }
 
-    // ---------------- arena automática (esquerda)
+    // ---------------- título do herói/mapa (canto sup. esquerdo, sob o
+    // cabeçalho — era a faixa de título do painel da arena, que saiu;
+    // sombra p/ legibilidade sobre o terreno)
     var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';
-    UI.panel(8, 36, 392, 300, p.nome + cursor + ' — MAPA ' +
-      Batalha.info().mapa);
-    Batalha.desenhar(ctx, 12, 64, 384, 268);
+    UI.text(p.nome + cursor + ' — MAPA ' + Batalha.info().mapa,
+      8, 46, {
+        color: '#e8c86a', font: 'bold 16px monospace', sombra: true
+      });
 
     // ---------------- gestão (direita)
     Gestao.desenhar(ctx, p);

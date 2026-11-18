@@ -512,7 +512,9 @@ var Efeitos = (function () {
     var cfg = est === 'crit'
       ? { t: 1.15, sobe: 34, font: 'bold 11px monospace' }
       : est === 'big'
-        ? { t: 1.4, sobe: 16, font: 'bold 10px monospace' }
+        // 'big' = aviso/banner (âncora de TELA, não de sprite): com k=1
+        // (R-MF-1) dobra 10→20px e sobe 16→32 — mesma presença de antes
+        ? { t: 1.4, sobe: 32, font: 'bold 20px monospace' }
         : { t: 0.9, sobe: 24, font: 'bold 8px monospace' };
     nums.push({
       x: x, y: y, txt: String(txt), cor: cor, est: est,
