@@ -27,6 +27,12 @@ const modoArg = process.argv[3];   // 'mundo' | 'mapa' (A/B da escala)
 const kArg = process.argv[4];      // monstros extras por mundo
 const sementeArg = parseInt(process.argv[5] === undefined ? '1' : process.argv[5], 10);
 const semente = Number.isFinite(sementeArg) && sementeArg >= 0 ? sementeArg : 1;
+// RITMO_SKILL=1 (spec economia-de-pontos R-EDP-4): o investidor
+// RESPEITA o soft cap do atributo de dano (para no limiar) e desbota
+// o excedente em NÍVEIS DE SKILL — o jogador que gerencia os dois
+// poços. Sem o env: mono-FOR puro = referência medida de sempre (e o
+// pior caso do soft cap: se ele passa, builds gerenciadas passam).
+const ritmoSkill = process.env.RITMO_SKILL === '1';
 const FPS_MS = 16.7;               // o harness avança 16,7ms por frame
 const RAIZ = path.join(__dirname, '..');
 
@@ -66,7 +72,35 @@ if (temEscala) {
 
 let total = 0;
 function gastar() {
-  while (p.pontos > 0) { p.atributos.for++; p.pontos--; }
+  if (ritmoSkill) {
+    // R-EDP-4: gerente dos dois poços — para o atributo de dano no
+    // limiar do soft cap e joga o resto em nível de skill (a mais
+    // barata não-máxima; custo crescente faz o investimento se
+    // espalhar sozinho entre as skills)
+    const Skills = h.sandbox.Skills;
+    const cl = Personagem.CLASSES[p.classe] || Personagem.CLASSES.guerreiro;
+    const alvoLim = 8 + Personagem.ATRIB_LIM;   // raw até o limiar
+    while (p.pontos > 0 && p.atributos[cl.danoMod] < alvoLim) {
+      p.atributos[cl.danoMod]++; p.pontos--;
+    }
+    let guardaS = 0;
+    while (p.pontos > 0 && guardaS++ < 5000) {
+      let melhor = null, melhorC = Infinity;
+      for (const sk of Skills.daClasse(p.classe)) {
+        if (sk.nivel > p.nivel) continue;        // desbloqueada
+        const nv = Skills.nvSkill(p, sk.id);
+        if (nv >= Skills.SKILL_NV_MAX) continue; // teto
+        const c = Skills.custoNivel(nv);
+        if (c < melhorC) { melhorC = c; melhor = sk; }
+      }
+      if (!melhor || p.pontos < melhorC) break;
+      const antesP = p.pontos;
+      Skills.sobe(p, melhor.id, 1);
+      if (p.pontos === antesP) break;            // trava anti-livro
+    }
+  } else {
+    while (p.pontos > 0) { p.atributos.for++; p.pontos--; }
+  }
   // gestão de ouro (Leva 1): o baseline medido é o do jogador que GASTA —
   // sem gestão, a penalidade de morte (−5 ondas) cria uma esteira na
   // fronteira (morre/re-limpa sem progredir). Mesma cadência dos pontos.
