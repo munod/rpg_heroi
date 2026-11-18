@@ -77,3 +77,53 @@ Variância: NOVO bem estável (mapa 9 em 4/4; nv 792-798).
 
 Qualquer escolha: novo A/B (≥4 seeds) + `node testes/todos.js` +
 docs (AGENTS/CHANGELOG) antes de fechar a leva.
+
+---
+
+# Rodada 4 — cota 20s (2026-11-18, commit `0469f3a`)
+
+Mantenedor recusou 15s e pediu medição com **20s**. Mesmo método
+(4 seeds × 15min + 4 seeds × 240min), worktree `ritmo-d`, artefatos
+`d15_s*`/`d240_s*`.
+
+## 4 vias — 240 min (média de 4 seeds)
+
+| Métrica | A anel110+30 | B anel460+30 | **D anel460+20** | C anel460+15 |
+|---|---|---|---|---|
+| **mapa** | **12,5** | 7,3 | **8,0** | 9,0 |
+| **nv** | **1.099** | 612 | **664** | 795 |
+| kpm | 26,3 | 14,8 | 15,9 | 19,1 |
+| clear médio / p95 | 9,9 / 14,6s | 19,1 / 25,3s | **21,7 / 41,4s** | 84,7 / 260s |
+| espera% | 17,6% | 9,8% | **8,9%** | 2,5% |
+| **atrasoPct** | 0,0% | 0,2% | **19,8%** (15-23/seed) | 81,8% |
+| ouro | 3,71M | 0,60M | 0,77M | 1,20M |
+| mortes | 0 | 0 | 0 | 0 |
+
+## 15 min (média)
+
+| | A | B | **D** | C |
+|---|---|---|---|---|
+| nv10 | 3,0min | 6,1 | **5,8** | 4,6 |
+| keystone | 8,4min | ~15 | ~15 | 11,4 |
+| @15min nv/onda | 64/80 | 30/44 | **31/45** | 42/56 |
+| atraso% | 0 | 1,2 | **34,2** | 71,6 |
+
+## Leitura (D vs as demais)
+
+- **Reforços ocasionais, não constantes**: atraso ~20% das ondas
+  (15-23% por seed) — ~1 a cada 5 ondas aperta; a batida continua
+  acontecendo (espera 8,9% ≈ B) e o campo **esvazia de verdade**
+  (clear p95 41s, sem rios intermináveis como o p95 260s do C).
+- **Progressão levemente melhor que B** (+9%: mapa 7,3→8,0; nv
+  612→664 — XP dos reforços pontuais), **ainda −36% vs A**
+  (mapa 12,5; nv 1.099). O drift continua sendo do **ANEL**, não da
+  cota: early game praticamente idêntico a B (nv10 5,8 vs 6,1).
+- Estável entre seeds (mapa 8 em 4/4; atraso 15-23%).
+- Estimativa de campanha: A = 44h (documentado) → **D ≈ 70-75h**,
+  C ≈ 60-65h, B ≈ 80h.
+
+## Estado atual do código
+
+**anel ≈460 + cota 20s** (commit `0469f3a`, gate `todos.js` verde).
+Opções seguem abertas (relatório anterior): aceitar · compensar renda
+(×~1,55 em D) · reduzir anel (~380-400px) · misturar.
