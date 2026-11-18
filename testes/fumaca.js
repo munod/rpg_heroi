@@ -6002,7 +6002,68 @@ console.log('54) robustez: save corrompido, tetos do infinito e pisos');
     'info().heroi.hpMax exposto (sonda do fuzz)');
 }
 
-console.log('');
+console.log('55) economia de pontos: respec pago, soft cap e nível de skill (spec economia-de-pontos)');
+{
+  const p = Game.personagem;
+  const Batalha = sandbox.Batalha;
+  // batalha pausada: kills não mudam ouro/XP no meio das asserções
+  if (!Batalha.info().pausada) Batalha.alternarPausa();
+  clique(240, 418);                 // aba Atributos (abre/troca a janela)
+  frame(2);
+  conf(sandbox.Gestao.abasGeom().aba === 'atributos',
+    'seção 55 começa na aba Atributos');
+
+  // --- D1) respec (−) devolve o ponto COBRANDO 1% do ouro atual
+  p.pontos = 0;
+  p.ouro = 1000;
+  p.atributos.for = 50;
+  clique(694, 96);                  // − da linha FOR (684..708 × 84..108)
+  frame(2);
+  conf(p.atributos.for === 49 && p.pontos === 1,
+    'respec devolve o ponto (for 50→49, pts 0→1)');
+  conf(p.ouro === 990,
+    'respec cobra 1% do ouro atual (1000 → ' + p.ouro + ')');
+
+  // --- D2) piso do custo (1% de 100 = 1 < piso 5)
+  p.ouro = 100;
+  clique(694, 96);
+  frame(2);
+  conf(p.ouro === 95,
+    'piso do respec (100 → 95, não 99)');
+
+  // --- D3) sem saldo → o ponto NÃO devolve (nada muda)
+  p.ouro = 0;
+  const forD3 = p.atributos.for, ptsD3 = p.pontos;
+  clique(694, 96);
+  frame(2);
+  conf(p.atributos.for === forD3 && p.pontos === ptsD3 && p.ouro === 0,
+    'sem ouro: respec não devolve o ponto (for/pts/ouro intactos)');
+
+  // --- D4) stats.ouroGasto conta o que o respec gastou
+  p.ouro = 1000;
+  const gD4 = p.stats.ouroGasto || 0;
+  clique(694, 96);
+  frame(2);
+  conf((p.stats.ouroGasto || 0) === gD4 + 10,
+    'stats.ouroGasto incrementa no respec (+10)');
+
+  // --- D5) MAX no −: esvai até a guarda de saldo, ouro NUNCA negativo
+  p.ouro = 100;
+  p.atributos.for = 50;
+  p.pontos = 0;
+  clique(708, 234); frame(2);       // toggle ×1 → ×5
+  clique(708, 234); frame(2);       // ×5 → ×50
+  clique(708, 234); frame(2);       // ×50 → MAX
+  clique(694, 96);                  // MAX no − (custo fixo = piso 5)
+  frame(3);
+  conf(p.ouro >= 0 && p.atributos.for >= 1,
+    'MAX − nunca deixa ouro negativo nem atributo < 1 (ouro ' +
+    p.ouro + ', for ' + p.atributos.for + ')');
+  conf(p.ouro === 0 || p.atributos.for === 1,
+    'MAX − para por saldo esgotado ou piso do atributo (ouro ' +
+    p.ouro + ' / for ' + p.atributos.for + ')');
+  clique(708, 234); frame(2);       // ciclo fecha: MAX → ×1
+}
 if (falhas) {
   console.log(falhas + ' FALHA(S)');
   process.exit(1);

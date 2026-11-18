@@ -59,12 +59,23 @@ var Gestao = (function () {
     });
   }
 
+  // Custo de devolver UM ponto (spec economia-de-pontos R-EDP-1):
+  // % do ouro atual com piso — fixo por chamada de `aplicar` (sem
+  // drift no laço MAX) e nunca maior que o saldo (guarda em aplicar).
+  function custoRespec(p) {
+    return Math.max(Personagem.RESPEC_PISO,
+      Math.ceil((p.ouro || 0) * Personagem.RESPEC_PCT));
+  }
+
   // Move `passo` pontos no sentido dir, com as guardas em cada unidade
   // (não gasta mais do que tem, não leva atributo abaixo de 1). Em MAX
   // o laço é infinito e param as GUARDAS: gasta tudo (+) ou esvai até
-  // o piso 1 (−), devolvendo todos os pontos.
+  // o piso 1 (−), devolvendo todos os pontos. O respec (−) PAGA ouro
+  // (R-EDP-1): custo fixo por chamada, sem saldo → ponto intacto e o
+  // ouro nunca fica negativo.
   function aplicar(p, at, dir) {
     var n = passo === 'max' ? Infinity : passo;
+    var custo = dir < 0 ? custoRespec(p) : 0;
     for (var i = 0; i < n; i++) {
       if (dir > 0) {
         if (p.pontos <= 0) return;
@@ -72,8 +83,13 @@ var Gestao = (function () {
         p.pontos -= 1;
       } else {
         if (p.atributos[at] <= 1) return;
+        if ((p.ouro || 0) < custo) return;    // sem saldo → ponto intacto
         p.atributos[at] -= 1;
         p.pontos += 1;
+        p.ouro -= custo;
+        if (p.stats) {
+          p.stats.ouroGasto = (p.stats.ouroGasto || 0) + custo;
+        }
       }
     }
   }
@@ -112,7 +128,9 @@ var Gestao = (function () {
     };
     var out = [
       [(textos[linha.at] || linha.nome), '#e8c86a'],
-      ['Valor atual: ' + v, '#f2eef8']
+      ['Valor atual: ' + v, '#f2eef8'],
+      // respec pago (R-EDP-1): o custo muda com o saldo — linha viva
+      ['Respec (−): ' + custoRespec(p) + ' de ouro por ponto', '#9a90b8']
     ];
     if (linha.at === 'int') {
       // espelho de IA.agudeza: (int − 4) ÷ 16 em 0..1
@@ -248,6 +266,16 @@ var Gestao = (function () {
       // segurar o − abria o tooltip (bug reportado)
       UI.dica({ x: 416, y: linha.y - 12, w: 264, h: 24 },
         dicasAtributo(linha, p));
+      // dica PRÓPRIA do − (retângulo exato do botão): mostra o custo
+      // do respec no lugar exato onde ele é pago (R-EDP-1)
+      UI.dica({ x: 684, y: linha.y - 12, w: 24, h: 24 }, [
+        ['Devolver ponto (respec)', '#e8c86a'],
+        ['Custo: ' + custoRespec(p) + ' de ouro por ponto', '#f2eef8'],
+        [(p.ouro || 0) >= custoRespec(p)
+          ? 'Saldo: ' + (p.ouro || 0)
+          : 'Sem ouro suficiente — ponto intacto',
+          (p.ouro || 0) >= custoRespec(p) ? '#9a90b8' : '#ff6b6b']
+      ]);
     });
 
     // toggle de quantos pontos cada clique/segurar gasta: ×1 → ×5 →

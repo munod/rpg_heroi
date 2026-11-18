@@ -216,6 +216,14 @@ var Personagem = (function () {
   var KEY_NIVEL = 30;
   var KEY_CUSTO = 200;
   var KEY_RESPEC = 10;
+  // ---- respec de atributo pago (spec economia-de-pontos R-EDP-1) -----
+  // Devolver um ponto custa % do ouro ATUAL (com piso): escala sozinha
+  // — simbólico no early (piso 5), com peso no late inflado (1% de
+  // 1e10 = 1e10/ponto). Sem compromisso não há peso na distribuição.
+  // O custo é fixo por chamada de Gestao.aplicar (sem drift no laço) e
+  // a guarda de saldo nunca deixa o ouro negativo.
+  var RESPEC_PCT = 0.01;   // 1% do ouro atual por ponto devolvido
+  var RESPEC_PISO = 5;     // piso em ouro por ponto (early curto)
   var KEYSTONES = [
     { id: 'furia', classe: 'guerreiro', nome: 'Fúria Incontida',
       efeito: '+35%D/-20%HP', dano: 1.35, hpMax: 0.8 },
@@ -781,6 +789,8 @@ var Personagem = (function () {
     KEY_NIVEL: KEY_NIVEL,
     KEY_CUSTO: KEY_CUSTO,
     KEY_RESPEC: KEY_RESPEC,
+    RESPEC_PCT: RESPEC_PCT,
+    RESPEC_PISO: RESPEC_PISO,
     NIVEL_MAX: NIVEL_MAX,
     VEL_MAX: VEL_MAX,
     OURO_CAR_K: OURO_CAR_K,
