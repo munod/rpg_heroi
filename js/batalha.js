@@ -2136,23 +2136,24 @@ var Batalha = (function () {
     // onda/cota alinhados na borda direita da área livre
     // (Game.W−360−8) para nunca passar por baixo da janela da Gestão
     var dirX = vx + livre() - 8;      // 400 em 16:9
-    UI.bar(vx + 8, vy + 58, 108, 12,
+    // HP sob o CARD do herói (card flutuante vive em y 4..78 — R-MF-3)
+    UI.bar(vx + 8, vy + 86, 108, 12,
       heroi.hp / heroi.hpMax, '#d84a4a');
     UI.text(Math.ceil(heroi.hp) + '/' + heroi.hpMax,
-      vx + 122, vy + 64, {
+      vx + 122, vy + 92, {
         color: '#ffffff', font: 'bold 13px monospace'
       });
     UI.text('Onda ' + onda + ' (' + inimigos.length + ')',
-      dirX, vy + 46, { align: 'right', color: '#e8c86a' });
+      dirX, vy + 92, { align: 'right', color: '#e8c86a' });
     // B1/R-TIM-4: contagem visível — na batida (campo vazio) e na
     // COTA da onda (campo cheio; vermelho ≤5s = alerta de expiração)
     if (inimigos.length === 0 && tOnda > 0 && !heroi.morto) {
       UI.text('PRÓXIMA ONDA EM ' + Math.max(1, Math.ceil(tOnda)) + 's',
-        dirX, vy + 66,
+        dirX, vy + 110,
         { align: 'right', color: '#8ce08c' });
     } else if (inimigos.length > 0 && tCota > 0 && !heroi.morto) {
       UI.text('TEMPO ' + Math.max(1, Math.ceil(tCota)) + 's',
-        dirX, vy + 66,
+        dirX, vy + 110,
         { align: 'right', color: tCota <= 5 ? '#ff6b6b' : '#e8c86a' });
     }
 

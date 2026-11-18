@@ -216,6 +216,38 @@ var UI = (function () {
     }
   }
 
+  // Janela flutuante (spec mundo-fullscreen R-MF-3): sombra + cantos +
+  // corpo TRANSLÚCIDO (o mundo continua visível atrás, α 0,88) + barra
+  // de título opcional. Padrão da casa: o teste vê quadrado/chapado
+  // (caixa = preenchimento direto), o navegador vê arredondado
+  // (caminho → roundRect). Só primitivas que o rasterizador entende.
+  function janela(x, y, w, h, titulo) {
+    sombra(x, y, w, h, 10);
+    caixa(x, y, w, h, 8, PALETA.borda);
+    caixa(x + 1, y + 1, w - 2, h - 2, 7, 'rgba(24, 20, 42, 0.88)');
+    if (titulo) {
+      caixa(x + 1, y + 1, w - 2, 30, [7, 7, 0, 0],
+        'rgba(47, 39, 82, 0.96)');
+      ctx.fillStyle = 'rgba(232, 200, 106, 0.35)';
+      ctx.fillRect(x + 1, y + 31, w - 2, 1);
+      text(titulo, x + 10, y + 16,
+        { color: PALETA.ouroClaro, font: 'bold 16px monospace', sombra: true });
+    } else {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.fillRect(x + 2, y + 2, w - 4, 1);
+    }
+  }
+
+  // Barra de menu flutuante (mesma família da janela, sem título):
+  // contêiner dos botões de aba no rodapé (R-MF-3)
+  function barra(x, y, w, h) {
+    sombra(x, y, w, h, 8);
+    caixa(x, y, w, h, 8, PALETA.borda);
+    caixa(x + 1, y + 1, w - 2, h - 2, 7, 'rgba(24, 20, 42, 0.88)');
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    ctx.fillRect(x + 2, y + 2, w - 4, 1);
+  }
+
   function button(x, y, w, h, label, o) {
     o = o || {};
     var m = Input.mouse;
@@ -313,6 +345,9 @@ var UI = (function () {
   function linhaStatus(s, p) {
     var W = Game.W;
     var CHAR = 9.6;         // 16px monospace ≈ 0,6em
+    // faixa translúcida atrás dos segmentos (o rodapé agora flutua
+    // sobre o mundo — spec mundo-fullscreen R-MF-3)
+    caixa(6, 346, W - 12, 22, 6, 'rgba(16, 12, 24, 0.62)');
     ctx.fillStyle = 'rgba(90, 79, 120, 0.45)';
     ctx.fillRect(8, 344, W - 16, 1);
     var det = p ? Personagem.statusDetalhado(p) : null;
@@ -388,6 +423,8 @@ var UI = (function () {
     desenhaTooltip: desenhaTooltip,
     text: text,
     panel: panel,
+    janela: janela,
+    barra: barra,
     button: button,
     bar: bar,
     swatch: swatch,

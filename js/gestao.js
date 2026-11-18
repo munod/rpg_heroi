@@ -3,6 +3,9 @@
 // as duas telas terem exatamente o mesmo comportamento.
 var Gestao = (function () {
   var aba = 'atributos';   // atributos | aparencia | classe | itens
+  var aberta = true;       // janela flutuante visível (R-MF-3: padrão
+                           // ABERTA — os testes clicam conteúdo direto;
+                           // o X fecha e a barra de abas reabre)
   var paginaBolsa = 0;     // página da lista da bolsa (5 por página)
   var passo = 1;           // quantos pontos por ação (toggle ×1/×5)
   var repT = 0;            // tempo segurando um botão +/−
@@ -150,6 +153,9 @@ var Gestao = (function () {
     } else {
       autoT = 0;
     }
+    // janela fechada: nenhum clique/rolagem de conteúdo (o X fecha e a
+    // barra reabre); auto-aprimoramento e o relógio da prévia seguem
+    if (!aberta) { repT = 0; repI = 0; return; }
     // aba Stats: rolagem do conteúdo (wheel + arrasto do thumb)
     if (aba === 'stats') { atualizaStatsRolagem(); return; }
     if (aba !== 'atributos') { repT = 0; repI = 0; return; }
@@ -184,25 +190,41 @@ var Gestao = (function () {
     if (m.clicked && dentro(m, RECT_TOGGLE)) passo = passo === 1 ? 5 : 1;
   }
 
-  function desenhaAbas() {
-    // 5 abas encurtadas: o painel tem 352px — 66px de largura com passo 70
-    var lista = [
-      ['atributos', 'Atrib'],
-      ['aparencia', 'Apar'],
-      ['classe', 'Classe'],
-      ['itens', 'Itens'],
-      ['stats', 'Stats']
-    ];
-    lista.forEach(function (a, i) {
-      var x = 412 + i * 70;
-      if (UI.button(x, 40, 66, 28, a[1], {
+  // Tabela das 5 abas: id · rótulo CURTO da barra · nome cheio do
+  // título da janela (fonte única — barra, título e abasGeom leem aqui)
+  var ABAS = [
+    ['atributos', 'Atrib', 'Atributos'],
+    ['aparencia', 'Apar', 'Aparência'],
+    ['classe', 'Classe', 'Classe'],
+    ['itens', 'Itens', 'Itens'],
+    ['stats', 'Stats', 'Stats']
+  ];
+  function nomeAba() {
+    for (var i = 0; i < ABAS.length; i++) {
+      if (ABAS[i][0] === aba) return ABAS[i][2];
+    }
+    return ABAS[0][2];
+  }
+
+  // Barra de menu inferior (spec mundo-fullscreen R-MF-3): 5 botões
+  // CENTRADOS no rodapé (estilo skill bar da referência) — clicar
+  // abre/troca a janela da Gestão. Passo 72: centros
+  // 240/312/384/456/528 em W=768, y=418; em tela larga o grupo
+  // desloca dx/2 (centro da tela). Geometria exposta em abasGeom().
+  function barra() {
+    var dx = Math.round((Game.W - 768) / 2);
+    UI.barra(200 + dx, 404, 368, 28);
+    for (var i = 0; i < ABAS.length; i++) {
+      var a = ABAS[i];
+      if (UI.button(206 + dx + i * 72, 406, 68, 24, a[1], {
         ativo: aba === a[0],
         color: aba === a[0] ? '#e8c86a' : '#9a90b8',
-        font: 'bold 16px monospace'
+        font: 'bold 15px monospace'
       })) {
         aba = a[0];
+        aberta = true;   // a barra é o caminho de volta com a janela fechada
       }
-    });
+    }
   }
 
   function desenhaAtributos(ctx, p) {
@@ -835,9 +857,12 @@ var Gestao = (function () {
     return { valX: ST_VAL_X, trilho: ST_TRILHO };
   }
 
-  // Desenha o painel direito completo (painel + abas + conteúdo).
+  // Desenha a janela flutuante da Gestão (título = nome da aba + X p/
+  // fechar; corpo translúcido sobre o mundo — spec mundo-fullscreen
+  // R-MF-3). Fechada: não desenha nada (a barra inferior continua).
   // o.criacao ajusta as dicas de texto para a tela de seleção.
   function desenhar(ctx, p, o) {
+    if (!aberta) return;
     // âncora direita em tela larga: o grupo inteiro desloca por dx
     // (desenho via translate; hit-test via UI.deslocar e o m - dx do
     // update). Em 16:9, dx = 0 e nada muda.
@@ -845,8 +870,13 @@ var Gestao = (function () {
     ctx.save();
     ctx.translate(dx, 0);
     UI.deslocar(dx);
-    UI.panel(408, 36, 352, 300);
-    desenhaAbas();
+    UI.janela(408, 36, 352, 300, nomeAba());
+    // X da barra de título (22×20 — alvo de toque ≥20): fecha; a barra
+    // inferior reabre (mesmo na cena de seleção)
+    if (UI.button(732, 42, 22, 20, 'X',
+      { font: 'bold 13px monospace' })) {
+      aberta = false;
+    }
     if (aba === 'atributos') desenhaAtributos(ctx, p);
     else if (aba === 'aparencia') desenhaAparencia(ctx, p, o);
     else if (aba === 'itens') desenhaItens(ctx, p);
@@ -856,8 +886,28 @@ var Gestao = (function () {
     ctx.restore();
   }
 
+  // Geometria p/ teste (spec mundo-fullscreen R-MF-3): barra centrada
+  // (centros em tela), janela ancorada à direita e o X — a fonte da
+  // verdade p/ cliques de aba em qualquer largura de janela.
+  function abasGeom() {
+    var dx = Math.round((Game.W - 768) / 2);
+    var dw = Game.W - 768;
+    return {
+      aberta: aberta,
+      aba: aba,
+      y: 418,
+      centros: [240, 312, 384, 456, 528].map(function (cx) {
+        return cx + dx;
+      }),
+      janela: { x: 408 + dw, y: 36, w: 352, h: 300 },
+      fechar: { x: 732 + dw, y: 42, w: 22, h: 20 }
+    };
+  }
+
   return {
     desenhar: desenhar,
+    barra: barra,
+    abasGeom: abasGeom,
     update: update,
     quebra: quebra,
     statsGeom: statsGeom,

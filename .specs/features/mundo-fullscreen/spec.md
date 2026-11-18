@@ -99,14 +99,20 @@ lindão!"*
 - `Gestao.barra(ctx)` — nova barra de abas **centrada no rodapé**
   (5 botões; centros 240/312/384/456/528 · y=418 em W=768) +
   `Gestao.abasGeom()` (precedente: `statsGeom`) p/ testes.
-  Clicar abre/troca a janela; a mesma aba fecha.
+  Clicar abre/troca a janela (**sem toggle na aba ativa** — cliques
+  repetidos dos testes não podem fechar a janela por acidente); o
+  `[X]` da barra de título fecha.
 - **Título do cabeçalho vira card flutuante no canto** (decisão do
   mantenedor): `HERÓI IDLE` sai da faixa; o card concentra
   `NOME — MAPA n · Nv · XP · Pontos`; **Opções vai para o canto
   superior direito** (`W-72, 8`).
 - **Toast/aviso sai de y=405** (colide com a barra nova) →
   **topo-centro** (y=4..30), desenhado por cima (comportamento
-  atual preservado).
+  atual preservado). Assinatura `Gravacao.desenharAviso(ctx, dica,
+  y, minX)`: no jogo `minX=408` desloca o pill **à direita do card**
+  (senão a dica persistente cobriria o título para sempre — texto
+  ≤33ch p/ caber antes do Opções) e na seleção `y=340` usa a faixa
+  livre acima do rodapé (o topo tem o campo de nome).
 - `linhaStatus` ganha fundo translúcido (texto sobre o mundo).
 
 ### R-MF-4 — Testes e verificação (em todas as fases)

@@ -58,20 +58,29 @@ var Gravacao = (function () {
     }
   }
 
-  // Mensagem (ou dica padrão) na base da tela.
-  function desenharAviso(ctx, dica) {
+  // Mensagem (ou dica padrão) — posição configurável por cena
+  // (spec mundo-fullscreen R-MF-3: a base da tela virou a barra de
+  // abas). y padrão 4 = topo-centro; minX desloca o pill p/ direita
+  // (fora do card do herói) quando ele couber — senão mantém centrado.
+  function desenharAviso(ctx, dica, y, minX) {
     var txt = toast ? toast.txt : dica;
     if (!txt) return;
+    if (y === undefined) y = 4;
     // mini-painel atrás do aviso: 16px monospace ≈ 9.6px por caractere
     var cx = Math.round(Game.W / 2);   // centrado na largura dinâmica
     var larg = Math.min(Game.W - 8, Math.ceil(txt.length * 9.6) + 28);
     var x = Math.round(cx - larg / 2);
+    // desloca p/ a direita de minX só se couber antes do canto
+    // (W−80 = folga do botão Opções no topo-direito)
+    if (minX !== undefined && x < minX && minX + larg <= Game.W - 80) {
+      x = minX;
+    }
     ctx.fillStyle = 'rgba(16, 12, 24, 0.94)';
-    ctx.fillRect(x, 405, larg, 26);
+    ctx.fillRect(x, y, larg, 26);
     ctx.strokeStyle = toast ? '#4c8a5a' : '#5a4f78';
     ctx.lineWidth = 1;
-    ctx.strokeRect(x + 0.5, 405.5, larg - 1, 25);
-    UI.text(txt, cx, 418, {
+    ctx.strokeRect(x + 0.5, y + 0.5, larg - 1, 25);
+    UI.text(txt, Math.round(x + larg / 2), y + 13, {
       align: 'center', color: toast ? '#8ce08c' : '#9a90b8'
     });
   }

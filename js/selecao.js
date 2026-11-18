@@ -152,13 +152,18 @@ var Selecao = (function () {
     UI.panel(8, 36, 392, 300, 'HERÓIS');
     desenhaLista(ctx);
 
-    // ---------------- gestão do herói em foco (direita)
+    // ---------------- gestão do herói em foco (direita) — a barra
+    // vem antes p/ a aba trocar no MESMO frame (contrato dos testes)
+    Gestao.barra();
     Gestao.desenhar(ctx, p, { criacao: true });
 
     desenhaRodape(ctx, p);
 
+    // dica da cena: faixa LIVRE acima do rodapé (y 340..366 — o
+    // topo-centro pertence ao card/toasts da jogatina e o faixaTopo
+    // tem o campo de nome à direita)
     Gravacao.desenharAviso(ctx,
-      'Ajuste o herói e clique em JOGAR — Enter também entra');
+      'Clique em JOGAR ou pressione Enter', 340);
     UI.desenhaTooltip();   // por cima de tudo, sem hit-test
   }
 

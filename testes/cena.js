@@ -302,10 +302,10 @@ salvar('tela-selecao.png');
 
 // prévia do herói na CRIAÇÃO (spec preview-heroi): aba Apar na tela de
 // seleção — e volta pra Atributos p/ não alterar o resto do roteiro
-clique(515, 50);
+clique(312, 418);
 frame(3);
 salvar('tela-selecao-apar.png');
-clique(445, 50);
+clique(240, 418);
 frame(2);
 
 // JOGAR entra na arena
@@ -335,7 +335,7 @@ salvar('tela-cofre.png');
 sandbox.Eventos.cofreColetado();
 
 // gestao: aba aparência (âncora direita em tela larga)
-clique(515 + dxL, 50);   // aba Aparência
+clique(312 + dxL / 2, 418);   // aba Aparência
 frame(4);
 salvar('tela-aparencia.png');
 
@@ -355,19 +355,19 @@ salvar('tela-aparencia.png');
   const semArmadura = pj.bolsa.filter(it => it.slot === 'armadura');
   if (!eq0.arma && semArma.length) It.equipar(pj, semArma[0]);
   if (!eq0.armadura && semArmadura.length) It.equipar(pj, semArmadura[0]);
-  clique(655 + dxL, 50);      // aba Itens
+  clique(456 + dxL / 2, 418);      // aba Itens
   frame(4);
   salvar('tela-itens.png');
   pj.equip.arma = eq0.arma;
   pj.equip.armadura = eq0.armadura;
   pj.bolsa = bolsa0;
   pj.ouro = ouro0;
-  clique(445 + dxL, 50);      // volta p/ Atributos
+  clique(240 + dxL / 2, 418);      // volta p/ Atributos
   frame(2);
 }
 
 // gestão: aba classe (âncora direita em tela larga)
-clique(585 + dxL, 50);   // aba Classe
+clique(384 + dxL / 2, 418);   // aba Classe
 frame(4);
 salvar('tela-classe.png');
 
@@ -421,7 +421,7 @@ for (let i = 0; i < 1800 && !ferido; i++) {
 capturaSkill('clerigo', 'tela-skill-cura.png');    // motes + anel de cura
 
 // aba Stats: estatísticas do jogador (5ª aba da grade)
-clique(412 + 4 * 70 + 33 + dxL, 54);
+clique(528 + dxL / 2, 418);
 frame(4);
 salvar('tela-stats.png');
 
@@ -462,7 +462,7 @@ sandbox.Game.personagem.classe = 'guerreiro';
 sandbox.Game.personagem.nivel = 400;
 sandbox.Game.personagem.loadout = null;
 sandbox.Game.personagem.ramos = { 'golpe-bravo': 'largada' };
-clique(585 + dxL, 50);                  // aba Classe
+clique(384 + dxL / 2, 418);                  // aba Classe
 frame(4);
 salvar('tela-arvore.png');
 sandbox.Game.personagem.ramos = null;

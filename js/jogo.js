@@ -259,8 +259,10 @@ var Jogo = (function () {
     // baixo desenham sem responder enquanto o overlay está no ar
     UI.bloqueia(vit || corte || opAberta);
     desenhaFundo(ctx);
+    // dica persistente: pill topo-centro DESLOCADO p/ direita do card
+    // (minX 408 — senão cobriria o título do herói para sempre)
     Gravacao.desenharAviso(ctx,
-      'Combate 100% automático — gerencie seus atributos');
+      'Combate 100% automático', 4, 408);
     UI.bloqueia(false);
     // prioridade: vitória > cutscene > opções (no 100→101 a cutscene já
     // é cortada em passaMapa; a ordem do desenho deixa a regra explícita)
@@ -280,38 +282,36 @@ var Jogo = (function () {
     // ocupa o canvas inteiro e os demais elementos flutuam por cima
     Batalha.desenhar(ctx, 0, 0, W, 432);
 
-    // ---------------- cabeçalho: nível, XP (centrado) e pontos (direita)
-    UI.faixaTopo(ctx, 30);
-    UI.text('HERÓI IDLE', 6, 16, { color: '#e8c86a', font: 'bold 16px monospace' });
-    UI.text('Nv ' + p.nivel, 152, 16, { color: '#f2eef8' });
-    var cx = Math.round(W / 2);
+    // ---------------- card flutuante do herói (canto sup. esquerdo —
+    // substitui a faixaTopo do cabeçalho; spec mundo-fullscreen
+    // R-MF-3): nome + mapa na barra de título; nível, XP e pontos no
+    // corpo, flutuando sobre o mundo
+    var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';
+    UI.janela(8, 4, 392, 74, p.nome + cursor + ' — MAPA ' +
+      Batalha.info().mapa);
     var noTeto = p.nivel >= Personagem.NIVEL_MAX;   // barra cheia + MÁXIMO
-    UI.bar(cx - 168, 10, 168, 14, noTeto ? 1 : p.xp / p.xpProx, '#e8c86a');
+    UI.text('Nv ' + p.nivel, 20, 50, { color: '#f2eef8' });
+    UI.bar(96, 43, 140, 14, noTeto ? 1 : p.xp / p.xpProx, '#e8c86a');
     // XP exponencial: sem abreviação a barra viraria 46 dígitos
     UI.text(noTeto ? 'MÁXIMO'
-      : (UI.abrev(p.xp) + '/' + UI.abrev(p.xpProx)), cx + 12, 16,
+      : (UI.abrev(p.xp) + '/' + UI.abrev(p.xpProx)), 244, 50,
       { color: noTeto ? '#e8c86a' : '#c9c2dd' });
-    UI.text('Pontos: ' + p.pontos, W - 12, 16, {
-      align: 'right',
+    UI.text('Pontos: ' + p.pontos, 20, 66, {
       color: p.pontos > 0 ? '#8ce08c' : '#9a90b8'
     });
-    // opções (spec opcoes R-OP-3): toggle de conforto visual — vive no
-    // cabeçalho p/ não mexer na grade de abas da Gestão (contrato)
-    if (UI.button(W - 216, 3, 64, 24, 'Opções', { font: '13px monospace' })) {
+
+    // opções (spec opcoes R-OP-3): toggle de conforto visual — canto
+    // superior direito (o card flutuante ocupa o esquerdo)
+    if (UI.button(W - 72, 8, 64, 24, 'Opções', { font: '13px monospace' })) {
       opAberta = true;
       opAbriuAgora = true;
     }
 
-    // ---------------- título do herói/mapa (canto sup. esquerdo, sob o
-    // cabeçalho — era a faixa de título do painel da arena, que saiu;
-    // sombra p/ legibilidade sobre o terreno)
-    var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';
-    UI.text(p.nome + cursor + ' — MAPA ' + Batalha.info().mapa,
-      8, 46, {
-        color: '#e8c86a', font: 'bold 16px monospace', sombra: true
-      });
-
-    // ---------------- gestão (direita)
+    // ---------------- barra de abas (rodapé) + gestão (direita): a
+    // barra vem ANTES da janela de propósito — o clique troca a aba e
+    // o conteúdo do MESMO frame já sai na aba nova (mesmo contrato do
+    // frame único das abas antigas dentro do painel)
+    Gestao.barra();
     Gestao.desenhar(ctx, p);
 
     desenhaRodape(ctx, p);

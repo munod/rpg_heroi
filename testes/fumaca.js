@@ -309,7 +309,7 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   // look fixo por classe (spec visual-heroi-spritecook): as linhas de
   // Pele/Cabelo/Estilo/Roupa saíram da Apar — a coordenada antiga do
   // botão > não muda mais nada
-  clique(515, 50);            // aba Aparência (centro da 2ª aba)
+  clique(312, 418);            // aba Aparência (centro da 2ª aba)
   frame(2);
   const look0 = JSON.stringify(p1.look);
   clique(706, 96);           // coordenada antiga do botão > da linha Pele
@@ -333,14 +333,27 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   }
   conf(animou, 'prévia anima (idle/ataque alternam em ~4s)');
 
-  clique(585, 50);           // aba Classe (centro da 3ª aba)
+  clique(384, 418);           // aba Classe (centro da 3ª aba)
   frame(2);
   clique(673, 102);          // Mago na grade 2×2 (590..756, 88..116)
   frame(2);
   conf(p1.classe === 'mago', 'troca de classe funciona');
 
-  clique(445, 50);           // volta pra aba Atributos (1ª aba)
+  clique(240, 418);           // volta pra aba Atributos (1ª aba)
   frame(2);
+
+  // --- janela flutuante: X fecha, a barra reabre (R-MF-3) — a janela
+  //     fecha sem derrubar a simulação e a barra é o caminho de volta
+  const gf = sandbox.Gestao.abasGeom();
+  clique(gf.fechar.x + 11, gf.fechar.y + 10);   // centro do X
+  frame(2);
+  conf(!sandbox.Gestao.abasGeom().aberta,
+    'X da barra de título fecha a janela da Gestão');
+  clique(240, 418);                            // aba na barra inferior reabre
+  frame(2);
+  const gr = sandbox.Gestao.abasGeom();
+  conf(gr.aberta && gr.aba === 'atributos',
+    'clique na barra de abas reabre a janela');
 
   // --- pausar / continuar
   clique(644, 388);
@@ -961,7 +974,7 @@ console.log('15) drops, equipamento e aba de itens');
                   bonus: { hp: 50 } };
   Itens.guardar(p, manto);
   jogoCanvas._textos = [];
-  clique(655, 50);                 // aba Itens (4ª coluna)
+  clique(456, 418);                 // aba Itens (4ª coluna)
   frame(2);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('Bolsa') >= 0),
     'aba Itens abre com a bolsa');
@@ -993,7 +1006,7 @@ console.log('15) drops, equipamento e aba de itens');
   frame(2);
   conf(p.equip.armadura === cara && p.bolsa.indexOf(manto) >= 0,
     'clique na linha equipa mesmo com delta negativo (contrato preservado)');
-  clique(445, 50);                 // volta pra Atributos (estado neutro)
+  clique(240, 418);                 // volta pra Atributos (estado neutro)
   frame(2);
 
   if (!estavaPausada) Batalha.alternarPausa();
@@ -1408,7 +1421,7 @@ console.log('19) viewport larga: layout ancorado e preenchido (celular)');
 
   // aba desenhada sob translate: UI.deslocar compensa no hit-test
   jogoCanvas._textos = [];
-  clique(412 + 3 * 70 + 33 + dx, 54);   // aba Itens (local 622..688)
+  clique(456 + dx / 2, 418);   // aba Itens (barra centrada, tela larga)
   frame(2);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('Bolsa') >= 0),
     'aba Itens clicável com o painel ancorado à direita');
@@ -1551,7 +1564,7 @@ console.log('21) estatísticas do jogador (Personagem.stats)');
 
   // --- aba Stats na UI (clique na 5ª aba da grade nova)
   jogoCanvas._textos = [];
-  clique(412 + 4 * 70 + 33, 54);          // centro da aba Stats (725, 54)
+  clique(528, 418);          // centro da aba Stats (barra do rodapé)
   frame(1);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('Abates') >= 0),
     'aba Stats mostra as estatísticas');
@@ -1849,7 +1862,7 @@ console.log('24) economia: ouro, venda/sucata, aprimoramento e re-roll');
                  up: 0, afixos: [], bonus: { hp: 10 } };
   Itens.guardar(p, itUI);
   jogoCanvas._textos = [];
-  clique(655, 50);                 // aba Itens (se não estiver nela)
+  clique(456, 418);                 // aba Itens (se não estiver nela)
   frame(2);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('Ouro 500') >= 0),
     'linha da aba Itens mostra o ouro');
@@ -2000,7 +2013,7 @@ console.log('25) gestão de skills: loadout e keystone');
   p.nivel = 45;
   p.classe = 'guerreiro';
   p.loadout = null;
-  clique(585, 50);                 // aba Classe
+  clique(384, 418);                 // aba Classe
   frame(2);
   clique(673, 102);                // Mago na grade 2×2
   frame(2);
@@ -2135,7 +2148,7 @@ console.log('26) itens lendários: raridade 4, efeitos e equilíbrio');
   p.bolsa = [];
   Itens.guardar(p, Itens.geraItem(4, 1, 'mago'));
   jogoCanvas._textos = [];
-  clique(655, 50);                 // aba Itens (a 25 saiu na Classe)
+  clique(456, 418);                 // aba Itens (a 25 saiu na Classe)
   frame(2);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('★') >= 0),
     'linha da bolsa mostra o ★ do efeito lendário');
@@ -2227,7 +2240,7 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
 
   // --- a aba Atributos anuncia o novo patamar de pontos
   jogoCanvas._textos = [];
-  clique(445, 50);                 // aba Atributos (1ª coluna)
+  clique(240, 418);                 // aba Atributos (1ª coluna)
   frame(2);
   // literal de propósito: mudança de cadência é decisão de design e
   // deve estourar este teste (spec balance-dopamina R-BAL-2: 1 por nível)
@@ -2262,10 +2275,17 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
   };
 
   // --- 1) morte: −10% do ouro e −5 ondas (sem contar onda limpa)
-  Batalha.restaurarOnda(12);
-  esperaOnda(12);
-  conf(Batalha.info().onda === 12 && Batalha.info().inimigos > 0,
-    'onda 12 assentada antes do teste');
+  // pressão ALTA (onda 90 — teto útil: acima de FIM_MAPA=100 o
+  // restaurarOnda cai em passaMapa em vez de spawnar; lição da seção
+  // 21): com a cota de 30s (R-TIM — cota expirada CONTA stats.ondas,
+  // spec onda-timer) uma morte lenta (anel full screen: contato ~9s +
+  // regen do herói de vidro) deixava a cota disparar ANTES da morte e
+  // o conf de "rollback não conta" virava flake — medido: 2 falhas
+  // em 4 runs com onda 12)
+  Batalha.restaurarOnda(90);
+  esperaOnda(90);
+  conf(Batalha.info().onda === 90 && Batalha.info().inimigos > 0,
+    'onda 90 assentada antes do teste');
   p.ouro = 100;
   const s1 = p.stats.ondas, m1 = p.stats.mortes;
   // relativas ao frame da morte: pathing livre pode dar kills (ouro) e
@@ -2480,12 +2500,12 @@ console.log('28) evento: o Açougueiro (raro, uma chance, recompensa gorda)');
   // dispensaria antes de usar a UI (spec cutscenes: auto-dismiss 3,5s)
   sandbox.Cutscene.fecha();
   jogoCanvas._textos = [];
-  clique(412 + 4 * 70 + 33, 54);            // aba Stats
+  clique(528, 418);            // aba Stats
   frame(1);
   conf((jogoCanvas._textos || [])
        .some(t => t.indexOf('Açougueiros abatidos') >= 0),
     'aba Stats lista os Açougueiros');
-  clique(445, 50);                           // volta pra Atributos
+  clique(240, 418);                           // volta pra Atributos
   frame(1);
 
   // --- morte com o predador em campo: penalidade EM DOBRO + despawn
@@ -2750,7 +2770,7 @@ console.log('30) tooltips: breakdown do rodapé, atributos e item');
   conf(acheiDps, 'segmento DPS expõe a conta (dano × (1+crít) ÷ recarga)');
 
   // --- tooltip do item completo (cabeçalho da aba Itens)
-  clique(655, 50);                 // aba Itens
+  clique(456, 418);                 // aba Itens
   frame(2);
   jogoCanvas._textos = [];
   clique(500, 96);                 // texto da arma (não é botão)
@@ -2759,7 +2779,7 @@ console.log('30) tooltips: breakdown do rodapé, atributos e item');
     'cabeçalho da arma abre o tooltip completo (venda/sucata/custos)');
 
   // --- tooltip do atributo (linha da INT)
-  clique(445, 50);                 // aba Atributos
+  clique(240, 418);                 // aba Atributos
   frame(2);
   jogoCanvas._textos = [];
   clique(500, 180);                // linha INT (i=3 → y=180)
@@ -2847,7 +2867,7 @@ console.log('31) estatísticas de economia e tooltips de skill/keystone/stats');
 
   // --- tooltip da linha de estatística (aba Stats)
   jogoCanvas._textos = [];
-  clique(412 + 4 * 70 + 33, 54);          // aba Stats
+  clique(528, 418);          // aba Stats
   frame(1);
   clique(500, 120);                        // linha 'Abates' (y=120)
   for (let i = 0; i < 25; i++) frame(1);
@@ -2857,7 +2877,7 @@ console.log('31) estatísticas de economia e tooltips de skill/keystone/stats');
 
   // --- tooltip da skill (linha da aba Classe)
   p.nivel = 45;
-  clique(585, 50);                         // aba Classe
+  clique(384, 418);                         // aba Classe
   frame(2);
   jogoCanvas._textos = [];
   clique(500, 190);                        // 1ª skill da classe (y=178..202)
@@ -3055,7 +3075,7 @@ console.log('32) correções de IA/combate: colado, encurralado, DES e tooltip')
 
   // --- 4) tooltip da linha de atributo NÃO abre pelo botão −
   jogoCanvas._textos = [];
-  clique(445, 50);                 // aba Atributos
+  clique(240, 418);                 // aba Atributos
   frame(2);
   // y da 1ª linha = 96; botão − em 684..708 × 84..108
   mm(694, 96);                     // mouse SOBRE o −
@@ -3114,7 +3134,7 @@ console.log('33) gestão: fixar slot, auto-aprimorar e stats base→total');
 
   // --- botão [x] da UI alterna a trava
   p.trava = { arma: false, armadura: false };
-  clique(655, 50);                 // aba Itens
+  clique(456, 418);                 // aba Itens
   frame(2);
   clique(656, 96);                 // centro do [x] da arma (640..672 × 84..108)
   frame(1);
@@ -3208,7 +3228,7 @@ console.log('33) gestão: fixar slot, auto-aprimorar e stats base→total');
   conf(det.dano.base + det.dano.partes[2].v === st.dano,
     'sem keystone: base + itens = status (' + det.dano.base + '+' +
     det.dano.partes[2].v + ' = ' + st.dano + ')');
-  clique(725, 50);                 // aba Stats
+  clique(528, 418);                 // aba Stats
   frame(2);
   const ts = jogoCanvas._textos || [];
   conf(ts.some(t => t.indexOf('Base → total') >= 0),
@@ -3692,7 +3712,7 @@ console.log('36) ajustes: piso da recarga, cooldown na Stats (rolagem) e teto');
   p.classe = 'mago';
   p.atributos = { for: 8, des: 8, con: 8, int: 8, car: 8 };
   p.pontos = 0;
-  clique(725, 50);                     // aba Stats
+  clique(528, 418);                     // aba Stats
   frame(1);
   jogoCanvas._textos = [];
   frame(1);
@@ -4409,8 +4429,11 @@ console.log('41) monstros novos: espécies com skill, ranged, comum intacto e ev
   // monstros-novos: o bloco do cofre chamava anima(walk) sem fluxo
   // próprio e o ramo "sem alvo" sobrescrevia com idle — o herói
   // DESLIZAVA em idle em linha reta; sonda info().heroi.anim p/ pegar)
+  // — 54px p/ cima: o caminho inteiro cai na CLAREIRA central do chunk
+  // (y ∈ 70..198 sem centros de obstáculo) — com −100 o herói saía da
+  // clareira e podia grudar numa árvore (flake medido: nunca coletava)
   Eventos.colocaCofre(Math.round(Batalha.info().heroi.x),
-    Math.round(Batalha.info().heroi.y) - 100);
+    Math.round(Batalha.info().heroi.y) - 54);
   let subiu = 0, movendo = 0, andandoIdle = 0;
   let pyV = Batalha.info().heroi.y;
   for (let i = 0; i < 400; i++) {
@@ -4468,7 +4491,7 @@ console.log('42) cutscenes: fronteiras de mundo, eventos e mapa do universo');
   Game.setScene('jogo');
   frame(2);
   if (Batalha.info().pausada) Batalha.alternarPausa();
-  clique(445, 50);                        // aba Atributos (p/ o botão +)
+  clique(240, 418);                        // aba Atributos (p/ o botão +)
   frame(1);
 
   // --- 1) gatilho: só fronteiras de mundo da campanha
@@ -4811,7 +4834,7 @@ console.log('43) árvore de skills: 8 por classe, ramos e loadout escalonado');
   p.nivel = 400;
   p.loadout = null;
   p.ramos = null;
-  clique(585, 50);                        // aba Classe
+  clique(384, 418);                        // aba Classe
   frame(2);
   jogoCanvas._textos = [];
   frame(1);
@@ -5162,6 +5185,15 @@ console.log('46) UI visual: paleta, primitivas com fallback e cromo');
   conf((jogoCanvas._textos || []).some(t => t.indexOf('TÍTULO TESTE') >= 0),
     'painel novo mantém o título em fillText');
 
+  // --- 4b) receitas da spec mundo-fullscreen (janela flutuante + barra)
+  jogoCanvas._textos = [];
+  UI.janela(40, 60, 200, 100, 'JANELA TESTE');
+  conf((jogoCanvas._textos || []).some(t => t.indexOf('JANELA TESTE') >= 0),
+    'janela flutuante mantém o título em fillText');
+  const a1b = jogoCanvas._chamadas;
+  UI.barra(60, 404, 368, 28);
+  conf(jogoCanvas._chamadas > a1b, 'barra de abas desenha sem exceção');
+
   // --- 5) fundo e faixaTopo das cenas
   const a2 = jogoCanvas._chamadas;
   UI.fundo(ctx);
@@ -5226,7 +5258,7 @@ console.log('47) Ajustes playtest: resolução nítida, Vel inteira e scrollbar'
     (txtRodape.find(t => /^Vel /.test(t)) || '?') + ')');
 
   // aba Stats (clique no seletor) — bloco Base → total
-  clique(412 + 4 * 70 + 33, 54);
+  clique(528, 418);
   jogoCanvas._textos = [];
   frame(2);
   const txts = jogoCanvas._textos || [];
@@ -5662,7 +5694,7 @@ console.log('52) opções: defaults, gates, persistência e overlay');
   // --- e) overlay: abre pelo botão do cabeçalho, toggle, Fechar
   conf(Game.cena === 'jogo', 'cena jogo ativa p/ o overlay');
   jogoCanvas._textos = [];
-  clique(584, 15);                             // botão Opções (552..616, 3..27)
+  clique(728, 20);                             // botão Opções (W−72..W−8, 8..32)
   frame(2);
   conf((jogoCanvas._textos || []).some(t => t.indexOf('OPÇÕES') >= 0),
     'clique em Opções abre o overlay (título OPÇÕES no frame)');
