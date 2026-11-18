@@ -2278,7 +2278,7 @@ console.log('27) sistema punitivo: morte −5 ondas, −10% ouro e 2ª vida');
   // --- 1) morte: −10% do ouro e −5 ondas (sem contar onda limpa)
   // pressão ALTA (onda 90 — teto útil: acima de FIM_MAPA=100 o
   // restaurarOnda cai em passaMapa em vez de spawnar; lição da seção
-  // 21): com a cota de 15s (R-TIM — cota expirada CONTA stats.ondas,
+  // 21): com a cota de 20s (R-TIM — cota expirada CONTA stats.ondas,
   // spec onda-timer) uma morte lenta (anel full screen: contato ~9s +
   // regen do herói de vidro) deixava a cota disparar ANTES da morte e
   // o conf de "rollback não conta" virava flake — medido: 2 falhas
@@ -4208,9 +4208,9 @@ console.log('40) gestao-atributos: teto da regen, afixo vel e clamp final');
   // --- 5) batida e cota (spec onda-timer R-TIM-1/2): constantes
   // exportadas (o comportamento cobre a seção 51). Literal p/ decisão
   // de design: mudar a cota tem que estourar aqui (mundo-fullscreen:
-  // mantenedor reduziu 30 → 15s em 2026-11-18)
-  conf(Batalha.BEAT === 2 && Batalha.ONDA_SEG === 15,
-    'batida 2s e cota 15s exportadas (BEAT=' + Batalha.BEAT +
+  // mantenedor reduziu 30 → 20s em 2026-11-18, após medir 15s)
+  conf(Batalha.BEAT === 2 && Batalha.ONDA_SEG === 20,
+    'batida 2s e cota 20s exportadas (BEAT=' + Batalha.BEAT +
     ' · ONDA_SEG=' + Batalha.ONDA_SEG + ')');
 
   // --- 6) o keystone de crítico ROMPE o teto 45 (o +18C/−10%D não pode
@@ -5557,8 +5557,8 @@ console.log('51) respiro: contagem no HUD, beat do clear e fim do delay duplo');
   esp = 0;
   while (Batalha.info().onda < 3 && esp < 600) { frame(1); esp++; }
   conf(Batalha.info().onda === 3, 'onda 3 em campo antes do teste');
-  conf(Batalha.info().cota > 14 && Batalha.info().cota <= 15,
-    'onda normal nasce com cota de 15s (cota=' +
+  conf(Batalha.info().cota > 19 && Batalha.info().cota <= 20,
+    'onda normal nasce com cota de 20s (cota=' +
     Batalha.info().cota.toFixed(1) + ')');
   // HUD da cota durante a onda (spec onda-timer R-TIM-4)
   jogoCanvas._textos = [];

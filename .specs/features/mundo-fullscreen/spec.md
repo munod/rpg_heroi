@@ -61,10 +61,11 @@ Após o primeiro relatório de drift (anel ≈460 ×30s):
 9. **Onda no canto superior esquerdo** (`x=8, y=46/64`): `Onda X (N)`
    + `PRÓXIMA ONDA/TEMPO` — o único canto livre (sup. direito tem a
    janela, base tem rodapé + barra de abas).
-10. **Cota da onda 30s → 15s** (`ONDA_SEG`, spec onda-timer R-TIM-2)
-    — pressão mais curta; literal do teste estoura junto (decisão de
-    design, mesmo padrão de `A cada nível: +1 ponto`). Refeito o A/B
-    de ritmo com o valor novo.
+10. **Cota da onda 30s → 20s** (`ONDA_SEG`, spec onda-timer R-TIM-2)
+    — pressão mais curta por onda; **15s medido e recusado** (virou
+    fluxo contínuo: atraso 82%, espera 2,5%); literal do teste
+    estoura junto (decisão de design, mesmo padrão de `A cada nível:
+    +1 ponto`). Refeito o A/B de ritmo com o valor novo.
 
 ## Requisitos
 

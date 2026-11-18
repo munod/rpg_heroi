@@ -187,12 +187,12 @@ var Batalha = (function () {
   // banner/cutscene — decisão do mantenedor) e a regen durante as
   // brechas do combate + a batida (R-TIM-5).
   // Ajuste do mantenedor (2026-11-18, spec mundo-fullscreen): cota
-  // 30 → **15s** — pressão mais curta por onda (com o anel full
-  // screen o p95 do clear é ~25s, então reforços passam a ser
-  // frequentes: drama p/ build fraca, monstros extras p/ renda);
-  // medido no relatório de drift pós-ajuste.
+  // 30 → **20s** — pressão mais curta por onda (o anel full screen dá
+  // clear típico ~19s; a medição com 15s virou fluxo contínuo —
+  // atraso 82%, espera 2,5% — e o mantenedor pediu medição com 20s;
+  // ver relatorio-ritmo-final.md).
   var BEAT = 2.0;           // batida após o clear (era a espera)
-  var ONDA_SEG = 15;        // cota da onda em segundos (R-TIM-2; era 30)
+  var ONDA_SEG = 20;        // cota da onda em segundos (R-TIM-2; era 30)
   var ESPERA_TRANSICAO = 8.0; // pós-chefe: a troca de mapa é o seu
                               // próprio tempo (banner/cutscene —
                               // mantida por decisão do mantenedor)
