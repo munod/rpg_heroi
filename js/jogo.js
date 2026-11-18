@@ -259,10 +259,10 @@ var Jogo = (function () {
     // baixo desenham sem responder enquanto o overlay está no ar
     UI.bloqueia(vit || corte || opAberta);
     desenhaFundo(ctx);
-    // dica persistente: pill topo-centro DESLOCADO p/ direita do card
-    // (minX 408 — senão cobriria o título do herói para sempre)
-    Gravacao.desenharAviso(ctx,
-      'Combate 100% automático', 4, 408);
+    // SEM dica persistente (decisão do mantenedor,2026-11-18): só os
+    // toasts transitórios de Gravacao.msg aparecem (topo-centro,
+    // deslocados p/ direita do título da faixa)
+    Gravacao.desenharAviso(ctx, null, 4, 408);
     UI.bloqueia(false);
     // prioridade: vitória > cutscene > opções (no 100→101 a cutscene já
     // é cortada em passaMapa; a ordem do desenho deixa a regra explícita)
@@ -282,26 +282,30 @@ var Jogo = (function () {
     // ocupa o canvas inteiro e os demais elementos flutuam por cima
     Batalha.desenhar(ctx, 0, 0, W, 432);
 
-    // ---------------- card flutuante do herói (canto sup. esquerdo —
-    // substitui a faixaTopo do cabeçalho; spec mundo-fullscreen
-    // R-MF-3): nome + mapa na barra de título; nível, XP e pontos no
-    // corpo, flutuando sobre o mundo
+    // ---------------- TOP BAR (decisão do mantenedor — era card
+    // flutuante; spec mundo-fullscreen R-MF-3): nome + mapa, nível,
+    // XP e pontos na faixa superior de largura total, com o botão
+    // Opções DENTRO dela; a fração de XP vira linha fina na base da
+    // faixa (h=2: sem contorno, mesma regra das barras finas)
+    UI.faixaTopo(ctx, 34);
     var cursor = Math.floor(blinkT * 2) % 2 === 0 ? '_' : ' ';
-    UI.janela(8, 4, 392, 74, p.nome + cursor + ' — MAPA ' +
-      Batalha.info().mapa);
+    UI.text(p.nome + cursor + ' — MAPA ' + Batalha.info().mapa,
+      8, 17, { color: '#e8c86a', font: 'bold 16px monospace' });
     var noTeto = p.nivel >= Personagem.NIVEL_MAX;   // barra cheia + MÁXIMO
-    UI.text('Nv ' + p.nivel, 20, 50, { color: '#f2eef8' });
-    UI.bar(96, 43, 140, 14, noTeto ? 1 : p.xp / p.xpProx, '#e8c86a');
-    // XP exponencial: sem abreviação a barra viraria 46 dígitos
+    UI.text('Nv ' + p.nivel, 286, 17, { color: '#f2eef8' });
+    // XP exponencial: sem abreviação o texto viraria 46 dígitos
     UI.text(noTeto ? 'MÁXIMO'
-      : (UI.abrev(p.xp) + '/' + UI.abrev(p.xpProx)), 244, 50,
+      : (UI.abrev(p.xp) + '/' + UI.abrev(p.xpProx)), 361, 17,
       { color: noTeto ? '#e8c86a' : '#c9c2dd' });
-    UI.text('Pontos: ' + p.pontos, 20, 66, {
+    UI.text('Pontos: ' + p.pontos, 688, 17, {
+      align: 'right',
       color: p.pontos > 0 ? '#8ce08c' : '#9a90b8'
     });
+    UI.bar(0, 32, W, 2, noTeto ? 1 : p.xp / p.xpProx, '#e8c86a');
 
-    // opções (spec opcoes R-OP-3): toggle de conforto visual — canto
-    // superior direito (o card flutuante ocupa o esquerdo)
+    // opções (spec opcoes R-OP-3): toggle de conforto visual — DENTRO
+    // da top bar, canto direito (coordenadas de sempre: clique
+    // (728,20) continua válido)
     if (UI.button(W - 72, 8, 64, 24, 'Opções', { font: '13px monospace' })) {
       opAberta = true;
       opAbriuAgora = true;

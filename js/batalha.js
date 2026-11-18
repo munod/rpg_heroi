@@ -13,11 +13,6 @@ var Batalha = (function () {
     VH = 432;
   }
 
-  // Área livre à esquerda da janela da Gestão (408 em 16:9; a coluna
-  // 408..760 fica coberta pelo painel flutuante). A câmera centraliza o
-  // herói AQUI — a briga toda fica visível atrás/ao lado da janela.
-  function livre() { return Game.W - 360; }
-
   // Raio do anel de spawn (R-MF-2): nasce FORA da janela visível em
   // qualquer direção — canto mais distante do herói + folga.
   // Em 16:9 ≈ 460px (era 110-132, que nasce dentro da tela nova).
@@ -191,8 +186,13 @@ var Batalha = (function () {
   // Mantidas: ESPERA_TRANSICAO (troco de mapa, contexto próprio com
   // banner/cutscene — decisão do mantenedor) e a regen durante as
   // brechas do combate + a batida (R-TIM-5).
+  // Ajuste do mantenedor (2026-11-18, spec mundo-fullscreen): cota
+  // 30 → **15s** — pressão mais curta por onda (com o anel full
+  // screen o p95 do clear é ~25s, então reforços passam a ser
+  // frequentes: drama p/ build fraca, monstros extras p/ renda);
+  // medido no relatório de drift pós-ajuste.
   var BEAT = 2.0;           // batida após o clear (era a espera)
-  var ONDA_SEG = 30;        // cota da onda em segundos (R-TIM-2)
+  var ONDA_SEG = 15;        // cota da onda em segundos (R-TIM-2; era 30)
   var ESPERA_TRANSICAO = 8.0; // pós-chefe: a troca de mapa é o seu
                               // próprio tempo (banner/cutscene —
                               // mantida por decisão do mantenedor)
@@ -360,7 +360,7 @@ var Batalha = (function () {
   }
 
   // Lista ATIVA = raio dinâmico de chunks em volta do herói (R-MF-1):
-  // cobre a janela visível inteira (herói central na área livre) + o
+  // cobre a janela visível inteira (herói no CENTRO da tela) + o
   // anel de spawn + folga de sprite — em 16:9 = 5×5 chunks (1920×1340,
   // era 3×3). Reconstruída quando o herói muda de chunk, o RAIO muda
   // (resize) ou o mapa muda — colideObst/resolve/desenho leem obst[].
@@ -368,9 +368,9 @@ var Batalha = (function () {
     if (!heroi) return;
     janelaOK();
     // metades necessárias: canto mais distante da janela visível
-    // (herói em livre/2 da tela) e do anel de spawn, + folga
+    // (herói central) e do anel de spawn, + folga
     var alvo = raioSpawn();
-    var ncx = Math.ceil((Math.max((VW + 360) / 2, alvo) + 64) / MW);
+    var ncx = Math.ceil((Math.max(VW / 2, alvo) + 64) / MW);
     var ncy = Math.ceil((Math.max(VH / 2, alvo) + 64) / MH);
     var hx = Math.floor(heroi.x / MW), hy = Math.floor(heroi.y / MH);
     if (obstCx === hx && obstCy === hy && obstNcx === ncx && obstNcy === ncy) {
@@ -529,14 +529,14 @@ var Batalha = (function () {
   }
 
   // ------------------------------------------------------------- câmera
-  // Alvo: herói centralizado na ÁREA LIVRE (R-MF-1 — a janela da
-  // Gestão cobre a direita; sem isso a briga acontecia atrás dela);
+  // Alvo: herói no CENTRO DA TELA (decisão do mantenedor — a janela
+  // da Gestão cobre a direita; o X fecha p/ ver a briga inteira);
   // a centralização sem clamp continua valendo (spec mapa-infinito
   // R-INF-1 — não há bordas). O teleporte do renascimento continua
   // com o trava-rápido no atualizaCamera.
   function alvoCamera() {
     janelaOK();
-    return { x: heroi.x - livre() / 2, y: heroi.y - VH / 2 };
+    return { x: heroi.x - VW / 2, y: heroi.y - VH / 2 };
   }
 
   // Suaviza o deslize (lerp); teleporte grande (renascimento) trava na
@@ -554,13 +554,12 @@ var Batalha = (function () {
     cam.y += dy * k;
   }
 
-  // Aviso grande (onda/chefe/mapa) ancorado na área livre da tela —
+  // Aviso grande (onda/chefe/mapa) ancorado no centro da tela —
   // nums vive em coordenadas de mundo, e a câmera muda.
   function aviso(txt, cor) {
     janelaOK();
-    // k=1: 30% da altura ≈ 130 un. — abaixo do cabeçalho flutuante,
-    // centrado na área livre (fora da janela da Gestão)
-    numero(cam.x + livre() / 2, cam.y + VH * 0.3, txt, cor, true);
+    // k=1: 30% da altura ≈ 130 un. — abaixo da faixa superior
+    numero(cam.x + VW / 2, cam.y + VH * 0.3, txt, cor, true);
   }
 
   // Retoma a onda gravada no save (reabertura/progresso offline).
@@ -1992,6 +1991,15 @@ var Batalha = (function () {
       Assets.desenha(ctx, x0, y0, c);
     }
     ctx.globalAlpha = 1;
+    // HP do herói SOBRE A CABEÇA — estilo inimigo (barra fina 3px,
+    // sem número; decisão do mantenedor): só aparece machucado,
+    // como a dos monstros (desenhaInimigo)
+    if (heroi.hp < heroi.hpMax) {
+      var bwH = Math.round(alt * 0.8);
+      UI.bar(Math.round(heroi.x - bwH / 2),
+        Math.round(heroi.y - alt - 6), bwH, 3,
+        heroi.hp / heroi.hpMax, '#d84a4a');
+    }
   }
 
   function spriteInimigo(en) {
@@ -2131,43 +2139,36 @@ var Batalha = (function () {
     // flash/vinheta de evento/perigo — espaço de JANELA (spec visual-efeitos)
     Efeitos.desenharTela(ctx, vx, vy, vw, vh);
 
-    // ---- HUD do herói (espaço de tela, por cima do mundo; k=1): as
-    // colunas vivem na ÁREA LIVRE — HP sob o cabeçalho à esquerda,
-    // onda/cota alinhados na borda direita da área livre
-    // (Game.W−360−8) para nunca passar por baixo da janela da Gestão
-    var dirX = vx + livre() - 8;      // 400 em 16:9
-    // HP sob o CARD do herói (card flutuante vive em y 4..78 — R-MF-3)
-    UI.bar(vx + 8, vy + 86, 108, 12,
-      heroi.hp / heroi.hpMax, '#d84a4a');
-    UI.text(Math.ceil(heroi.hp) + '/' + heroi.hpMax,
-      vx + 122, vy + 92, {
-        color: '#ffffff', font: 'bold 13px monospace'
-      });
+    // ---- HUD do herói (espaço de tela, por cima do mundo; k=1):
+    // info da Onda no CANTO SUPERIOR ESQUERDO (decisão do mantenedor —
+    // sup. direito tem a janela da Gestão, base tem rodapé + barra).
+    // O HP do herói NÃO está aqui: vira barra sobre a cabeça no
+    // espaço de mundo (desenhaHeroi, estilo inimigo, sem número)
     UI.text('Onda ' + onda + ' (' + inimigos.length + ')',
-      dirX, vy + 92, { align: 'right', color: '#e8c86a' });
+      vx + 8, vy + 46, { color: '#e8c86a' });
     // B1/R-TIM-4: contagem visível — na batida (campo vazio) e na
     // COTA da onda (campo cheio; vermelho ≤5s = alerta de expiração)
     if (inimigos.length === 0 && tOnda > 0 && !heroi.morto) {
       UI.text('PRÓXIMA ONDA EM ' + Math.max(1, Math.ceil(tOnda)) + 's',
-        dirX, vy + 110,
-        { align: 'right', color: '#8ce08c' });
+        vx + 8, vy + 64,
+        { color: '#8ce08c' });
     } else if (inimigos.length > 0 && tCota > 0 && !heroi.morto) {
       UI.text('TEMPO ' + Math.max(1, Math.ceil(tCota)) + 's',
-        dirX, vy + 110,
-        { align: 'right', color: tCota <= 5 ? '#ff6b6b' : '#e8c86a' });
+        vx + 8, vy + 64,
+        { color: tCota <= 5 ? '#ff6b6b' : '#e8c86a' });
     }
 
     if (heroi.morto) {
       ctx.fillStyle = 'rgba(5,3,10,0.5)';
-      ctx.fillRect(vx, vy + vh / 2 - 24, livre(), 48);
+      ctx.fillRect(vx, vy + vh / 2 - 24, vw, 48);
       UI.text('CAIU — revivendo em ' + Math.max(1, Math.ceil(heroi.revT)) + 's',
-        vx + livre() / 2, vy + vh / 2, { align: 'center', color: '#ff6b6b' });
+        vx + vw / 2, vy + vh / 2, { align: 'center', color: '#ff6b6b' });
     }
 
     if (pausada) {
       ctx.fillStyle = 'rgba(5,3,10,0.55)';
-      ctx.fillRect(vx, vy, livre(), vh);
-      UI.text('PAUSADO', vx + livre() / 2, vy + vh / 2, {
+      ctx.fillRect(vx, vy, vw, vh);
+      UI.text('PAUSADO', vx + vw / 2, vy + vh / 2, {
         align: 'center', color: '#e8c86a', font: 'bold 16px monospace'
       });
     }
@@ -2210,9 +2211,9 @@ var Batalha = (function () {
       espera: Math.max(0, tOnda),
       // cota da onda (spec onda-timer R-TIM-4): −1 = sem cota (chefe)
       cota: tCota,
-      // janela da CÂMERA = área livre à esquerda da Gestão (408×432
-      // em 16:9 — o herói centraliza aqui, R-MF-1)
-      janela: { w: livre(), h: VH },
+      // janela da CÂMERA = a tela inteira (herói no centro — decisão
+      // do mantenedor; spec mundo-fullscreen R-MF-1)
+      janela: { w: VW, h: VH },
       // região ativa = raio dinâmico de chunks ao redor do herói
       // (5×5 = 1920×1340 em 16:9; spec mapa-infinito R-INF-5/10 —
       // o mundo não tem bordas)

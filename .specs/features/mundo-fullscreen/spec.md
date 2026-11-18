@@ -38,6 +38,34 @@ lindão!"*
    **O anel é alvo de ritmo**: medir com `ritmo.js` (≥4 seeds) e
    reportar drift ao mantenedor ANTES de qualquer reequilíbrio
    (rebalance = decisão separada; levers documentados no AGENTS).
+
+## Rodada 2 de decisões do mantenedor (2026-11-18, pós-Fase C)
+
+Após o primeiro relatório de drift (anel ≈460 ×30s):
+
+5. **Herói no CENTRO DA TELA** (supera a centralização na área livre
+   de R-MF-1): `alvoCamera` volta a `herói − (VW/2, VH/2)` e
+   `info().janela` = `{768, 432}`. Troca aceita: brigas à direita do
+   herói acontecem atrás da janela da Gestão (α0,88; X fecha).
+6. **HP do herói SOBRE A CABEÇA, sem números** — barra no espaço de
+   mundo dentro de `desenhaHeroi`, estilo inimigo (fina 3px, largura
+   `alt×0,8`, ~6px acima do sprite, **só quando machucado**);
+   sai do HUD a barra `(8,86,108,12)` e o texto `58/58`.
+7. **`NOME — MAPA n` vira TOP BAR** de largura total (`faixaTopo(34)`)
+   com o que já tinha (Nível · XP · Pontos) **+ botão Opções dentro**
+   (mesmas coords `(W−72,8)`); a fração de XP vira linha fina de 2px
+   na base da faixa (o card flutuante de R-MF-3 sai).
+8. **Sem dica persistente**: removida a caixa `Combate 100%
+   automático` (só toasts transitórios de `Gravacao.msg` permanecem;
+   a dica da seleção `Clique em JOGAR…` continua).
+9. **Onda no canto superior esquerdo** (`x=8, y=46/64`): `Onda X (N)`
+   + `PRÓXIMA ONDA/TEMPO` — o único canto livre (sup. direito tem a
+   janela, base tem rodapé + barra de abas).
+10. **Cota da onda 30s → 15s** (`ONDA_SEG`, spec onda-timer R-TIM-2)
+    — pressão mais curta; literal do teste estoura junto (decisão de
+    design, mesmo padrão de `A cada nível: +1 ponto`). Refeito o A/B
+    de ritmo com o valor novo.
+
 ## Requisitos
 
 ### R-MF-1 — Mundo full screen sem zoom (Fase A)
@@ -58,13 +86,12 @@ lindão!"*
 - `jogo.js`: **remove o painel da arena** (`UI.panel(8,36,392,300)`);
   o mundo vira o fundo da cena; o título `NOME — MAPA n` (com cursor
   piscante) migra para o canto superior esquerdo, abaixo do cabeçalho.
-- HUD do herói dentro de `desenhar` (barra de HP, contador de onda,
-  PRÓXIMA ONDA/TEMPO) reposicionada para o novo layout: topo-esquerdo
-  abaixo do cabeçalho (y≥36) e alinhada à direita na borda esquerda
-  da janela da Gestão (`Game.W - 360 - 8`) — nunca por baixo dela.
-- Aviso grande (ONDA/CHEJE/MAPA): reposicionado para30% da altura
-  (abaixo do cabeçalho) e centrado na área livre (fora da janela da
-  Gestão).
+- HUD do herói dentro de `desenhar` (contador de onda + cota)
+  reposicionado: **canto superior esquerdo** (`x=8, y=46/64` —
+  decisão 9; era coluna direita na área livre). O HP saiu daqui
+  (decisão 6: barra sobre a cabeça no espaço de mundo).
+- Aviso grande (ONDA/CHEFE/MAPA): 30% da altura, **centrado na tela**
+  (decisão 5).
 - **Fontes em espaço de mundo**: o estilo `big` do `Efeitos.nota`
   (aviso/banner — âncora de tela, não de sprite) dobra de tamanho
   (10→20px, sobe 16→32) para manter presença; `normal`/`crit`
@@ -105,7 +132,9 @@ lindão!"*
 - **Título do cabeçalho vira card flutuante no canto** (decisão do
   mantenedor): `HERÓI IDLE` sai da faixa; o card concentra
   `NOME — MAPA n · Nv · XP · Pontos`; **Opções vai para o canto
-  superior direito** (`W-72, 8`).
+  superior direito** (`W-72, 8`). — *SUPERADO pela decisão 7
+  (2026-11-18): vira **top bar** de largura total com o Opções
+  dentro; o card flutuante sai.*
 - **Toast/aviso sai de y=405** (colide com a barra nova) →
   **topo-centro** (y=4..30), desenhado por cima (comportamento
   atual preservado). Assinatura `Gravacao.desenharAviso(ctx, dica,
