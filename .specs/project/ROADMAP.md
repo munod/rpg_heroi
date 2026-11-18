@@ -5,6 +5,21 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Entregue
 
+### Unreleased — 2026-11-18 — leva "mundos-vivos" (cenário/vidas/ícones)
+- **Fase 1** — folhagem por chunk (preset Foliage, 3 paletas
+  mapeadas aos 10 temas) + **vila por mapa** (preset Character & Props:
+  2-3 casas colidentes + fogueira no miolo, semente do mapa, contratos
+  da fumaça 20) + pipeline (`prepara-cenario.js`, manifesto
+  `{dir,qtd}` no Assets) — `1d35a9c`
+- **Fase 2** — `js/ambientais.js`: NPCs na vila (preset Tiny medieval,
+  25 tipos) + animais por chunk (preset Tiny animals, 4 espécies) com
+  fuga a 60px — zero impacto em combate (fumaça 20b) — `1353e63`
+- **Fase 3** — 32 ícones de skill 14×14 (preset Skill Icons) na aba
+  Classe via opção `icon` do `UI.button` (clique intacto, fonte 9px)
+  — `33aa3ab`
+- **Fase 4** — grade Tiny pixel monsters arquivada (adiada, R-MV-7)
+  `9dade27` + docs (AGENTS/CHANGELOG/STATE/README/spec/tasks)
+
 ### Unreleased — 2026-11-18 — leva "mundo-fullscreen" (UI Leveling Idle 2D)
 - **Fase A** — mundo k=1 full screen (`VW/VH` dinâmicos, janela =
   tela), câmera na área livre (depois corrigida p/ centro), região

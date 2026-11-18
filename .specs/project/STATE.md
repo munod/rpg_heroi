@@ -685,6 +685,31 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   `garanteCenario` perdeu o early-return (semente do Perlin podia
   divergir no meio do run) e `info()` passou a auto-sincronizar a
   lista ativa de obstáculos.
+- **Mundos vivos (Leva `mundos-vivos`, 2026-11-18)** — pedido: "Os
+  mundos estão 'vazios e sem vida', não tem casa (vilas), npc's,
+  animais… dá uma verificada nos presets que se enquadram". Avaliados
+  oficial + comunidade e escolhidos: **Foliage** (folhagem),
+  **Character & Props** (casas — nenhum dos citados tinha), **Tiny
+  medieval characters** (NPCs), **Tiny animals** (animais, mesmo
+  criador), **Skill Icons** (ícones), **Tiny pixel monsters**
+  (ADIADA — decisão 2). Decisões do mantenedor: (1) ordem mundo →
+  UI → QA/docs; (2) monstros gerados e só arquivados; (3) NPCs
+  **ambiente**, sem interação; (4) vila **rara por mapa,
+  colidente**. Entregue em 4 fases (`1d35a9c` cenário+vila ·
+  `1353e63` vidas · `33aa3ab` ícones · `9dade27` monstros adiados):
+  folhagem por tema (3 paletas × 10), vila determinística (10/10
+  mapas, ≥55px, fora da zona livre), vidas com fuga (1→48px em
+  0,75s, **0 abates**), 32 ícones 14×14 na aba Classe. Lições:
+  busca angular em **faixa estreita morre** contra obstáculo (60/60
+  rejeitadas → círculo livre); a fogueira no miolo precisou ser
+  **opcional** (no anel das casas nunca achava vaga); modelo de
+  grade desenha **na ordem dele** e nem respeita 4×2 (pega
+  remapeia peça→skill após QA) e regenerar "melhor" pode piorar
+  (ladino fusionado — mantida a original); botão de 110px não cabe
+  ícone + nome longo (fonte 10→9px: pior caso 119,5px vs 116,4px de
+  hoje); Chrome indisponível no ambiente — QA visual via PNGs +
+  PIL (o display da sessão serviu imagem errada 2×: sempre copiar
+  p/ caminho novo).
 
 ## Bloqueios
 

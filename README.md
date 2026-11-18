@@ -149,6 +149,7 @@ style.css           canvas centralizado, pixel art nítida
 js/
   input.js          teclado, mouse e toque (estado por frame)
   sprite.js         geração procedural de pixel art (herói, inimigos, cenário)
+  assets.js         manifesto + carga dos PNGs gerados (herói, cenário, seres, ícones)
   anim.js           cache de frames animados
   personagem.js     classes, atributos, status derivados, validação, níveis
   assinatura.js     HMAC-SHA256 em JS puro (assinatura dos saves)
@@ -166,6 +167,7 @@ js/
   ranking-config.js config pública do Firebase (preenchida pelo mantenedor)
   ranking.js        ranking global: score, apelido, SDK lazy-load + cena
   cutscene.js       cutscenes: mapa do universo, narração e cena "Universo"
+  ambientais.js     vidas do mundo: NPCs da vila + animais ambiente (sem combate)
   ui.js             UI visual: paleta/gradientes/cantos arredondados — botões, painéis, barras
   batalha.js        combate automático: IA do herói, ondas, XP, morte/revivescimento
   gestao.js         painel de gestão (Atrib/Apar/Classe/Itens/Stats) compartilhado
@@ -173,6 +175,8 @@ js/
   jogo.js           tela de jogo: arena + gestão + cabeçalho + botões
   loop.js           game loop (requestAnimationFrame)
   main.js           bootstrap e troca de cenas
+assets/             PNGs gerados no SpriteCook: herois/ cenario/ npcs/
+                    animais/ icones/ (no jogo) + fonte/ (folhas brutas)
 .specs/             specs: projeto, codebase e features (rastreabilidade)
 CHANGELOG.md        o que mudou, por versão (Keep a Changelog)
 AGENTS.md           convenções e armadilhas para quem mexe no código
@@ -194,9 +198,12 @@ fica à direita com a **barra de abas centrada no rodapé**. Em 16:9 a
 largura é 768 e tudo cai exatamente nas coordenadas de referência. O
 terreno é **procedural INFINITO por chunks de 384×268** — a câmera
 fica **sempre centralizada no herói** (sem bordas de mundo; os
-inimigos nascem fora da tela, a ~460px) — e os sprites são
-grades de pixels desenhadas por código e escaladas com `imageSmoothing`
-desligado.
+inimigos nascem fora da tela, a ~460px). Cada mapa tem **1 vila**
+(casas colidentes + fogueira, a 200-360px do spawn) com **NPCs
+andando** e **animais** vagueando pelo entorno (vidas ambiente — zero
+impacto em combate). Os sprites são grades de pixels desenhadas por
+código e PNGs gerados no SpriteCook (`assets/`), escalados com
+`imageSmoothing` desligado.
 
 **Celular**: toque funciona como o mouse (`touchstart` = clique, com
 `preventDefault` contra rolagem/zoom), alvos de toque de 24px nos

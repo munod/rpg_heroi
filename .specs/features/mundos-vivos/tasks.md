@@ -13,9 +13,9 @@ Status: ⬜ pendente / ✅ feito · `[P]` paralelo
 | T7 | **Fase 2**: `js/ambientais.js` (NPCs na vila + animais por chunk, pool, fuga 60px, y-sort, silenciar) + declarar no `index.html` | T6 | ✅ (pool CAP 12 · auto-sincronização no `info()` p/ ler sem frame — mesmo tratamento do `info().obst`; sem `silenciar` — vidas são mobília do mundo, não efeito transitório) |
 | T8 | **Fase 2**: assets de NPC/animal (presets Tiny medieval/Tiny animals) + fumaça (0 impacto em combate/stats, determinismo) + gate | T7 | ✅ (25 NPCs + 4 animais laterais [0,4,8,12] · seção 20b: fuga 1→48px, abates intactos, determinismo) |
 | T9 | **Fase 3**: 8 ícones/classe (preset Skill Icons) + ícone nos botões da aba Classe (clique intacto) + gate | T8 | ✅ (4 packs → 32 ícones 14×14 via `pega`+`quadro` no prepara · `UI.button` ganha opção `icon` [retângulo intacto] · fonte 10→9px p/ o nome caber — pior caso119,5px vs 116,4px de hoje) |
-| T10 | **Fase 4**: grade Tiny pixel monsters gerada e arquivada (`assets/fonte/` + ID + nota adiado) | T9 | ⬜ |
-| T11 | **Fase 4**: QA visual (previa/cena/ampliar, `JANELA=1280x400`) + docs (AGENTS/CHANGELOG/STATE/README) + spec/tasks concluídos | T10 | ⬜ |
-| T12 | Gate `todos.js` verde ao fim de CADA fase · Push (só com aval do mantenedor) | T11 | ⬜ |
+| T10 | **Fase 4**: grade Tiny pixel monsters gerada e arquivada (`assets/fonte/` + ID + nota adiado) | T9 | ✅ (`9dade27`) |
+| T11 | **Fase 4**: QA visual (previa/cena/ampliar, `JANELA=1280x400`) + docs (AGENTS/CHANGELOG/STATE/README) + spec/tasks concluídos | T10 | ✅ (telas verdes em 16:9 e 1280×400 — vila/vidas/ícones conferidos a olho) |
+| T12 | Gate `todos.js` verde ao fim de CADA fase · Push (só com aval do mantenedor) | T11 | ✅ gate (4 fases) · ⬜ push |
 
 ## Verificação por task
 

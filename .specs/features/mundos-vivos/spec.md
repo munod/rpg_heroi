@@ -1,6 +1,6 @@
 # Spec: Mundos vivos — cenário, vilas, NPCs e animais
 
-Status: **em execução** (gate = `node testes/todos.js`, 5 arquivos) ·
+Status: **concluída** (gate = `node testes/todos.js`, 5 arquivos) ·
 Data: 2026-11-18 ·
 Iniciativa: mantenedor — *"Vamos trabalhar os mundos. Os mundos estão
 'vazios e sem vida', não tem casa (vilas), npc's, animais e etc...

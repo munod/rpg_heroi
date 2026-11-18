@@ -12,6 +12,25 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Mundos vivos: cenário, vilas, NPCs e ícones (spec
+  `mundos-vivos`)** — os mundos deixaram de ser "vazios": **folhagem
+  por chunk** (3 paletas mapeadas aos 10 temas — verde/frio/quente,
+  PNGs do preset *Foliage* assados no chão de cada chunk) e **1 vila
+  por mapa** (preset *Character & Props*: 2-3 casas colidentes +
+  fogueira no miolo, a 200-360px do spawn, determinística por
+  semente) com **vidas**: `js/ambientais.js` traz **NPCs** (25 tipos
+  do preset *Tiny medieval characters*) andando na vila e **animais**
+  (veado/pássaro/coelho/sapo do preset *Tiny animals*) vagueando por
+  chunk — fogem do herói a 60px, **zero impacto em combate/stats**
+  (fumaça 20b: abates intactos, determinismo, fuga 1→48px). A aba
+  **Classe** ganhou **ícones nas 8 skills** (32 do preset *Skill
+  Icons*, normalizados em 14×14, na ordem da `Skills.LISTA`; opção
+  `icon` nova no `UI.button` — clique intacto). Pipeline novo:
+  manifesto `{dir,qtd}` no `Assets` (92 peças na mesma carga, sem
+  `fetch`), `testes/prepara-cenario.js` (corte por alfa conectado +
+  `pega`/`quadro`) e seção de cenário+ícones no `previa-assets` do
+  gate. Grade *Tiny pixel monsters* gerada e **adiada** (futura leva
+  de espécies). Gate: `node testes/todos.js` (5 arquivos).
 - **Mundo full screen + UI flutuante (spec `mundo-fullscreen`)** —
   referência: UI do **Leveling Idle 2D**. O mundo cobre a tela
   inteira **sem zoom (k=1)** — 1 un. de mundo = 1 px, canvas `W×432`

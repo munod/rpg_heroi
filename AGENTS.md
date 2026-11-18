@@ -282,6 +282,42 @@
   `240/312/384/456/528` · y=418 em W=768, desloca **dx/2** em tela
   larga — desenhada ANTES da janela p/ a aba trocar no MESMO frame
   do clique; geometria em `Gestao.abasGeom()`).
+- **Mundos vivos (spec `mundos-vivos`)** — cenário e vida SEM mexer
+  no ritmo (nada de spawn/XP/dano muda): **folhagem** por chunk (PNGs
+  de `assets/cenario/` assados no `chunkDe` — paleta por tema via o
+  campo `folhagem` de `Mapas.LISTA` [verde 1/5/6 · frio 2/8/9 ·
+  quente 3/4/7/10], sorteio com o rng do chão = **último uso do
+  rng** do bake; sem PNG = dots pintados continuam), **1 vila por
+  mapa** (`vilaDe()` em `batalha.js`: semente do mapa, centro
+  200-360px do spawn, fogueira no miolo [dd 0-35, **opcional**] +
+  2-3 casas no anel [dd 60-130], colidente `r` 18/14 com `cy`
+  deslocado; busca angular em **círculo livre** — a faixa estreita
+  morria 60/60 contra obstáculo; merge **DEPOIS** dos itens de chunk
+  em `atualizaObstAtivos` → `obst[0]` intacto; contratos da fumaça
+  20: ≥55px entre QUALQUER par + zona livre 72×64; sonda
+  `info().vila`), **vidas** em `js/ambientais.js` (declarado no
+  `index.html` antes de `batalha.js`): NPCs ancorados na frente das
+  peças da vila (vagueio + espera, validado contra `colideObst`) e
+  animais por chunk (semente mapa+chunk, ~42%/chunk, teto `CAP` 12 na
+  janela ativa) com **fuga a 60px** do herói — ZERO impacto: fora de
+  `inimigos`/`obst`/stats/XP. A batalha alimenta: `.reinicia` no
+  `garanteCenario`, `.atualiza(dt, cfg)` no topo do frame (após
+  pausa/hit-stop), y-sort `t=5` na cena e `.sincroniza` no `info()`
+  (ler sem frame — mesmo tratamento do `info().obst`). **Ícones das
+  skills** (32 em `assets/icones/`, ordem da `Skills.LISTA` via
+  `indexOf`) desenhados pela opção `icon` NOVA do `UI.button` (o
+  texto anda junto; retângulo de clique intacto; fonte das skills
+  10→9px p/ o nome caber). Pipeline: `js/assets.js` manifesto
+  `{dir, qtd}` na mesma `carga` (92 peças; fallback por construção =
+  não desenha), `testes/prepara-cenario.js` (corte por alfa
+  CONECTADO + fusão de fragmentos <12px + `pega` [remapeia
+  peça→skill: o modelo desenha na ordem dele] + `quadro` [normaliza
+  14×14]) e `previa-assets` com 4 linhas de cenário + 4 de ícones.
+  Fumaça seções 20 (tipos estendidos `casa`/`fogueira` + vila) e 20b
+  (NPCs/animais/fuga/abates intactos). Arte via presets do SpriteCook
+  (Foliage, Character&Props, Tiny medieval, Tiny animals, Skill
+  Icons) com `style_asset_ids` dos sheets do herói; IDs em
+  `spritecook-assets.json` — monstros gerados e **adiados** (R-MV-7).
 - **Mundos (spec `mundos`)**: campanha **10 mundos × 10 mapas × 100
   ondas** (`FIM_MAPA` intacto — a onda 100 é o chefe; vencido,
   `passaMapa()` faz `mapa++` e volta a onda 1). `Mapas.mundo(n)` =
