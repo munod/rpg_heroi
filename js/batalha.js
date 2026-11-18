@@ -525,6 +525,9 @@ var Batalha = (function () {
     obstCache = {};
     obstCx = null; obstCy = null;
     atualizaObstAtivos();
+    // vidas do mundo (mundos-vivos): NPCs ancorados na vila + limpa
+    // o cache de animais (tudo f(mapa), como o cenário)
+    Ambientais.reinicia(vilaDe(mapa), mapa, colideObst);
   }
 
   function colideObst(x, y, raio) {
@@ -1933,7 +1936,14 @@ var Batalha = (function () {
     IA.pintaMapa(inimigos, heroi.x, heroi.y);
     if (contaTempo) stat('tempo', dt);
 
-
+    // vidas do mundo (spec mundos-vivos R-MV-4/5): NPCs da vila +
+    // animais por chunk — camada de apresentação (zero impacto em
+    // combate); janela = a lista ativa de chunks da batalha
+    Ambientais.atualiza(dt, {
+      hx: heroi.x, hy: heroi.y,
+      cx: obstCx, cy: obstCy, nx: obstNcx, ny: obstNcy,
+      mw: MW, mh: MH, mapa: mapa, livre: colideObst
+    });
 
     // efeitos visuais (missis podem matar e reduzir a lista de inimigos
     // antes do laço de baixo — por isso rodam primeiro)
@@ -2229,6 +2239,11 @@ var Batalha = (function () {
     var cofCena = Eventos.posCofre();
     if (cofCena) cena.push({ y: cofCena.y, t: 4, c: cofCena });
     cena.push({ y: heroi.y, t: 3 });
+    // vidas do mundo (mundos-vivos): NPCs/animais entram no y-sort
+    var vidas = Ambientais.todos();
+    for (i = 0; i < vidas.length; i++) {
+      cena.push({ y: vidas[i].y, t: 5, a: vidas[i] });
+    }
     cena.sort(function (a, b) { return a.y - b.y; });
 
     for (i = 0; i < cena.length; i++) {
@@ -2236,6 +2251,7 @@ var Batalha = (function () {
       if (it.t === 1) desenhaObst(ctx, it.o);
       else if (it.t === 2) desenhaInimigo(ctx, it.e);
       else if (it.t === 4) desenhaCofre(ctx, it.c);
+      else if (it.t === 5) Ambientais.desenhar(ctx, it.a);
       else desenhaHeroi(ctx);
     }
 
@@ -2387,6 +2403,17 @@ var Batalha = (function () {
         if (!vl) return null;
         return { x: Math.round(vl.x), y: Math.round(vl.y),
                  casas: vl.casas, pecas: vl.pecas.length };
+      })(),
+      // sonda das vidas (R-MV-4/5): NPCs + animais em cena —
+      // auto-sincroniza a janela como o info().obst (sem rodar frame)
+      ambientais: (function () {
+        if (!heroi || obstCx === null) return Ambientais.info();
+        Ambientais.sincroniza({
+          hx: heroi.x, hy: heroi.y, cx: obstCx, cy: obstCy,
+          nx: obstNcx, ny: obstNcy, mw: MW, mh: MH, mapa: mapa,
+          livre: colideObst
+        });
+        return Ambientais.info();
       })(),
       heroi: { x: Math.round(heroi ? heroi.x : 0),
                y: Math.round(heroi ? heroi.y : 0),

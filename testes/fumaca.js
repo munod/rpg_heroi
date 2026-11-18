@@ -1518,13 +1518,65 @@ console.log('20) cenário procedural: Perlin Noise com semente do mapa');
   conf(folhEsperada.every((f, i) => sandbox.Mapas.info(i + 1).folhagem === f),
     'folhagem mapeada nos 10 temas (verde×3 · frio×3 · quente×4)');
 
-  // --- assets de cenário carregados na mesma carga do boot (R-MV-3)
+  // --- assets de cenário/seres carregados na mesma carga do boot (R-MV-3)
   const ai = sandbox.Assets.info();
   const chavesC = Object.keys(ai.cenario);
-  conf(chavesC.length === 5 && chavesC.every(k =>
+  conf(chavesC.length === 7 && chavesC.every(k =>
       ai.cenarioPronto[k] === ai.cenario[k]),
     'cenario: ' + chavesC.reduce((s, k) => s + ai.cenario[k], 0) +
-    ' peças prontas (folhagem 27 + vila 4)');
+    ' peças prontas (folhagem 27 + vila 4 + npcs 25 + animais 4)');
+}
+
+console.log('20b) vidas do mundo: NPCs na vila e animais (mundos-vivos)');
+{
+  const Batalha = sandbox.Batalha;
+  Batalha.restaurarMapa(1);           // sem frame: estado FRESCO
+  const inf = Batalha.info();
+  const vil = inf.vila;
+  const amb = inf.ambientais;
+
+  // --- NPCs ancorados na vila (1 por peça, teto 4)
+  conf(!!vil && amb.npcs >= 1 && amb.npcs <= Math.min(4, vil.pecas),
+    'NPCs nascem na vila (' + amb.npcs + '/' + vil.pecas + ' peças)');
+  if (amb.npcEx.length && vil) {
+    const ds = amb.npcEx.map(p => Math.round(Math.sqrt(
+      (p.x - vil.x) * (p.x - vil.x) + (p.y - vil.y) * (p.y - vil.y))));
+    // âncora = peça (até 130 do centro) + offset de frente (até ~35)
+    conf(ds.every(d => d < 175),
+      'NPCs ficam perto da vila (' + ds.join(',') + 'px do centro)');
+  }
+
+  // --- animais na janela ativa (pool com teto 12)
+  conf(amb.animais >= 1 && amb.animais <= 12,
+    'animais em cena (' + amb.animais + ' · teto 12)');
+
+  // --- determinismo: mesmo mapa = as mesmas vidas (semente = nº do mapa)
+  // — captura no estado FRESCO (sem frame desde o restaurar)
+  const vidas0 = JSON.stringify(amb);
+  Batalha.restaurarMapa(2);
+  Batalha.restaurarMapa(1);
+  conf(JSON.stringify(Batalha.info().ambientais) === vidas0,
+    'vidas determinísticas (restaurar o mapa reproduz as mesmas)');
+
+  // --- fuga (R-MV-5): herói em cima do bicho → ele corre — nunca
+  // colide, nunca luta (stats de combate intactos)
+  const heroi0 = Batalha.info().heroi;
+  const abates0 = Game.personagem.stats.abates;
+  const an = Batalha.info().ambientais.animalEx[0];
+  if (an) {
+    Batalha._posicionaHeroi(an.x, an.y);   // herói EM cima do bicho
+    frame(3);
+    const perto0 = Batalha.info().ambientais.animalPerto;
+    frame(45);                             // ~0,75s de fuga
+    const perto1 = Batalha.info().ambientais.animalPerto;
+    conf(perto0 <= 8 && perto1 > 15,
+      'bicho foge do herói (perto ' + perto0 + ' → ' + perto1 +
+      'px em 0,75s)');
+    conf(Game.personagem.stats.abates === abates0,
+      'vida ambiente não dá combate (abates ' + abates0 + ' intactos)');
+    Batalha._posicionaHeroi(heroi0.x, heroi0.y);
+    frame(2);
+  }
 }
 
 console.log('21) estatísticas do jogador (Personagem.stats)');

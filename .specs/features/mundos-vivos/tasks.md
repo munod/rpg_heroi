@@ -10,8 +10,8 @@ Status: ⬜ pendente / ✅ feito · `[P]` paralelo
 | T4 | **Fase 1**: `chunkDe` assa a folhagem (rng do chunk, ~8/chunk, Perlin p/ densidade) + `desenhaObst` desenha `casa`/`fogueira` via `Assets.cena` | T3 | ✅ (folhagem ×1 · casas ×ESC_CENARIO=2 como a árvore) |
 | T5 | **Fase 1**: vila por mapa (`vilaDe`, 200-360px do spawn, ≥55px, zona livre central) + merge em `atualizaObstAtivos` + sonda `info().vila` | T4 | ✅ (10/10 mapas com vila — 2-3 casas + fogueira; 2 fixes medidos: busca angular em círculo livre [a estreita morria 60/60] e fogueira opcional no miolo) |
 | T6 | **Fase 1**: fumaça (seção nova da vila + tipos estendidos + mapeamento folhagem) + `previa-assets` com seção de cenário + gate | T5 | ✅ |
-| T7 | **Fase 2**: `js/ambientais.js` (NPCs na vila + animais por chunk, pool, fuga 60px, y-sort, silenciar) + declarar no `index.html` | T6 | ⬜ |
-| T8 | **Fase 2**: assets de NPC/animal (presets Tiny medieval/Tiny animals) + fumaça (0 impacto em combate/stats, determinismo) + gate | T7 | ⬜ |
+| T7 | **Fase 2**: `js/ambientais.js` (NPCs na vila + animais por chunk, pool, fuga 60px, y-sort, silenciar) + declarar no `index.html` | T6 | ✅ (pool CAP 12 · auto-sincronização no `info()` p/ ler sem frame — mesmo tratamento do `info().obst`; sem `silenciar` — vidas são mobília do mundo, não efeito transitório) |
+| T8 | **Fase 2**: assets de NPC/animal (presets Tiny medieval/Tiny animals) + fumaça (0 impacto em combate/stats, determinismo) + gate | T7 | ✅ (25 NPCs + 4 animais laterais [0,4,8,12] · seção 20b: fuga 1→48px, abates intactos, determinismo) |
 | T9 | **Fase 3**: 8 ícones/classe (preset Skill Icons) + ícone nos botões da aba Classe (clique intacto) + gate | T8 | ⬜ |
 | T10 | **Fase 4**: grade Tiny pixel monsters gerada e arquivada (`assets/fonte/` + ID + nota adiado) | T9 | ⬜ |
 | T11 | **Fase 4**: QA visual (previa/cena/ampliar, `JANELA=1280x400`) + docs (AGENTS/CHANGELOG/STATE/README) + spec/tasks concluídos | T10 | ⬜ |

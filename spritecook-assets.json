@@ -85,6 +85,21 @@
       "label": "Vila: 3 casas + fogueira (2×2, preset Character & Props)"
     }
   },
+  "seres": {
+    "nota": "spec mundos-vivos fase 2 — cortados por testes/prepara-cenario.js (npcs: 25 peças; animais: o jogo usa as LATERAIS de cada espécie, índices 0/4/8/12 da grade 4×4)",
+    "npcs": {
+      "asset_id": "e70ad66e-68a8-4e60-83da-d32e60e168b4",
+      "sha12": "74d7e7057ef8",
+      "local": "assets/fonte/npcs-sheet.png",
+      "label": "Tiny medieval characters (5×5 = 25, preset comunidade)"
+    },
+    "animais": {
+      "asset_id": "13218d95-b64d-40ff-a641-5625a248453c",
+      "sha12": "088f88ca824c",
+      "local": "assets/fonte/animais-sheet.png",
+      "label": "Tiny animals (4×4 = veado/pássaro/coelho/sapo × 4 vistas, preset comunidade)"
+    }
+  },
   "geracoes_substituidas": {
     "nota": "piloto sem arma embutida (composição separada — abandonada na emenda do veredito)",
     "idle_antigo": "37ec5ea3-13ac-4deb-8c07-dbc956990e92",

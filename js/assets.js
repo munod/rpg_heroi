@@ -74,13 +74,19 @@ var Assets = (function () {
   var carregado = {};   // classe → true (TODOS os frames prontos)
   var iniciado = false, pendentes = 0, cbFinal = null;
 
-  // Cenário (spec mundos-vivos): chave → nº de peças. Folhagem por
-  // paleta (3×9) + vila (3 casas + fogueira) — carregam na MESMA
-  // `carga` do boot (o jogo só cria as cenas depois). Quem falta não
-  // desenha (fallback: dots pintados / vila sem a peça).
+  // Cenário e SERES (spec mundos-vivos): chave → {dir, qtd}. Folhagem
+  // por paleta (3×9) + vila (3 casas + fogueira) + NPCs da vila (25) +
+  // animais (4 espécies) — carregam na MESMA `carga` do boot (o jogo
+  // só cria as cenas depois). Quem falta não desenha (fallback:
+  // dots pintados / vila sem a peça / sem vida).
   var CENARIO = {
-    'folhagem-verde': 9, 'folhagem-frio': 9, 'folhagem-quente': 9,
-    casa: 3, fogueira: 1
+    'folhagem-verde': { dir: 'cenario', qtd: 9 },
+    'folhagem-frio': { dir: 'cenario', qtd: 9 },
+    'folhagem-quente': { dir: 'cenario', qtd: 9 },
+    casa: { dir: 'cenario', qtd: 3 },
+    fogueira: { dir: 'cenario', qtd: 1 },
+    npc: { dir: 'npcs', qtd: 25 },
+    animal: { dir: 'animais', qtd: 4 }
   };
   var imgCena = {};     // 'chave|i' → Image
 
@@ -94,11 +100,13 @@ var Assets = (function () {
     return 'assets/herois/' + c + '-' + a + '-' + i + '.png';
   }
 
-  // peça de cenário: folhagem-verde-3.png / fogueira.png (1 peça = sem
-  // sufixo numérico)
+  // peça de cenário/ser: assets/cenario/folhagem-verde-3.png ·
+  // assets/npcs/npc-7.png · fogueira.png (1 peça = sem sufixo)
   function caminhoCena(chave, i) {
-    return 'assets/cenario/' + chave +
-      ((CENARIO[chave] || 0) > 1 ? '-' + i : '') + '.png';
+    var d = CENARIO[chave];
+    if (!d) return null;
+    return 'assets/' + d.dir + '/' + chave +
+      (d.qtd > 1 ? '-' + i : '') + '.png';
   }
 
   function conta() {
@@ -140,7 +148,7 @@ var Assets = (function () {
     classes.forEach(function (cl) { total += nTotal(cl); });
     var chaves = [];
     for (var k in CENARIO) if (CENARIO.hasOwnProperty(k)) {
-      chaves.push(k); total += CENARIO[k];
+      chaves.push(k); total += CENARIO[k].qtd;
     }
     pendentes = total;
     if (total === 0) { conta(); return; }
@@ -161,7 +169,7 @@ var Assets = (function () {
     });
 
     chaves.forEach(function (ch) {
-      for (var i = 0; i < CENARIO[ch]; i++) {
+      for (var i = 0; i < CENARIO[ch].qtd; i++) {
         pega(caminhoCena(ch, i), imgCena, ch + '|' + i, null);
       }
     });
@@ -180,7 +188,8 @@ var Assets = (function () {
   // nº de peças PRONTAS da chave (0 = sem asset → fallback)
   function qtdCena(chave) {
     var n = 0;
-    for (var i = 0; i < (CENARIO[chave] || 0); i++) {
+    var d = CENARIO[chave];
+    for (var i = 0; d && i < d.qtd; i++) {
       if (imgCena[chave + '|' + i]) n++;
     }
     return n;
@@ -243,7 +252,7 @@ var Assets = (function () {
     for (var c in HEROIS) if (HEROIS.hasOwnProperty(c)) classes.push(c);
     var cenario = {}, pronto = {};
     for (var k in CENARIO) if (CENARIO.hasOwnProperty(k)) {
-      cenario[k] = CENARIO[k];
+      cenario[k] = CENARIO[k].qtd;
       pronto[k] = qtdCena(k);
     }
     return {
