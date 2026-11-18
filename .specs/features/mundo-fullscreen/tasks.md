@@ -8,7 +8,7 @@ Status: ⬜ pendente / ✅ feito · `[P]` paralelo
 | T2 | **Fase A**: `batalha.js` k=1 (VW/VH dinâmico, `janelaOK`, área livre, região ativa 5×5, HUD na área livre, aviso 30%, poeira 150) | T1 | ✅ |
 | T3 | **Fase A**: `jogo.js` mundo vira fundo + título no canto · `efeitos.js` fonte `big` 10→20px | T2 | ✅ |
 | T4 | **Fase A**: teste seção 17 (janela-livre 408×432 / mundo 1920×1340) + fix de determinismo (`garanteCenario` sem early-return + `info()` auto-sincroniza a lista ativa) | T3 | ✅ |
-| T5 | **Fase B**: anel de spawn dinâmico (`raioSpawn()`, ≈460 em 16:9) + limite de fuga do Gatuno = anel+120 + geometria do gatuno/cofre + `ritmo.js` ≥4 seeds (A/B vs `c983d2e`) + **relatório de drift ao mantenedor** | T4 | ✅ (código) ⏳ (medição) |
+| T5 | **Fase B**: anel de spawn dinâmico (`raioSpawn()`, ≈460 em 16:9) + limite de fuga do Gatuno = anel+120 + geometria do gatuno/cofre + `ritmo.js` ≥4 seeds (A/B vs `c983d2e`) + **relatório de drift ao mantenedor** | T4 | ✅ (relatório em `relatorio-ritmo-faseB.md`; reequilíbrio = decisão do mantenedor, ⬜) |
 | T6 | **Fase C**: `UI.janela`/`UI.barra` · `Gestao` flutuante (título=X, botão X, estado `aberta`) + `Gestao.barra`/`abasGeom` · barra de abas no rodapé · card flutuante no lugar da faixaTopo · Opções no canto (W−72,8) · toast topo-centro · `linhaStatus` com fundo | T5 | ✅ |
 | T7 | **Fase C**: remapear ~56+10 cliques de aba (barra centrada, dx/2 em wide) + conf X fecha/reabre | T6 | ✅ |
 | T8 | **Fase D**: QA visual (cena/ampliar/previa-assets), `CHANGELOG [Unreleased]`, `STATE`, `AGENTS` (contrato das abas, janela 192×134, anel 110-132), `README` | T7 | ⬜ |
