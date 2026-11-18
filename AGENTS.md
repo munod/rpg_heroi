@@ -290,7 +290,8 @@
   rng** do bake; sem PNG = dots pintados continuam), **1 vila por
   mapa** (`vilaDe()` em `batalha.js`: semente do mapa, centro
   200-360px do spawn, fogueira no miolo [dd 0-35, **opcional**] +
-  2-3 casas no anel [dd 60-130], colidente `r` 18/14 com `cy`
+  2-3 casas no anel [dd 60-130] em **fachada frontal reta** [emenda
+  pós-QA: o preset é three-quarter/isométrico por padrão], colidente `r` 18/14 com `cy`
   deslocado; busca angular em **círculo livre** — a faixa estreita
   morria 60/60 contra obstáculo; merge **DEPOIS** dos itens de chunk
   em `atualizaObstAtivos` → `obst[0]` intacto; contratos da fumaça
@@ -310,7 +311,8 @@
   10→9px p/ o nome caber). Pipeline: `js/assets.js` manifesto
   `{dir, qtd}` na mesma `carga` (92 peças; fallback por construção =
   não desenha), `testes/prepara-cenario.js` (corte por alfa
-  CONECTADO + fusão de fragmentos <12px + `pega` [remapeia
+  CONECTADO + fusão de fragmentos <50px [lenha da fogueira n=44] +
+  `altos` [altura-alvo por peça] + `pega` [remapeia
   peça→skill: o modelo desenha na ordem dele] + `quadro` [normaliza
   14×14]) e `previa-assets` com 4 linhas de cenário + 4 de ícones.
   Fumaça seções 20 (tipos estendidos `casa`/`fogueira` + vila) e 20b
