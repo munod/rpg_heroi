@@ -722,7 +722,13 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   fumaça 20b + linha dos animais no previa-assets. **Lições**: pedir
   a VISTA de forma explícita no prompt (o preset Character & Props é
   three-quarter por padrão) e medir a proporção contra o herói
-  (43px) ANTES de integrar.
+  (43px) ANTES de integrar. **Flake do CI no teste de fuga**: o
+  `Math.random` da IA NÃO é semeado no harness (run = run varia) — a
+  sonda `animalPerto` (mínimo global) acoplava o teste ao estado
+  aleatório; corrigido com **sonda exata por id** (`Ambientais.distDe`
+  + `id` no bicho) + fuga que **desliza pela parede** + até 3
+  candidatos — lição: teste de comportamento nunca deve ler o mínimo
+  global de entidades que você não controla.
 
 ## Bloqueios
 

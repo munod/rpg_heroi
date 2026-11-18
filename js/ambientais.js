@@ -60,6 +60,7 @@ var Ambientais = (function () {
       }
       if (ok) {
         lista.push({
+          id: chave + '#' + lista.length,
           x: px, y: py, bx: cx * cfg.mw, by: cy * cfg.mh,
           mw: cfg.mw, mh: cfg.mh,
           sp: Math.floor(rng() * 4), flip: rng() < 0.5 ? -1 : 1,
@@ -144,14 +145,25 @@ var Ambientais = (function () {
         a.vy = Math.sin(ang) * 10;
       }
     }
-    var nx = a.x + a.vx * dt, ny = a.y + a.vy * dt;
-    // dentro do próprio chunk (o bicho não vaga p/ o mundo afora)
-    if (nx < a.bx + 24 || nx > a.bx + a.mw - 24 ||
-        ny < a.by + 24 || ny > a.by + a.mh - 24) {
-      a.t = 0; a.fuga = Math.min(a.fuga, 0.15);    // morde a borda
-    } else if (livre && livre(nx, ny, 5)) {
+    // alvo com a borda do chunk CLAMPADA (o bicho não vaga p/ o mundo
+    // afora, mas desliza ao longo da borda em vez de grudar)
+    var nx = Math.max(a.bx + 24, Math.min(a.bx + a.mw - 24, a.x + a.vx * dt));
+    var ny = Math.max(a.by + 24, Math.min(a.by + a.mh - 24, a.y + a.vy * dt));
+    if (livre && livre(nx, ny, 5)) {
       a.x = nx; a.y = ny;
       if (Math.abs(a.vx) > 0.4) a.flip = a.vx > 0 ? 1 : -1;
+    } else if (a.fuga > 0) {
+      // FUGA desliza pela parede (obstáculos ficam ≥55px entre si — o
+      // bicho nunca fica encurralado e não pode morrer de medo parado
+      // com o herói em cima; QA do mantenedor: fuga 1→48px)
+      if (livre(nx, a.y, 5)) {
+        a.x = nx;
+        if (Math.abs(a.vx) > 0.4) a.flip = a.vx > 0 ? 1 : -1;
+      } else if (livre(a.x, ny, 5)) {
+        a.y = ny;
+      } else {
+        a.t = 0;
+      }
     } else {
       a.t = 0;                                     // bateu: novo rumo
     }
@@ -211,12 +223,25 @@ var Ambientais = (function () {
     }
   }
 
+  // distância do bicho MARCADO ao herói (−1 = não está na janela) —
+  // a sonda exata do teste de fuga: imune a outros bichos estarem perto
+  function distDe(id) {
+    for (var i = 0; i < ativos.length; i++) {
+      if (ativos[i].id === id) {
+        var dx = ativos[i].x - heroiX, dy = ativos[i].y - heroiY;
+        return Math.round(Math.sqrt(dx * dx + dy * dy));
+      }
+    }
+    return -1;
+  }
+
   // sonda p/ teste
   function info() {
     function perto3(lista) {
       var out = [];
       for (var i = 0; i < lista.length && out.length < 3; i++) {
-        out.push({ x: Math.round(lista[i].x), y: Math.round(lista[i].y) });
+        out.push({ x: Math.round(lista[i].x), y: Math.round(lista[i].y),
+                   id: lista[i].id });
       }
       return out;
     }
@@ -233,5 +258,5 @@ var Ambientais = (function () {
   }
 
   return { reinicia: reinicia, atualiza: atualiza, sincroniza: sincroniza,
-           todos: todos, desenhar: desenhar, info: info };
+           todos: todos, desenhar: desenhar, info: info, distDe: distDe };
 })();
