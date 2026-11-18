@@ -1,7 +1,9 @@
-// Folha de prévia dos assets GERADOS (spec visual-heroi-spritecook):
-// 3 linhas (idle/walk/ataque) × 8 frames — lê o manifesto do
-// js/assets.js (não duplica geometria) e serve de QA visual do
-// pipeline (arquivo + pose + mão da arma embutida + alinhamento).
+// Folha de prévia dos assets GERADOS (spec visual-heroi-spritecook +
+// mundos-vivos): 12 linhas do herói (idle/walk/ataque × 4 classes) +
+// 4 linhas de cenário (folhagem por paleta + vila) — lê o manifesto do
+// js/assets.js (não duplica geometria) e serve de QA visual do pipeline
+// (arquivo + pose + mão da arma embutida + alinhamento + corte das
+// peças de cenário).
 // Uso: node testes/previa-assets.js  ->  testes/previa-assets.png
 'use strict';
 const path = require('path');
@@ -36,8 +38,40 @@ const CLASSES = ['guerreiro', 'mago', 'ladino', 'clerigo'];
 const ANIMS = ['idle', 'walk', 'attack'];
 const LINHAS = [];
 CLASSES.forEach(cl => ANIMS.forEach(a => LINHAS.push([cl, a])));
-const W = COLS * CEL;
-const H = LINHAS.length * CEL;
+const W_HERO = COLS * CEL;
+const H_HERO = LINHAS.length * CEL;
+
+// --------------------------------------------------- linhas de cenário
+// [chave, i] por peça — folhagem 3×9 + vila (3 casas + fogueira)
+function faixa(chave, n) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push([chave, i]);
+  return out;
+}
+const LINHAS_CEN = [
+  faixa('folhagem-verde', 9),
+  faixa('folhagem-frio', 9),
+  faixa('folhagem-quente', 9),
+  [['casa', 0], ['casa', 1], ['casa', 2], ['fogueira', 0]]
+];
+const cenLinhas = LINHAS_CEN.map(linha => {
+  const imgs = linha.map(([ch, i]) => {
+    const im = Assets.cena(ch, i);
+    if (!im) {
+      throw new Error('previa-assets: sem peça de cenário ' + ch + '|' + i +
+        ' (roda o prepara-cenario)');
+    }
+    return im;
+  });
+  const larg = imgs.reduce((s, im) => s + (im.width + MARG * 2) * ESC, 0);
+  const alt = (Math.max(...imgs.map(im => im.height)) + MARG * 2) * ESC;
+  return { imgs, larg, alt };
+});
+const W_CEN = Math.max(...cenLinhas.map(l => l.larg));
+const H_CEN = cenLinhas.reduce((s, l) => s + l.alt, 0);
+
+const W = Math.max(W_HERO, W_CEN);
+const H = H_HERO + H_CEN;
 const folha = Buffer.alloc(W * H * 3);
 
 // fundo xadrez (mesmo tom do previa.js)
@@ -70,6 +104,7 @@ function cola(img, ox, oy) {
   }
 }
 
+// ---------------------------------------------------------- herói (12)
 LINHAS.forEach(([cl, anim], li) => {
   for (let i = 0; i < 8; i++) {
     const c = Assets.hero(cl, anim, i);
@@ -78,8 +113,19 @@ LINHAS.forEach(([cl, anim], li) => {
   }
 });
 
+// ------------------------------------------------- cenário (4 linhas)
+let oy = H_HERO;
+cenLinhas.forEach(l => {
+  let ox = 0;
+  l.imgs.forEach(im => {
+    cola(im, ox + MARG * ESC, oy + MARG * ESC);
+    ox += (im.width + MARG * 2) * ESC;
+  });
+  oy += l.alt;
+});
+
 const saida = path.join(__dirname, 'previa-assets.png');
 escreverPNG(saida, W, H, folha);
 console.log('gerado: ' + saida + ' (' + W + 'x' + H + ')');
 console.log('linhas: ' + CLASSES.join(', ') + ' × ' + ANIMS.join('/') +
-  ' — 8 frames cada');
+  ' — 8 frames cada · cenário: 3 paletas × 9 + vila 4');

@@ -291,6 +291,28 @@ var Batalha = (function () {
     for (i = 0; i < 20; i++) {
       c.fillRect(Math.floor(rng() * MW), Math.floor(rng() * MH), 2, 1);
     }
+
+    // folhagem GERADA (spec mundos-vivos R-MV-1): peças PNG sorteadas
+    // POR CHUNK com o rng do chão (determinismo intacto — é o ÚLTIMO
+    // uso do rng neste bake, sem consumidores depois); a densidade
+    // varia pelo Perlin absoluto (mesma receita das flores pintadas).
+    // Sem PNG da paleta = não desenha (os dots continuam de fallback).
+    var folha = 'folhagem-' + (tem.folhagem || 'verde');
+    var qtdF = Assets.qtdCena(folha);
+    var feitasF = 0;
+    for (i = 0; qtdF > 0 && feitasF < 8 && tent < 900; tent++) {
+      var gx = Math.floor(rng() * MW);
+      var gy = Math.floor(rng() * MH);
+      if (Perlin.valor((ox + gx) / 36 + 3, (oy + gy) / 36 + 7) < 0.40) {
+        continue;
+      }
+      var imF = Assets.cena(folha, Math.floor(rng() * qtdF));
+      if (!imF) continue;
+      var fw = imF.width || imF.naturalWidth;
+      var fh = imF.height || imF.naturalHeight;
+      c.drawImage(imF, Math.round(gx - fw / 2), Math.round(gy - fh / 2));
+      feitasF++;
+    }
     // SEM strokeRect de borda (spec R-INF-5: não há bordas)
 
     if (Object.keys(chaoCache).length >= CHAO_MAX) chaoCache = {};
@@ -359,6 +381,101 @@ var Batalha = (function () {
     return out;
   }
 
+  // Vila por mapa (spec mundos-vivos R-MV-2): 1 cluster determinístico
+  // (semente = nº do mapa) a 200-360px do spawn do chunk 0, colidente.
+  // As peças entram no obst DEPOIS dos itens de chunk (obst[0]
+  // continua sendo chunk — contrato das seções 20/45 da fumaça).
+  // Restrições do gerador: zona livre central do spawn, ≥55px de
+  // QUALQUER par (contrato medido da seção 20) e não-sobreposição
+  // visual (meia-largura + folga). Sem arte suficiente (≥2 casas) ou
+  // sem vaga = sem vila (null; null NÃO cacheia — os PNGs podem ainda
+  // estar carregando quando a cena nasce).
+  var vilaCache = {};   // mapa → {x, y, casas, peças} | null
+
+  function vilaDe(n) {
+    if (vilaCache.hasOwnProperty(n)) return vilaCache[n];
+    var nc = Assets.qtdCena('casa'), nf = Assets.qtdCena('fogueira');
+    if (nc < 2) return null;
+    var i, j;
+    var rng = Perlin.sorteio(n * 104729 + 77);
+    var ang = rng() * Math.PI * 2;
+    var dist = 200 + rng() * 160;              // 200..360px do spawn
+    var ccx = 192 + Math.cos(ang) * dist;
+    var ccy = 134 + Math.sin(ang) * dist;
+    // obstáculos existentes nos 9 chunks em volta do centro (mesma
+    // semente do gerador de chunk — determinístico junto com ele; 9
+    // chunks cobrem tudo que fica a <55px de qualquer peça candidata)
+    var hx = Math.floor(ccx / MW), hy = Math.floor(ccy / MH);
+    var viz = [];
+    for (var dy = -1; dy <= 1; dy++) {
+      for (var dx = -1; dx <= 1; dx++) {
+        var l = obstChunk(hx + dx, hy + dy);
+        for (i = 0; i < l.length; i++) viz.push(l[i]);
+      }
+    }
+    // peças: fogueira PRIMEIRA no miolo (dd 0-35 — o fogo no centro
+    // da vila, casas em volta) e OPCIONAL (nunca mata a vila); casas
+    // 2-3 no anel externo (dd 60-130)
+    var nCasas = (nc >= 3 && rng() < 0.5) ? 3 : 2;
+    if (nCasas > nc) nCasas = nc;
+    var tipos = [];
+    if (nf > 0) tipos.push({ tipo: 'fogueira', var: 0 });
+    for (i = 0; i < nCasas; i++) tipos.push({ tipo: 'casa', var: i });
+    var feitos = [], pecas = [];
+    for (i = 0; i < tipos.length; i++) {
+      var tp = tipos[i];
+      var im = Assets.cena(tp.tipo, tp.var);
+      if (!im) return null;                    // arte sumiu: sem vila
+      var meia = (im.width || im.naturalWidth) * ESC_CENARIO / 2;
+      var r = tp.tipo === 'casa' ? 18 : 14;
+      var acha = null, tent = 0;
+      while (!acha && tent < 60) {
+        tent++;
+        // ângulo LIVRE em cada tentativa (uma faixa estreita morria
+        // toda se apontasse pra um obstáculo — medido: 60/60 rejeitadas);
+        // o agrupamento da vila fica por conta do raio dd e da
+        // distância mínima entre as peças (feitos)
+        var a = rng() * Math.PI * 2;
+        var dd = tp.tipo === 'fogueira' ? rng() * 35 : 60 + rng() * 70;
+        var px = ccx + Math.cos(a) * dd;
+        var py = ccy + Math.sin(a) * dd;
+        // zona livre central do spawn (contrato da seção 20)
+        if (Math.abs(px - 192) < 72 && Math.abs(py - 134) < 64) continue;
+        var perto = false;
+        for (j = 0; j < feitos.length && !perto; j++) {
+          var q = feitos[j];
+          var qx = q.x - px, qy = q.y - py;
+          var minQ = Math.max(55, q.meia + meia + 8);
+          if (qx * qx + qy * qy < minQ * minQ) perto = true;
+        }
+        for (j = 0; j < viz.length && !perto; j++) {
+          var v = viz[j];
+          var vx = v.x - px, vy = v.y - py;
+          var minV = Math.max(55, meia +
+            (v.tipo === 'tree' ? 20 : 14) + 8);
+          if (vx * vx + vy * vy < minV * minV) perto = true;
+        }
+        if (perto) continue;
+        acha = { x: px, y: py };
+      }
+      if (!acha) { if (tp.tipo === 'fogueira') continue; break; }
+      feitos.push({ x: acha.x, y: acha.y, meia: meia });
+      pecas.push({ x: acha.x, y: acha.y, r: r, tipo: tp.tipo,
+        var: tp.var, cx: acha.x,
+        cy: acha.y - (tp.tipo === 'casa' ? 18 : 14) });
+    }
+    var casas = 0;
+    for (i = 0; i < pecas.length; i++) {
+      if (pecas[i].tipo === 'casa') casas++;
+    }
+    // sem vaga = sem vila (null NÃO cacheia: a próxima rebuilda tenta
+    // de novo — o resultado é determinístico, só não vale pena fixar)
+    if (casas < 2) return null;
+    var out = { x: ccx, y: ccy, casas: casas, pecas: pecas };
+    vilaCache[n] = out;
+    return out;
+  }
+
   // Lista ATIVA = raio dinâmico de chunks em volta do herói (R-MF-1):
   // cobre a janela visível inteira (herói no CENTRO da tela) + o
   // anel de spawn + folga de sprite — em 16:9 = 5×5 chunks (1920×1340,
@@ -384,6 +501,12 @@ var Batalha = (function () {
         var l = obstChunk(hx + dx, hy + dy);
         for (var i = 0; i < l.length; i++) out.push(l[i]);
       }
+    }
+    // vila do mapa (spec mundos-vivos): DEPOIS dos itens de chunk —
+    // obst[0] continua sendo chunk (contrato das seções 20/45)
+    var vil = vilaDe(mapa);
+    if (vil) {
+      for (i = 0; i < vil.pecas.length; i++) out.push(vil.pecas[i]);
     }
     obst = out;
   }
@@ -1939,11 +2062,24 @@ var Batalha = (function () {
       var tw = 20 * ESC_CENARIO, th = 26 * ESC_CENARIO;
       ctx.drawImage(t.canvas, Math.round(o.x - tw / 2),
         Math.round(o.y - th), tw, th);
-    } else {
+    } else if (o.tipo === 'rock') {
       var r = Anim.rock();
       var rw = 14 * ESC_CENARIO, rh = 11 * ESC_CENARIO;
       ctx.drawImage(r.canvas, Math.round(o.x - rw / 2),
         Math.round(o.y - rh), rw, rh);
+    } else {
+      // casa/fogueira da vila (spec mundos-vivos R-MV-2): PNG ×
+      // ESC_CENARIO como a árvore (mesma densidade de pixel); sem PNG
+      // a peça não nasce (não chega aqui). Sombra própria assenta no
+      // chão — árvore/pedra não têm (só entidades), mas a casa é um
+      // volume grande perto do herói.
+      var im = Assets.cena(o.tipo, o.var || 0);
+      if (!im) return;
+      var iw = (im.width || im.naturalWidth) * ESC_CENARIO;
+      var ih = (im.height || im.naturalHeight) * ESC_CENARIO;
+      sombra(ctx, o.x, o.y - 2, Math.round(iw * 0.3));
+      ctx.drawImage(im, Math.round(o.x - iw / 2),
+        Math.round(o.y - ih), iw, ih);
     }
   }
 
@@ -2244,6 +2380,14 @@ var Batalha = (function () {
                    (heroi.y - c.y) * (heroi.y - c.y))) };
       })(),
       enxame: Eventos.enxameAtivo(),
+      // sonda da vila (spec mundos-vivos R-MV-2): centro + peças
+      // (null = sem vila neste mapa: arte faltando ou sem vaga)
+      vila: (function () {
+        var vl = vilaDe(mapa);
+        if (!vl) return null;
+        return { x: Math.round(vl.x), y: Math.round(vl.y),
+                 casas: vl.casas, pecas: vl.pecas.length };
+      })(),
       heroi: { x: Math.round(heroi ? heroi.x : 0),
                y: Math.round(heroi ? heroi.y : 0),
                hpMax: heroi ? heroi.hpMax : 0,
@@ -2279,6 +2423,10 @@ var Batalha = (function () {
       // cenário procedural (semente do mapa) e skills de posicionamento
       obst: obst.map(function (o) {
         return { x: Math.round(o.x), y: Math.round(o.y), tipo: o.tipo,
+                 // índice da peça de cenário (casa-0/1/2, folha da
+                 // paleta) — undefined nos itens de chunk (spec
+                 // mundos-vivos)
+                 var: o.var,
                  // centro de colisão cru + raio (p/ a propriedade da
                  // seção 34: cy difere de y pelo offset da âncora)
                  cx: o.cx, cy: o.cy, r: o.r };

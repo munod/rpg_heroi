@@ -1,11 +1,13 @@
-// Assets gerados (spec visual-heroi-spritecook): manifesto + carga.
+// Assets gerados (spec visual-heroi-spritecook + mundos-vivos):
+// manifesto + carga.
 //
 // O herói do guerreiro vem de PNGs gerados no SpriteCook (pixels fora
 // do grid procedural); as outras classes continuam procedurais até a
 // leva 2 — quem não tem asset NUNCA fica sem desenho (fallback por
 // construção). A arma da classe é EMBUTIDA na arte (emenda do
 // veredito: composição não resolvia grip nem salva de mão) — este
-// módulo cuida só dos frames.
+// módulo cuida só dos frames. O CENÁRIO (folhagem por paleta + peças
+// da vila, spec mundos-vivos) carrega na mesma `carga`.
 //
 // O manifesto é EMBUTIDO (nunca fetch: o jogo abre em file://, onde
 // fetch é bloqueado) e os caminhos são relativos. Contratos p/ os
@@ -72,6 +74,16 @@ var Assets = (function () {
   var carregado = {};   // classe → true (TODOS os frames prontos)
   var iniciado = false, pendentes = 0, cbFinal = null;
 
+  // Cenário (spec mundos-vivos): chave → nº de peças. Folhagem por
+  // paleta (3×9) + vila (3 casas + fogueira) — carregam na MESMA
+  // `carga` do boot (o jogo só cria as cenas depois). Quem falta não
+  // desenha (fallback: dots pintados / vila sem a peça).
+  var CENARIO = {
+    'folhagem-verde': 9, 'folhagem-frio': 9, 'folhagem-quente': 9,
+    casa: 3, fogueira: 1
+  };
+  var imgCena = {};     // 'chave|i' → Image
+
   function chaveHeroi(c, a, i) { return c + '|' + a + '|' + i; }
 
   // o jogo fala 'attack' (chave do anim.js/batalha.js) e o arquivo é
@@ -80,6 +92,13 @@ var Assets = (function () {
 
   function caminhoHeroi(c, a, i) {
     return 'assets/herois/' + c + '-' + a + '-' + i + '.png';
+  }
+
+  // peça de cenário: folhagem-verde-3.png / fogueira.png (1 peça = sem
+  // sufixo numérico)
+  function caminhoCena(chave, i) {
+    return 'assets/cenario/' + chave +
+      ((CENARIO[chave] || 0) > 1 ? '-' + i : '') + '.png';
   }
 
   function conta() {
@@ -119,6 +138,10 @@ var Assets = (function () {
     for (var c in HEROIS) if (HEROIS.hasOwnProperty(c)) classes.push(c);
     var total = 0;
     classes.forEach(function (cl) { total += nTotal(cl); });
+    var chaves = [];
+    for (var k in CENARIO) if (CENARIO.hasOwnProperty(k)) {
+      chaves.push(k); total += CENARIO[k];
+    }
     pendentes = total;
     if (total === 0) { conta(); return; }
 
@@ -136,11 +159,30 @@ var Assets = (function () {
         }
       });
     });
+
+    chaves.forEach(function (ch) {
+      for (var i = 0; i < CENARIO[ch]; i++) {
+        pega(caminhoCena(ch, i), imgCena, ch + '|' + i, null);
+      }
+    });
   }
 
   function nTotal(cl) {
     var n = 0;
     for (var a in HEROIS[cl]) if (HEROIS[cl].hasOwnProperty(a)) n += HEROIS[cl][a].qtd;
+    return n;
+  }
+
+  // ----------------------------------------------------------- cenário
+  // peça de cenário já carregada (Image) ou null (não nasce)
+  function cena(chave, i) { return imgCena[chave + '|' + i] || null; }
+
+  // nº de peças PRONTAS da chave (0 = sem asset → fallback)
+  function qtdCena(chave) {
+    var n = 0;
+    for (var i = 0; i < (CENARIO[chave] || 0); i++) {
+      if (imgCena[chave + '|' + i]) n++;
+    }
     return n;
   }
 
@@ -199,10 +241,16 @@ var Assets = (function () {
   function info() {
     var classes = [];
     for (var c in HEROIS) if (HEROIS.hasOwnProperty(c)) classes.push(c);
+    var cenario = {}, pronto = {};
+    for (var k in CENARIO) if (CENARIO.hasOwnProperty(k)) {
+      cenario[k] = CENARIO[k];
+      pronto[k] = qtdCena(k);
+    }
     return {
       iniciado: iniciado, pendentes: pendentes,
       classes: classes, alt: ALT, cx: CX,
-      carregado: JSON.parse(JSON.stringify(carregado))
+      carregado: JSON.parse(JSON.stringify(carregado)),
+      cenario: cenario, cenarioPronto: pronto
     };
   }
 
@@ -211,6 +259,7 @@ var Assets = (function () {
     carga: carga, hero: hero, desenha: desenha,
     qtd: qtd, durFrame: durFrame, frameAtaque: frameAtaque,
     temHeroi: temHeroi, info: info,
-    caminhoHeroi: caminhoHeroi
+    caminhoHeroi: caminhoHeroi,
+    cena: cena, qtdCena: qtdCena, caminhoCena: caminhoCena
   };
 })();

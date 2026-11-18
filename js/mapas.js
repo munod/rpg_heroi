@@ -20,6 +20,7 @@ var Mapas = (function () {
         borda: '#5a4a2e', borda2: '#6b5a38'
       },
       obst: { tipos: ['tree', 'rock'], qtd: 4 },
+      folhagem: 'verde',
       inimigos: {
         comum: { tipo: 'slime', cor: '#4aa03a' },
         raro: { tipo: 'visgo', cor: '#7a4ac0' }
@@ -35,6 +36,7 @@ var Mapas = (function () {
         borda: '#3a4a66', borda2: '#4c6084'
       },
       obst: { tipos: ['rock'], qtd: 5 },
+      folhagem: 'frio',
       inimigos: {
         comum: { tipo: 'slime', cor: '#5ac8e8' },      // gelema glacial
         raro: { tipo: 'morcego', cor: '#7a5aa8' }
@@ -51,6 +53,7 @@ var Mapas = (function () {
         borda: '#2e1418', borda2: '#5a3038'
       },
       obst: { tipos: ['rock'], qtd: 5 },
+      folhagem: 'quente',
       inimigos: {
         comum: { tipo: 'aranha', cor: '#c84a3a' },
         raro: { tipo: 'visgo', cor: '#9a4ac0' }
@@ -68,6 +71,7 @@ var Mapas = (function () {
         borda: '#7a6030', borda2: '#8f7440'
       },
       obst: { tipos: ['rock'], qtd: 5 },
+      folhagem: 'quente',
       inimigos: {
         comum: { tipo: 'slime', cor: '#c8a860' },      // bola de areia
         raro: { tipo: 'aranha', cor: '#b08840' }       // escorpião
@@ -84,6 +88,7 @@ var Mapas = (function () {
         borda: '#1f3326', borda2: '#2c4536'
       },
       obst: { tipos: ['tree', 'rock'], qtd: 5 },
+      folhagem: 'verde',
       inimigos: {
         comum: { tipo: 'slime', cor: '#5a9a4a' },   // intacto (R-MON-3)
         raro: { tipo: 'regenerador', cor: '#8ac040' }
@@ -100,6 +105,7 @@ var Mapas = (function () {
         borda: '#141c2e', borda2: '#22304a'
       },
       obst: { tipos: ['tree'], qtd: 6 },
+      folhagem: 'verde',
       inimigos: {
         comum: { tipo: 'morcego', cor: '#4a6a9a' },  // intacto (R-MON-3)
         raro: { tipo: 'atirador', cor: '#5a4a8a' }
@@ -116,6 +122,7 @@ var Mapas = (function () {
         borda: '#2e1a12', borda2: '#3e2618'
       },
       obst: { tipos: ['rock'], qtd: 6 },
+      folhagem: 'quente',
       inimigos: {
         comum: { tipo: 'visgo', cor: '#e86a2a' },  // intacto (gota de lava)
         raro: { tipo: 'regenerador', cor: '#c84a3a' }
@@ -132,6 +139,7 @@ var Mapas = (function () {
         borda: '#8a80a8', borda2: '#9e94b8'
       },
       obst: { tipos: ['rock'], qtd: 4 },
+      folhagem: 'frio',
       inimigos: {
         comum: { tipo: 'morcego', cor: '#e8d8f0' },   // intacto (R-MON-3)
         raro: { tipo: 'atirador', cor: '#c0a8e8' }
@@ -148,6 +156,7 @@ var Mapas = (function () {
         borda: '#120c20', borda2: '#1e1638'
       },
       obst: { tipos: ['rock'], qtd: 5 },
+      folhagem: 'frio',
       inimigos: {
         comum: { tipo: 'visgo', cor: '#8a4aff' },     // intacto (R-MON-3)
         raro: { tipo: 'drenador', cor: '#b06aff' }
@@ -164,6 +173,7 @@ var Mapas = (function () {
         borda: '#160a0e', borda2: '#241218'
       },
       obst: { tipos: ['rock'], qtd: 6 },
+      folhagem: 'quente',
       inimigos: {
         comum: { tipo: 'aranha', cor: '#d83a5a' },    // intacto (R-MON-3)
         raro: { tipo: 'drenador', cor: '#a83a6a' }

@@ -1465,8 +1465,9 @@ console.log('20) cenário procedural: Perlin Noise com semente do mapa');
   const antes = JSON.stringify(obs);
   conf(obs.length >= 4,
     'mapa 1 tem obstáculos procedurais (' + obs.length + ')');
-  conf(obs.every(o => o.tipo === 'tree' || o.tipo === 'rock'),
-    'tipos vêm do tema (tree/rock)');
+  conf(obs.every(o => o.tipo === 'tree' || o.tipo === 'rock' ||
+       o.tipo === 'casa' || o.tipo === 'fogueira'),
+    'tipos vêm do tema (tree/rock) ou da vila (casa/fogueira)');
   conf(obs.every(o =>
       Math.abs(o.x - 192) >= 72 || Math.abs(o.y - 134) >= 64),
     'área central livre p/ spawn e renascimento');
@@ -1484,9 +1485,46 @@ console.log('20) cenário procedural: Perlin Noise com semente do mapa');
   conf(JSON.stringify(Batalha.info().obst) !== antes,
     'mapa 2 tem layout próprio (outra semente, ' +
     Batalha.info().obst.length + ' obstáculos)');
+  conf(!!Batalha.info().vila, 'mapa 2 também tem vila');
   Batalha.restaurarMapa(1);
   conf(JSON.stringify(Batalha.info().obst) === antes,
     'voltar ao mapa 1 reproduz o mesmo layout (semente = nº do mapa)');
+
+  // --- vila por mapa (spec mundos-vivos R-MV-2): nasce, tem colisão
+  // e participa dos sistemas que leem obst (as restrições >=55px e
+  // zona livre central já rodam no obs geral acima — vila é obstáculo)
+  const vil = Batalha.info().vila;
+  conf(!!vil && vil.casas >= 2 && vil.pecas >= vil.casas &&
+       vil.pecas <= vil.casas + 1,
+    'mapa 1 tem vila (' + (vil ? vil.casas + ' casas · ' + vil.pecas +
+      ' peças' : 'null') + ')');
+  const vill = obs.filter(o => o.tipo === 'casa' || o.tipo === 'fogueira');
+  conf(vill.length >= 2 && vill.every(o => typeof o.var === 'number' &&
+       o.r > 0 && typeof o.cx === 'number' && typeof o.cy === 'number'),
+    'peças da vila expõem índice (var) e colisão cx/cy/r');
+  if (vill.length) {
+    const casa = vill.filter(o => o.tipo === 'casa')[0];
+    conf(sandbox.IA.celulaObst(casa.cx, casa.cy, 6),
+      'casa é obstáculo p/ a IA (celulaObst)');
+    const dSpawn = Math.sqrt((casa.x - 192) * (casa.x - 192) +
+      (casa.y - 134) * (casa.y - 134));
+    conf(dSpawn >= 90, 'casa fora do miolo do spawn (' +
+      Math.round(dSpawn) + 'px; retângulo livre 72×64 acima)');
+  }
+
+  // --- folhagem por tema (R-MV-1): 10 temas → 3 conjuntos
+  const folhEsperada = ['verde', 'frio', 'quente', 'quente', 'verde',
+    'verde', 'quente', 'frio', 'frio', 'quente'];
+  conf(folhEsperada.every((f, i) => sandbox.Mapas.info(i + 1).folhagem === f),
+    'folhagem mapeada nos 10 temas (verde×3 · frio×3 · quente×4)');
+
+  // --- assets de cenário carregados na mesma carga do boot (R-MV-3)
+  const ai = sandbox.Assets.info();
+  const chavesC = Object.keys(ai.cenario);
+  conf(chavesC.length === 5 && chavesC.every(k =>
+      ai.cenarioPronto[k] === ai.cenario[k]),
+    'cenario: ' + chavesC.reduce((s, k) => s + ai.cenario[k], 0) +
+    ' peças prontas (folhagem 27 + vila 4)');
 }
 
 console.log('21) estatísticas do jogador (Personagem.stats)');

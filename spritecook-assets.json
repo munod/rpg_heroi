@@ -58,6 +58,33 @@
     "walk": { "asset_id": "89c07479-4a26-403d-b5a6-fdb068d2c4e7", "local": "assets/fonte/clerigo-walk.png" },
     "ataque": { "asset_id": "ca5b2833-86e5-473a-91f5-2cae199a8ffe", "local": "assets/fonte/clerigo-ataque.png" }
   },
+  "cenario": {
+    "nota": "spec mundos-vivos — cortadas por testes/prepara-cenario.js em assets/cenario/ (27 folhagens + 3 casas + fogueira)",
+    "folhagem_verde": {
+      "asset_id": "e7e20841-a772-42e9-be6a-e06a74107884",
+      "sha12": "da06db98400f",
+      "local": "assets/fonte/folhagem-verde-sheet.png",
+      "label": "Foliage verde (3×3, preset Foliage)"
+    },
+    "folhagem_frio": {
+      "asset_id": "7334b804-8e17-4bf9-a592-1cd7abf70e2d",
+      "sha12": "65f97edc42f0",
+      "local": "assets/fonte/folhagem-frio-sheet.png",
+      "label": "Foliage frio/geada (3×3, preset Foliage)"
+    },
+    "folhagem_quente": {
+      "asset_id": "a27e6a24-5718-40f9-8555-35af0b8bb419",
+      "sha12": "2ce415e3f4e5",
+      "local": "assets/fonte/folhagem-quente-sheet.png",
+      "label": "Foliage quente/secas (3×3, preset Foliage)"
+    },
+    "vila": {
+      "asset_id": "ced61759-c4a4-4c1e-85ab-19258ecf0040",
+      "sha12": "c3360a2b47bd",
+      "local": "assets/fonte/vila-sheet.png",
+      "label": "Vila: 3 casas + fogueira (2×2, preset Character & Props)"
+    }
+  },
   "geracoes_substituidas": {
     "nota": "piloto sem arma embutida (composição separada — abandonada na emenda do veredito)",
     "idle_antigo": "37ec5ea3-13ac-4deb-8c07-dbc956990e92",
