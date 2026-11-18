@@ -150,6 +150,10 @@ var Personagem = (function () {
   // segue linear × linear (invariante anti-estol intacto).
   var ATRIB_LIM = 3500;
   var ATRIB_MAX = 1000000;  // pontos em cada atributo
+  // ---- nível de skill (spec economia-de-pontos R-EDP-3) --------------
+  // Teto por skill (espelho comentado em skills.js — o mesmo padrão de
+  // normalizaLoadout/LIMITE: personagem.js não depende de skills.js)
+  var SKILL_NV_MAX = 10;
 
   function novo() {
     return {
@@ -166,6 +170,7 @@ var Personagem = (function () {
       ouro: 0,              // moeda: abates, venda e sucata de itens
       loadout: null,        // skills escolhidas (null = automático)
       ramos: null,          // ramos escolhidos {skillId: ramoId} (null = base neutra)
+      skillNv: null,        // níveis de skill {skillId: nv} (null = nenhuma)
       trava: { arma: false, armadura: false },  // slot fixado (não auto-troca)
       autoApr: false,       // auto-aprimorar (A+) itens equipados
       keystoneLib: false,   // keystone desbloqueado (compra única)
@@ -711,6 +716,28 @@ var Personagem = (function () {
     return out;
   }
 
+  // níveis de skill {skillId: nv} (spec economia-de-pontos R-EDP-3):
+  // só ints em 1..SKILL_NV_MAX (0 é meaningless — descartado); lixo
+  // vira null (nenhum investimento = baseline intacta). Teto de 32
+  // entradas, padrão do normalizaRamos.
+  function normalizaSkillNv(snv) {
+    if (!snv || typeof snv !== 'object') return null;
+    var out = null, n = 0;
+    for (var k in snv) {
+      if (!Object.prototype.hasOwnProperty.call(snv, k)) continue;
+      if (n >= 32) break;
+      var v = snv[k];
+      if (typeof k === 'string' && k &&
+          typeof v === 'number' && isFinite(v) &&
+          v >= 1 && v <= SKILL_NV_MAX) {
+        if (!out) out = {};
+        out[k.slice(0, 24)] = Math.floor(v);
+        n++;
+      }
+    }
+    return out;
+  }
+
   function num(v, min, padrao) {
     return (typeof v === 'number' && isFinite(v) && v >= min) ? Math.floor(v) : padrao;
   }
@@ -757,6 +784,7 @@ var Personagem = (function () {
       ouro: Math.min(num(p.ouro, 0, 0), OURO_MAX),
       loadout: normalizaLoadout(p.loadout),
       ramos: normalizaRamos(p.ramos),
+      skillNv: normalizaSkillNv(p.skillNv),
       trava: {
         arma: !!(p.trava && p.trava.arma),
         armadura: !!(p.trava && p.trava.armadura)
@@ -825,6 +853,7 @@ var Personagem = (function () {
     PONTOS_MAX: PONTOS_MAX,
     ATRIB_MAX: ATRIB_MAX,
     ATRIB_LIM: ATRIB_LIM,
+    SKILL_NV_MAX: SKILL_NV_MAX,
     keystoneDe: keystoneDe,
     comprarKeystone: comprarKeystone,
     alternarKeystone: alternarKeystone,

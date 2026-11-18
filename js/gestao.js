@@ -9,6 +9,10 @@ var Gestao = (function () {
   var paginaBolsa = 0;     // página da lista da bolsa (5 por página)
   var passo = 1;           // quantos pontos por ação: 1 · 5 · 50 · 'max'
   var CICLO = [1, 5, 50, 'max'];   // ordem do toggle (QA: ×50 e MAX novos)
+  // função do 3º botão da grade de skills: escolher ramo (padrão) ou
+  // investir nível (spec economia-de-pontos R-EDP-3) — segmentado no
+  // cabeçalho; padrão 'ramo' mantém todos os contratos de clique
+  var modoSkill = 'ramo';
   var repT = 0;            // tempo segurando um botão +/−
   var repI = 0;            // tempo desde a última repetição
   var REP_ATRASO = 0.25;   // segurar antes de começar a repetir
@@ -567,6 +571,27 @@ var Gestao = (function () {
       (prox ? nomeRamo(sk, prox) : 'base neutra'));
   }
 
+  // dica do botão em modo Nível (R-EDP-3): custo, progresso e o
+  // multiplicador ativo (quem usa ×50/MAX sabe o que vai acontecer)
+  function dicaNivelSkill(sk, nv, custo) {
+    var out = [
+      ['Subir nível: ' + sk.nome, '#e8c86a'],
+      ['Nível ' + nv + ' → ' + (nv + 1) + ' · custo ' + custo +
+        ' pontos', '#f2eef8'],
+      ['Cada nível: +' + Math.round(Skills.SKILL_NV_PCT * 100) +
+        '% de poder (nunca muda a frequência)', '#9a90b8']
+    ];
+    if (nv >= Skills.SKILL_NV_MAX) {
+      out.push(['Nível máximo da skill', '#8ce08c']);
+    } else if (passo !== 1) {
+      out.push(['Multiplicador ativo: ' +
+        (passo === 'max' ? 'MAX (gasta todos os pontos)' : '×' + passo),
+        '#e8c86a']);
+    }
+    out.push(['Dispara sozinha — sem botão (100% automático)', '#6f678a']);
+    return out;
+  }
+
   function dicaRamo(sk, ramo) {
     var out = [['Ramo da skill: ' + sk.nome, '#e8c86a']];
     if (Array.isArray(sk.ramos)) {
@@ -608,10 +633,22 @@ var Gestao = (function () {
     // de ramo (52px: base → A → B → base)
     var ativasIds = Skills.carregadas(p).map(function (s) { return s.id; });
     var lim = Skills.limite(p.nivel);
-    UI.text('Skills ativas (máx ' + lim + ')', 416, 168,
+    // contagem absorvida no rótulo (o canto direito virou o segmentado
+    // [Ramo][Nível] — o substring 'máx N' continua, contrato da 43)
+    UI.text('Skills ativas (máx ' + lim + ') ' +
+      ativasIds.length + '/' + lim, 416, 168,
       { color: '#9a90b8', font: '13px monospace' });
-    UI.text(ativasIds.length + '/' + lim, 752, 168,
-      { align: 'right', color: '#e8c86a', font: '13px monospace' });
+    // segmentado: escolhe a função do 3º botão de cada linha da grade
+    if (UI.button(640, 154, 56, 22, 'Ramo', {
+        ativo: modoSkill === 'ramo', font: '10px monospace',
+        color: modoSkill === 'ramo' ? '#e8c86a' : '#9a90b8' })) {
+      modoSkill = 'ramo';
+    }
+    if (UI.button(700, 154, 56, 22, 'Nível', {
+        ativo: modoSkill === 'nivel', font: '10px monospace',
+        color: modoSkill === 'nivel' ? '#e8c86a' : '#9a90b8' })) {
+      modoSkill = 'nivel';
+    }
     Skills.daClasse(p.classe).forEach(function (sk, i) {
       var x = 416 + (i % 2) * 174;        // 2 colunas de 166 (110+4+52)
       var y = 178 + Math.floor(i / 2) * 29;  // 4 linhas: 178..289
@@ -631,19 +668,47 @@ var Gestao = (function () {
         })) {
         alternarSkill(p, sk.id);
       }
-      UI.dica({ x: x, y: y, w: 110, h: 24 }, Skills.dicas(sk, ramo));
-      // ramo: bloqueada mostra o nível; sem escolha = "Base"
-      var rot = !aberta ? ('nv ' + sk.nivel)
-        : (ramo ? nomeRamo(sk, ramo) : 'Base');
-      if (UI.button(x + 114, y, 52, 24, rot, {
-          disabled: !aberta,
-          ativo: !!ramo,
-          color: ramo ? '#e8c86a' : '#9a90b8',
-          font: '10px monospace'
-        })) {
-        alternaRamo(p, sk);
+      UI.dica({ x: x, y: y, w: 110, h: 24 },
+        Skills.dicas(sk, ramo, Skills.nvSkill(p, sk.id)));
+      if (modoSkill === 'nivel') {
+        // investir nível (R-EDP-3): o 3º botão compra níveis com
+        // pontos de atributo — custo no rótulo, guardas de
+        // desbloqueio/teto/saldo e o multiplicador ×1/×5/×50/MAX
+        // vale aqui (MAX = maxar a skill de uma vez)
+        var nvSk = Skills.nvSkill(p, sk.id);
+        var custoSk = Skills.custoNivel(nvSk);
+        var noTetoSk = nvSk >= Skills.SKILL_NV_MAX;
+        var podeSk = aberta && !noTetoSk && (p.pontos || 0) >= custoSk;
+        if (UI.button(x + 114, y, 52, 24,
+            noTetoSk ? ('nv ' + Skills.SKILL_NV_MAX) : ('+' + custoSk), {
+              disabled: !podeSk,
+              ativo: nvSk > 0,
+              color: noTetoSk ? '#8ce08c' : '#e8c86a',
+              font: '10px monospace'
+            })) {
+          var pts0Sk = p.pontos;
+          Skills.sobe(p, sk.id, passo === 'max' ? Infinity : passo);
+          if (p.pontos < pts0Sk) {
+            Gravacao.msg(sk.nome + ': nível ' + Skills.nvSkill(p, sk.id) +
+              ' (−' + (pts0Sk - p.pontos) + ' pts)');
+          }
+        }
+        UI.dica({ x: x + 114, y: y, w: 52, h: 24 },
+          dicaNivelSkill(sk, nvSk, custoSk));
+      } else {
+        // ramo: bloqueada mostra o nível; sem escolha = "Base"
+        var rot = !aberta ? ('nv ' + sk.nivel)
+          : (ramo ? nomeRamo(sk, ramo) : 'Base');
+        if (UI.button(x + 114, y, 52, 24, rot, {
+            disabled: !aberta,
+            ativo: !!ramo,
+            color: ramo ? '#e8c86a' : '#9a90b8',
+            font: '10px monospace'
+          })) {
+          alternaRamo(p, sk);
+        }
+        UI.dica({ x: x + 114, y: y, w: 52, h: 24 }, dicaRamo(sk, ramo));
       }
-      UI.dica({ x: x + 114, y: y, w: 52, h: 24 }, dicaRamo(sk, ramo));
     });
 
     // keystone da classe: efeito e custo no rótulo (11px p/ caber)
@@ -876,7 +941,8 @@ var Gestao = (function () {
           ST_VAL_X, y, { align: 'right',
             color: aberta ? '#e8c86a' : '#6f678a', font: '13px monospace' });
         UI.dica({ x: 416, y: y - 7, w: 340, h: 14 },
-          Skills.dicas(sk, Skills.ramoDe(p, sk)));
+          Skills.dicas(sk, Skills.ramoDe(p, sk),
+            Skills.nvSkill(p, sk.id)));
       });
     });
 

@@ -6006,6 +6006,7 @@ console.log('55) economia de pontos: respec pago, soft cap e nível de skill (sp
 {
   const p = Game.personagem;
   const Batalha = sandbox.Batalha;
+  const Skills = sandbox.Skills;
   // batalha pausada: kills não mudam ouro/XP no meio das asserções
   if (!Batalha.info().pausada) Batalha.alternarPausa();
   clique(240, 418);                 // aba Atributos (abre/troca a janela)
@@ -6141,6 +6142,118 @@ console.log('55) economia de pontos: respec pago, soft cap e nível de skill (sp
   // restaura o estado (era o fim da ficha — higiene)
   p.equip = eqA; p.keystoneOn = ksA; p.nivel = nvA;
   p.classe = classeA;
+
+  // ---------- S) nível de skill com pontos de atributo (R-EDP-3) ------
+  // --- S1) constantes espelhadas + custo crescente
+  conf(Skills.SKILL_NV_MAX === Personagem.SKILL_NV_MAX &&
+       Personagem.SKILL_NV_MAX === 10,
+    'SKILL_NV_MAX espelhado (skills = personagem = 10)');
+  const custos = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => Skills.custoNivel(n));
+  conf(custos[0] === 10 && custos[1] === 15 && custos[9] === 384 &&
+       custos.every((c, i) => i === 0 || c > custos[i - 1]),
+    'custo crescente 10 → 384 (' + custos.join(', ') + ')');
+
+  // --- S2) sobe: gasta pontos, registra nível, guarda tudo
+  p.classe = 'guerreiro';
+  p.nivel = 400;                     // todas desbloqueadas
+  p.pontos = 100;
+  p.skillNv = null;
+  const skS = Skills.daClasse('guerreiro')[0];   // golpe-bravo (nv 5)
+  const sub1 = Skills.sobe(p, skS.id, 1);
+  conf(sub1 === 1 && p.pontos === 90 &&
+       Skills.nvSkill(p, skS.id) === 1,
+    'sobe consome 10 pontos e registra nv 1 (pts 100→' + p.pontos + ')');
+  Skills.sobe(p, skS.id, Infinity);
+  conf(Skills.nvSkill(p, skS.id) > 1 && p.pontos >= 0 && p.pontos < 23,
+    'MAX compra parcial até o saldo acabar (nv ' +
+    Skills.nvSkill(p, skS.id) + ', pts ' + p.pontos + ')');
+  p.pontos = 99999;
+  Skills.sobe(p, skS.id, Infinity);
+  conf(Skills.nvSkill(p, skS.id) === Skills.SKILL_NV_MAX,
+    'teto de ' + Skills.SKILL_NV_MAX + ' níveis respeitado');
+  p.nivel = 1;
+  conf(Skills.sobe(p, Skills.daClasse('guerreiro')[7].id, 1) === 0,
+    'skill bloqueada (nv 400) não sobe com herói nv 1');
+
+  // --- S3) aplicaNivel: identidade nv0 · +8% nv1 · frequência intacta
+  const base0 = Skills.LISTA[0];                  // golpe-bravo: mult 1.2, aCada 7
+  conf(Skills.aplicaNivel(base0, 0) === base0 &&
+       Skills.aplicaNivel(base0, null) === base0,
+    'aplicaNivel(nv 0) é identidade (baseline medida intacta)');
+  const nv1s = Skills.aplicaNivel(base0, 1);
+  conf(Math.abs(nv1s.mult - 1.2 * 1.08) < 1e-9 && nv1s.aCada === 7,
+    'nv 1: mult ×1,08 e aCada (frequência) intacto');
+  conf(nv1s.nvSkill === 1,
+    'sonda nvSkill exposta na cópia');
+
+  // --- S4) carregadas aplica o nível (fonte única p/ a batalha)
+  p.classe = 'guerreiro';
+  p.nivel = 6;                        // só golpe-bravo desbloqueada
+  p.loadout = null;
+  p.skillNv = { 'golpe-bravo': 5 };
+  const vig = Skills.carregadas(p);
+  conf(vig.length === 1 &&
+       Math.abs(vig[0].mult - 1.2 * (1 + 0.08 * 5)) < 1e-9,
+    'carregadas aplica +40% (nv 5) no mult (' +
+    (vig[0] ? vig[0].mult.toFixed(3) : 'ausente') + ')');
+  p.skillNv = null;
+
+  // --- S5) save: normalizaSkillNv via normalizar
+  const nS1 = Personagem.normalizar(
+    { skillNv: { 'golpe-bravo': 3, 'x': 99, 'y': 0, 'z': 1.9 } });
+  conf(!!nS1.skillNv && nS1.skillNv['golpe-bravo'] === 3 &&
+       nS1.skillNv.z === 1 &&
+       !('x' in nS1.skillNv) && !('y' in nS1.skillNv),
+    'normaliza: válido fica, fracionário floora, teto/piso descartam');
+  conf(Personagem.normalizar({ skillNv: 'lixo' }).skillNv === null,
+    'normaliza: lixo vira null (nenhum investimento)');
+  conf(Personagem.normalizar({}).skillNv === null,
+    'normaliza: save sem skillNv ganha null');
+
+  // --- S6) UI: segmentado [Ramo][Nível] + compra pelo botão
+  p.classe = 'guerreiro';
+  p.nivel = 6;
+  p.skillNv = null;
+  p.pontos = 50;
+  clique(240, 418); frame(2);        // aba Atributos
+  clique(384, 418); frame(2);        // aba Classe
+  conf((jogoCanvas._textos || []).some(
+    t => t.indexOf('Skills ativas (máx 3)') >= 0),
+    'cabeçalho da grade mantém o formato com a contagem junto');
+  clique(728, 165); frame(2);        // segmento Nível (700,154,56,22)
+  const ptsS6 = p.pontos;
+  clique(556, 190); frame(2);        // 3º botão da linha 1: +10
+  conf(p.pontos === ptsS6 - 10 &&
+       Skills.nvSkill(p, 'golpe-bravo') === 1,
+    'modo Nível: botão +10 compra o nível 1 (pts ' + ptsS6 + '→' +
+    p.pontos + ')');
+  p.pontos = 0;
+  clique(556, 190); frame(2);
+  conf(Skills.nvSkill(p, 'golpe-bravo') === 1,
+    'sem pontos: botão desabilitado não compra');
+  // dica da skill mostra o nível investido
+  jogoCanvas._textos = [];
+  mm(470, 190);                      // hover no nome (416..526 × 178..202)
+  for (let i = 0; i < 25; i++) frame(1);
+  conf((jogoCanvas._textos || []).some(
+    t => t.indexOf('Investido: nível 1') >= 0),
+    'dica da skill mostra o nível investido');
+  mm(150, 150);
+  // MAX do multiplicador compra vários níveis de uma vez
+  clique(240, 418); frame(2);        // aba Atributos (toggle mora lá)
+  clique(708, 234); frame(2);        // ×1 → ×5
+  clique(708, 234); frame(2);        // ×5 → ×50
+  clique(708, 234); frame(2);        // ×50 → MAX
+  clique(384, 418); frame(2);        // aba Classe
+  p.pontos = 300;
+  const nvS6 = Skills.nvSkill(p, 'golpe-bravo');
+  clique(556, 190); frame(2);
+  conf(Skills.nvSkill(p, 'golpe-bravo') > nvS6 && p.pontos < 300 &&
+       p.pontos >= 0,
+    'MAX compra vários níveis de uma vez (nv ' + nvS6 + '→' +
+    Skills.nvSkill(p, 'golpe-bravo') + ', sobram ' + p.pontos + ' pts)');
+  clique(240, 418); frame(2);        // volta pra Atributos
+  clique(708, 234); frame(2);        // MAX → ×1 (ciclo fecha)
 }
 if (falhas) {
   console.log(falhas + ' FALHA(S)');

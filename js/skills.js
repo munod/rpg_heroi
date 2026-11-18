@@ -380,6 +380,19 @@ var Skills = (function () {
   // desbloqueadas. Mínimo 1 é garantido pela UI.
   var LIMITE = 5;
 
+  // ---- nível de skill (spec economia-de-pontos R-EDP-3) --------------
+  // Investir PONTOS DE ATRIBUTO pra subir o nível de uma skill — o
+  // segundo poço de gasto (custo de oportunidade: força vs skill).
+  // SKILL_NV_MAX = espelho comentado de Personagem.SKILL_NV_MAX (o
+  // save normaliza lá; fumaca confere que os dois batem).
+  var SKILL_NV_MAX = 10;
+  var SKILL_CUSTO_BASE = 10;    // custo do 1º nível (0 → 1)
+  var SKILL_CUSTO_FATOR = 1.5;  // crescente: escolha profundo vs largo
+  var SKILL_NV_PCT = 0.08;      // +8% de PODER por nível
+  // campos de PODER escalam com o nível; frequência/gatilho NUNCA
+  // (aCada/intervalo/chance/gatilho = o ritmo medido da skill)
+  var CAMPOS_PODER = ['mult', 'pct', 'dps', 'impulso', 'dur', 'alcance'];
+
   function limite(nivel) {
     var nv = (typeof nivel === 'number' && nivel >= 1) ? Math.floor(nivel) : 1;
     if (nv >= 150) return 5;
@@ -387,12 +400,74 @@ var Skills = (function () {
     return 3;
   }
 
+  // custo para ir de nv → nv+1: round(10 × 1,5^nv) — 10, 15, 23, 34,
+  // 51, 76, 114, 171, 256, 384 (zerar uma skill = 1.138 pontos ≈ 12%
+  // da campanha; as 8 = quase todos os pontos — escolha real)
+  function custoNivel(nv) {
+    var n = (typeof nv === 'number' && nv >= 0) ? Math.floor(nv) : 0;
+    return Math.round(SKILL_CUSTO_BASE * Math.pow(SKILL_CUSTO_FATOR, n));
+  }
+
+  // nível investido de uma skill (0 = nenhuma)
+  function nvSkill(p, id) {
+    var s = p && p.skillNv;
+    return (s && typeof s === 'object' && typeof s[id] === 'number')
+      ? s[id] : 0;
+  }
+
+  // compra até n níveis (Infinity = MAX): guarda desbloqueio, teto e
+  // pontos — compra PARCIAL (para quando o saldo acaba, mesmo
+  // espírito das guardas de Gestao.aplicar). Devolve os níveis subidos.
+  function sobe(p, id, n) {
+    if (!p) return 0;
+    var sk = null;
+    for (var i = 0; i < LISTA.length; i++) {
+      if (LISTA[i].id === id) { sk = LISTA[i]; break; }
+    }
+    var nvP = (typeof p.nivel === 'number' && p.nivel >= 1) ? p.nivel : 1;
+    if (!sk || sk.nivel > nvP) return 0;          // existe + desbloqueada
+    if (!p.skillNv || typeof p.skillNv !== 'object') p.skillNv = {};
+    var qtd = (n === Infinity) ? Infinity
+      : ((typeof n === 'number' && n >= 1) ? Math.floor(n) : 1);
+    var subiu = 0;
+    while (subiu < qtd) {
+      var nv = (typeof p.skillNv[id] === 'number') ? p.skillNv[id] : 0;
+      if (nv >= SKILL_NV_MAX) break;
+      var custo = custoNivel(nv);
+      if ((p.pontos || 0) < custo) break;
+      p.pontos -= custo;
+      p.skillNv[id] = nv + 1;
+      subiu++;
+    }
+    return subiu;
+  }
+
+  // cópia da skill COM o nível investido: campos de PODER × (1 + 8%×nv).
+  // IDENTIDADE quando nv = 0 — quem não investe joga exatamente a
+  // baseline medida (padrão "base neutra" do ramo).
+  function aplicaNivel(sk, nv) {
+    var n = (typeof nv === 'number' && nv > 0) ? Math.floor(nv) : 0;
+    if (!n) return sk;
+    var f = 1 + SKILL_NV_PCT * n;
+    var out = {};
+    for (var k in sk) {
+      if (Object.prototype.hasOwnProperty.call(sk, k)) out[k] = sk[k];
+    }
+    for (var i = 0; i < CAMPOS_PODER.length; i++) {
+      var c = CAMPOS_PODER[i];
+      if (typeof out[c] === 'number') out[c] = out[c] * f;
+    }
+    out.nvSkill = n;               // sonda p/ UI e testes
+    return out;
+  }
+
   function automaticas(desb, lim) {
     return desb.slice(Math.max(0, desb.length - lim));
   }
 
   // skills que o combate vai executar para o personagem — COM o ramo
-  // escolhido mergeado (fonte única: a batalha lê campos)
+  // escolhido mergeado e o nível investido aplicado (fonte única: a
+  // batalha lê campos e não sabe que skillNv existe)
   function carregadas(p) {
     var nv = p ? p.nivel : 1;
     var desb = ativas(p ? p.classe : null, nv);
@@ -402,7 +477,9 @@ var Skills = (function () {
       var out = [];
       for (var i = 0; i < desb.length; i++) {
         if (sel.indexOf(desb[i].id) >= 0) {
-          out.push(comRamo(desb[i], ramoDe(p, desb[i])));
+          out.push(aplicaNivel(
+            comRamo(desb[i], ramoDe(p, desb[i])),
+            nvSkill(p, desb[i].id)));
         }
       }
       // seleção da classe antiga (troca direta): volta pro automático
@@ -410,7 +487,8 @@ var Skills = (function () {
     }
     var auto = automaticas(desb, lim);
     for (var j = 0; j < auto.length; j++) {
-      auto[j] = comRamo(auto[j], ramoDe(p, auto[j]));
+      auto[j] = aplicaNivel(
+        comRamo(auto[j], ramoDe(p, auto[j])), nvSkill(p, auto[j].id));
     }
     return auto;
   }
@@ -475,11 +553,17 @@ var Skills = (function () {
 
   // tooltip: skill com os NÚMEROS DO ESTADO ATUAL (ramo aplicado) +
   // as linhas dos dois ramos e qual está ativo (árvore literal)
-  function dicas(sk, ramoId) {
+  function dicas(sk, ramoId, nvInvestido) {
     var atual = comRamo(sk, ramoId);
     var out = [[atual.nome, atual.cor]];
     out.push(['Nível ' + sk.nivel + ' · ' + (TIPO_TXT[sk.tipo] || sk.tipo),
       '#9a90b8']);
+    // nível investido (R-EDP-3): quanto o investimento rende hoje
+    if (typeof nvInvestido === 'number' && nvInvestido > 0) {
+      out.splice(2, 0, ['Investido: nível ' + nvInvestido + ' (+' +
+        Math.round(SKILL_NV_PCT * nvInvestido * 100) + '% de poder)',
+        '#8ce08c']);
+    }
     var f = efeitoLinha(atual);
     if (f) out.push([f, '#f2eef8']);
     if (Array.isArray(sk.ramos) && sk.ramos.length) {
@@ -508,6 +592,12 @@ var Skills = (function () {
     proxima: proxima,
     comRamo: comRamo,
     ramoDe: ramoDe,
-    cicloRamo: cicloRamo
+    cicloRamo: cicloRamo,
+    SKILL_NV_MAX: SKILL_NV_MAX,
+    SKILL_NV_PCT: SKILL_NV_PCT,
+    custoNivel: custoNivel,
+    nvSkill: nvSkill,
+    sobe: sobe,
+    aplicaNivel: aplicaNivel
   };
 })();
