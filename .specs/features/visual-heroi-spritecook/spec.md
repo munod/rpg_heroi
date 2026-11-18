@@ -1,7 +1,9 @@
 # Spec: Visual do herói via SpriteCook — arte gerada + pipeline de assets
 
 Status: **piloto + emenda concluídos** (gate verde =
-`node testes/todos.js` com 5 arquivos — entrou o `previa-assets.js`) ·
+`node testes/todos.js` com 5 arquivos — entrou o `previa-assets.js`;
+**QA visual do `previa-assets.png` aprovado pelo mantenedor em
+2026-11-18**) ·
 Data: 2026-11-16 · Emenda: 2026-11-17 ·
 Iniciativa: mantenedor — *"Vamos trabalhar a arte do game, começando
 pelos personagens. Analise os sprites dos personagens para montarmos

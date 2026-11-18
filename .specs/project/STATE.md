@@ -659,7 +659,7 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   imagem para qualquer arquivo), a QA visual virou programática —
   paleta por histograma, presença/continuidade da arma por contagem
   (frame ≠ <55% da mediana), pés na fileira42, `max-x` do golpe —
-  e a conferência a olho ficou pendente para o mantenedor
+  e a conferência a olho — aprovada pelo mantenedor em 2026-11-18
   (`testes/previa-assets.png`,12 linhas).
 - **Mundo full screen + UI flutuante (Leva `mundo-fullscreen`,
   2026-11-18)** — referência do mantenedor: UI do **Leveling Idle 2D**.

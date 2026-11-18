@@ -35,8 +35,8 @@ Spec: `spec.md` · piloto = guerreiro completo antes de replicar.
 - [x] L6. Testes: grade cobre as4 classes + tabelas por classe +
       fallback por classe inexistente; previa-assets =12 linhas
 - [x] L7. QA programático (paleta, presença/continuidade da arma,
-      pés na fileira42, extensões do golpe) — visual final pendente
-      (display de imagem da sessão travado)
+      pés na fileira42, extensões do golpe) — visual final **APROVADO
+      pelo mantenedor (2026-11-18)**
 - [x] L8. Gate verde (5 arquivos) + docs + commit
 
 ## Fase A — base de referência

@@ -159,7 +159,8 @@ Após o primeiro relatório de drift (anel ≈460 ×30s):
 - Opções: `(584,15)` → `(W-40,20)`.
 - Conf novo: `[X]` fecha a janela / clique na barra reabre.
 - `node testes/todos.js` verde ao fim de CADA fase; QA visual em
-  `testes/previa-assets.png` + `cena.js` (pendente do mantenedor).
+  `testes/previa-assets.png` + `cena.js` (QA aprovado pelo
+  mantenedor em 2026-11-18).
 
 ## Fora de escopo
 
