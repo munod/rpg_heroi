@@ -127,6 +127,15 @@
       "label": "Skill icons clérigo (9 na grade, jogo usa 8)"
     }
   },
+  "monstros_futuro": {
+    "nota": "ADIADO — spec mundos-vivos R-MV-7 (decisão 2 do mantenedor: gerar e arquivar para a FUTURA leva de espécies de combate; nada integrado ao jogo)",
+    "grade": {
+      "asset_id": "da16a12a-1aa1-47df-9ada-dbd412d7008e",
+      "sha12": "ca98c27b13ed",
+      "local": "assets/fonte/monstros-sheet.png",
+      "label": "Tiny pixel monsters 7×7 (preset comunidade @kimo, 156×156)"
+    }
+  },
   "geracoes_substituidas": {
     "nota": "piloto sem arma embutida (composição separada — abandonada na emenda do veredito)",
     "idle_antigo": "37ec5ea3-13ac-4deb-8c07-dbc956990e92",
