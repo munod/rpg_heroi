@@ -122,3 +122,15 @@ specialization").
   ouro 59M, +0,9 nv/min) — provar que a sobrevivência e o ritmo
   continuam dentro do validado · docs (CHANGELOG, AGENTS, STATE,
   ROADMAP) · commit.
+
+## Emenda: seletor ×1/×5 → ×1/×5/×50/MAX (2026-11-18)
+
+- Decisão do mantenedor (pós-QA da leva `mundos-vivos`): incluir
+  **×50** e **MAX** no toggle de distribuição de pontos
+  (`RECT_TOGGLE` 684,224,55,26 em `gestao.js`). Ciclo
+  `CICLO = [1, 5, 50, 'max']` (fecha em ×1 — o teste percorre os 4
+  estados). Em **MAX**, `aplicar` usa laço infinito **paramado pelas
+  guardas**: gasta **todos** os pontos no `+` ou **esvai até o piso 1**
+  no `−` (devolve tudo). Rótulo `MAX` (não `×max`), dourado/ativo
+  quando ≠ ×1; o segurar-repetir aproveita o mesmo `passo`. Fumaça
+  seção 4: asserções de ×50, MAX e do ciclo completo.

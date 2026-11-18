@@ -65,7 +65,9 @@
   `node testes/previa-assets.js` (folha no gate). Arte-fonte em
   `assets/fonte/`, IDs em `spritecook-assets.json`.
 - Botões de atributo (`+`/`−`) aplicam em `Gestao.update(dt, p)` (clique na
-  hora + segurar-repetir + seletor ×1/×5); os demais botões do jogo agem no
+  hora + segurar-repetir + seletor ×1/×5/×50/MAX — ciclo `CICLO`,
+  MAX = laço paramado pelas guardas: gasta tudo no `+`, esvai até o
+  piso 1 no `−`); os demais botões do jogo agem no
   render, pelo retorno de `UI.button`.
 - O estado da batalha (onda/ts) é gravado pelo **dono** da batalha em
   memória (`Batalha.dono()`), nunca pelo personagem em foco — na seleção

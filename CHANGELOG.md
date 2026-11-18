@@ -12,6 +12,13 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Seletor de pontos ×50 e MAX** — o toggle de distribuição da aba
+  Atributos cicla **×1 → ×5 → ×50 → MAX → ×1** (era ×1/×5): MAX
+  gasta **todos** os pontos de uma vez no `+` ou **esvai o atributo
+  até o piso 1** no `−` (devolve tudo — redistribuir sem refazer
+  tudo à mão). Rótulo `MAX` dourado, segurar-repetir aproveita o
+  mesmo passo; fumaça percorre os 4 estados.
+
 - **Mundos vivos: cenário, vilas, NPCs e ícones (spec
   `mundos-vivos`)** — os mundos deixaram de ser "vazios": **folhagem
   por chunk** (3 paletas mapeadas aos 10 temas — verde/frio/quente,
