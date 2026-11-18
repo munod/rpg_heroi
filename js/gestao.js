@@ -7,7 +7,8 @@ var Gestao = (function () {
                            // ABERTA — os testes clicam conteúdo direto;
                            // o X fecha e a barra de abas reabre)
   var paginaBolsa = 0;     // página da lista da bolsa (5 por página)
-  var passo = 1;           // quantos pontos por ação (toggle ×1/×5)
+  var passo = 1;           // quantos pontos por ação: 1 · 5 · 50 · 'max'
+  var CICLO = [1, 5, 50, 'max'];   // ordem do toggle (QA: ×50 e MAX novos)
   var repT = 0;            // tempo segurando um botão +/−
   var repI = 0;            // tempo desde a última repetição
   var REP_ATRASO = 0.25;   // segurar antes de começar a repetir
@@ -59,9 +60,12 @@ var Gestao = (function () {
   }
 
   // Move `passo` pontos no sentido dir, com as guardas em cada unidade
-  // (não gasta mais do que tem, não leva atributo abaixo de 1).
+  // (não gasta mais do que tem, não leva atributo abaixo de 1). Em MAX
+  // o laço é infinito e param as GUARDAS: gasta tudo (+) ou esvai até
+  // o piso 1 (−), devolvendo todos os pontos.
   function aplicar(p, at, dir) {
-    for (var i = 0; i < passo; i++) {
+    var n = passo === 'max' ? Infinity : passo;
+    for (var i = 0; i < n; i++) {
       if (dir > 0) {
         if (p.pontos <= 0) return;
         p.atributos[at] += 1;
@@ -187,7 +191,10 @@ var Gestao = (function () {
       repI = 0;
     }
 
-    if (m.clicked && dentro(m, RECT_TOGGLE)) passo = passo === 1 ? 5 : 1;
+    if (m.clicked && dentro(m, RECT_TOGGLE)) {
+      var ix = CICLO.indexOf(passo);
+      passo = CICLO[(ix + 1) % CICLO.length];
+    }
   }
 
   // Tabela das 5 abas: id · rótulo CURTO da barra · nome cheio do
@@ -243,11 +250,12 @@ var Gestao = (function () {
         dicasAtributo(linha, p));
     });
 
-    // toggle de quantos pontos cada clique/segurar gasta
+    // toggle de quantos pontos cada clique/segurar gasta: ×1 → ×5 →
+    // ×50 → MAX → ×1 (MAX gasta/esvai tudo de uma vez)
     UI.button(RECT_TOGGLE.x, RECT_TOGGLE.y, RECT_TOGGLE.w, RECT_TOGGLE.h,
-      '×' + passo, {
-        ativo: passo === 5,
-        color: passo === 5 ? '#e8c86a' : undefined
+      passo === 'max' ? 'MAX' : '×' + passo, {
+        ativo: passo !== 1,
+        color: passo !== 1 ? '#e8c86a' : undefined
       });
 
     var cl = Personagem.CLASSES[p.classe];

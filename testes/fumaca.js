@@ -240,8 +240,9 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   conf(gastos >= 3 && gastos <= 15,
     'segurar repete o + (gastou ' + gastos + ' em ~0,75s)');
 
-  // --- toggle ×5: gasta 5 por clique e volta para ×1
-  clique(708, 234);             // toggle (684,224,55,26)
+  // --- toggle do multiplicador: ×1 → ×5 → ×50 → MAX → ×1
+  // (emenda do mantenedor: ×50 e MAX novos; o ciclo antigo era ×1/×5)
+  clique(708, 234);             // toggle (684,224,55,26): ×1 → ×5
   frame(2);
   p0.pontos = 10;
   const forT = p0.atributos.for;
@@ -250,12 +251,30 @@ console.log('4) boot na tela de seleção + entrada na jogatina');
   conf(p0.atributos.for === forT + 5 && p0.pontos === 5,
     '×5 gasta 5 por clique (for ' + forT + '->' + p0.atributos.for +
     ', pts 10->' + p0.pontos + ')');
-  clique(708, 234);             // volta para ×1
+  clique(708, 234);             // ×5 → ×50
   frame(2);
+  p0.pontos = 60;
+  const for50 = p0.atributos.for;
   clique(722, 92);
   frame(2);
-  conf(p0.atributos.for === forT + 6 && p0.pontos === 4,
-    'toggle volta para ×1 (for +1, pts 5->4)');
+  conf(p0.atributos.for === for50 + 50 && p0.pontos === 10,
+    '×50 gasta 50 por clique (pts 60->' + p0.pontos + ')');
+  clique(708, 234);             // ×50 → MAX
+  frame(2);
+  const forMax = p0.atributos.for;
+  const ptsMax = p0.pontos;     // 10 (sobrou do ×50)
+  clique(722, 92);
+  frame(2);
+  conf(p0.atributos.for === forMax + ptsMax && p0.pontos === 0,
+    'MAX gasta todos os pontos de uma vez (' + ptsMax + ')');
+  clique(708, 234);             // MAX → ×1 (o ciclo fecha)
+  frame(2);
+  p0.pontos = 3;
+  const for1 = p0.atributos.for;
+  clique(722, 92);
+  frame(2);
+  conf(p0.atributos.for === for1 + 1 && p0.pontos === 2,
+    'toggle volta para ×1 (for +1, pts 3->2)');
 
   // digitar o nome (renomeia o herói em foco, antes de jogar)
   tecla('keydown', 'KeyB', 'b');
