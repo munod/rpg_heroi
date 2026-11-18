@@ -580,7 +580,11 @@ var Gestao = (function () {
           ativo: on,
           align: 'left',
           color: on ? '#e8c86a' : (aberta ? '#f2eef8' : '#6f678a'),
-          font: '10px monospace'
+          // ícone 14×14 na ordem da Skills.LISTA (spec mundos-vivos
+          // R-MV-6); sem PNG = texto só. Fonte 9 p/ o nome caber
+          // depois do ícone (contrato: nome completo, clique intacto)
+          font: '9px monospace',
+          icon: Assets.cena('icone', Skills.LISTA.indexOf(sk))
         })) {
         alternarSkill(p, sk.id);
       }

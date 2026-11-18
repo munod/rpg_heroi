@@ -278,7 +278,16 @@ var UI = (function () {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
       ctx.fillRect(x + 3, y + 3, w - 6, 1);
     }
-    var tx = o.align === 'left' ? x + 8
+    var tx0 = 8;
+    if (o.icon && o.icon.width) {
+      // ícone à esquerda (spec mundos-vivos R-MV-6): o texto anda
+      // junto (4 + lado + 4); o retângulo de clique NÃO muda (contrato)
+      var lado = o.icon.width;
+      ctx.drawImage(o.icon, x + 4,
+        y + Math.round((h - lado) / 2), lado, lado);
+      tx0 = lado + 8;
+    }
+    var tx = o.align === 'left' ? x + tx0
       : (o.align === 'right' ? x + w - 8 : x + w / 2);
     text(label, tx, y + h / 2 + 2, {
       color: o.disabled ? '#6f678a' : (o.color || '#f2eef8'),

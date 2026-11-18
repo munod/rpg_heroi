@@ -1521,10 +1521,11 @@ console.log('20) cenário procedural: Perlin Noise com semente do mapa');
   // --- assets de cenário/seres carregados na mesma carga do boot (R-MV-3)
   const ai = sandbox.Assets.info();
   const chavesC = Object.keys(ai.cenario);
-  conf(chavesC.length === 7 && chavesC.every(k =>
+  conf(chavesC.length === 8 && chavesC.every(k =>
       ai.cenarioPronto[k] === ai.cenario[k]),
     'cenario: ' + chavesC.reduce((s, k) => s + ai.cenario[k], 0) +
-    ' peças prontas (folhagem 27 + vila 4 + npcs 25 + animais 4)');
+    ' peças prontas (folhagem 27 + vila 4 + npcs 25 + animais 4 + ' +
+    'ícones 32)');
 }
 
 console.log('20b) vidas do mundo: NPCs na vila e animais (mundos-vivos)');

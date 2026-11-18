@@ -29,6 +29,12 @@ function faixa(prefixo, n) {
   return a;
 }
 
+function faixaDe(prefixo, ini, n) {
+  const a = [];
+  for (let i = 0; i < n; i++) a.push(prefixo + (ini + i));
+  return a;
+}
+
 // fontes → peças (ordem = índice; a ordem da grade é linha→coluna).
 // `dir` = subpasta de assets/ · `pega` = índices da grade a gravar
 // (os demais ficam só na folha-fonte, que é o arquivo)
@@ -46,7 +52,24 @@ const FONTES = [
   // costas) — leva a lateral de cada espécie (índices 0,4,8,12) p/ o
   // jogo; o resto fica na folha-fonte (arquivo)
   { dir: 'animais', arq: 'animais-sheet.png',
-    pega: [0, 4, 8, 12], nomes: faixa('animal-', 4) }
+    pega: [0, 4, 8, 12], nomes: faixa('animal-', 4) },
+  // ícones de skill (R-MV-6): ordem final = posição na Skills.LISTA
+  // (guerreiro 0-7 · mago 8-15 · ladino 16-23 · clérigo 24-31). O
+  // modelo desenha na ORDEM DELE (nem respeita 4×2), então `pega`
+  // remapeia peça→skill após o QA visual; `quadro` normaliza tudo em
+  // 14×14 (nativos variam 21-48px por folha — o botão tem caixa fixa)
+  { dir: 'icones', arq: 'icone-guerreiro-sheet.png',
+    pega: [0, 1, 2, 5, 3, 4, 7, 8], quadro: 14,
+    nomes: faixaDe('icone-', 0, 8) },
+  { dir: 'icones', arq: 'icone-mago-sheet.png',
+    pega: [0, 1, 2, 3, 4, 5, 6, 7], quadro: 14,
+    nomes: faixaDe('icone-', 8, 8) },
+  { dir: 'icones', arq: 'icone-ladino-sheet.png',
+    pega: [0, 1, 2, 3, 4, 5, 6, 7], quadro: 14,
+    nomes: faixaDe('icone-', 16, 8) },
+  { dir: 'icones', arq: 'icone-clerigo-sheet.png',
+    pega: [0, 1, 2, 6, 3, 4, 7, 8], quadro: 14,
+    nomes: faixaDe('icone-', 24, 8) }
 ];
 
 // ------------------------------------------------------------- componentes
@@ -148,6 +171,37 @@ function recorta(img, f) {
   return { w: w, h: h, px: px, al: al };
 }
 
+// normaliza p/ um quadrado de `lado`: centraliza no maior lado e
+// redimensiona por vizinho mais próximo (ícones nascem 21-48px e a
+// caixa do botão é fixa)
+function quadrado(img, lado) {
+  const l = Math.max(img.w, img.h);
+  const px = Buffer.alloc(l * l * 3), al = Buffer.alloc(l * l, 0);
+  const ox = Math.floor((l - img.w) / 2), oy = Math.floor((l - img.h) / 2);
+  for (let y = 0; y < img.h; y++) {
+    for (let x = 0; x < img.w; x++) {
+      const s = y * img.w + x, d = (y + oy) * l + (x + ox);
+      px[d * 3] = img.px[s * 3];
+      px[d * 3 + 1] = img.px[s * 3 + 1];
+      px[d * 3 + 2] = img.px[s * 3 + 2];
+      al[d] = img.al[s];
+    }
+  }
+  const px2 = Buffer.alloc(lado * lado * 3), al2 = Buffer.alloc(lado * lado, 0);
+  for (let y = 0; y < lado; y++) {
+    const sy = Math.min(l - 1, Math.floor(y * l / lado));
+    for (let x = 0; x < lado; x++) {
+      const sx = Math.min(l - 1, Math.floor(x * l / lado));
+      const s = sy * l + sx, d = y * lado + x;
+      px2[d * 3] = px[s * 3];
+      px2[d * 3 + 1] = px[s * 3 + 1];
+      px2[d * 3 + 2] = px[s * 3 + 2];
+      al2[d] = al[s];
+    }
+  }
+  return { w: lado, h: lado, px: px2, al: al2 };
+}
+
 // --------------------------------------------------------------- montagem
 const relatorio = {};
 const pecas = [];   // {nome, img} p/ QA
@@ -173,7 +227,8 @@ FONTES.forEach(function (fonte) {
     : frags.map(function (f, i) { return i; });
   alvo.forEach(function (fi, k) {
     const f = frags[fi];
-    const img = recorta(sheet, f);
+    const cru = recorta(sheet, f);
+    const img = fonte.quadro ? quadrado(cru, fonte.quadro) : cru;
     const nome = fonte.nomes[k];
     relatorio[fonte.arq].push({ nome: nome, tam: img.w + 'x' + img.h,
       px: f.n });

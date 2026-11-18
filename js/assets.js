@@ -86,7 +86,10 @@ var Assets = (function () {
     casa: { dir: 'cenario', qtd: 3 },
     fogueira: { dir: 'cenario', qtd: 1 },
     npc: { dir: 'npcs', qtd: 25 },
-    animal: { dir: 'animais', qtd: 4 }
+    animal: { dir: 'animais', qtd: 4 },
+    // ícones de skill (R-MV-6): 32 = posição na Skills.LISTA
+    // (guerreiro 0-7 · mago 8-15 · ladino 16-23 · clérigo 24-31)
+    icone: { dir: 'icones', qtd: 32 }
   };
   var imgCena = {};     // 'chave|i' → Image
 

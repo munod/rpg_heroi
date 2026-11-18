@@ -100,6 +100,33 @@
       "label": "Tiny animals (4×4 = veado/pássaro/coelho/sapo × 4 vistas, preset comunidade)"
     }
   },
+  "icones": {
+    "nota": "spec mundos-vivos fase 3 — preset Skill Icons; corte + quadro 14×14 em testes/prepara-cenario.js; ordem final = Skills.LISTA (pega remapeia peça→skill após QA visual). Regeneração do ladino 8c0178b7-descartada (peças fusionadas no corte)",
+    "guerreiro": {
+      "asset_id": "7cea2789-9c4e-439e-a622-3c9350dea057",
+      "sha12": "56efd8051c7e",
+      "local": "assets/fonte/icone-guerreiro-sheet.png",
+      "label": "Skill icons guerreiro (9 na grade, jogo usa 8)"
+    },
+    "mago": {
+      "asset_id": "49d522dc-5dbb-4498-9fce-076ae1501384",
+      "sha12": "068abee67802",
+      "local": "assets/fonte/icone-mago-sheet.png",
+      "label": "Skill icons mago (4×2)"
+    },
+    "ladino": {
+      "asset_id": "350294a2-d89a-46d9-9d1c-d6206699c7ff",
+      "sha12": "3ac55772308e",
+      "local": "assets/fonte/icone-ladino-sheet.png",
+      "label": "Skill icons ladino (10 na grade, jogo usa 8 — miolo branco)"
+    },
+    "clerigo": {
+      "asset_id": "0ad0e1a4-402f-490b-b730-ec3f324e3daa",
+      "sha12": "58127e4c8e5b",
+      "local": "assets/fonte/icone-clerigo-sheet.png",
+      "label": "Skill icons clérigo (9 na grade, jogo usa 8)"
+    }
+  },
   "geracoes_substituidas": {
     "nota": "piloto sem arma embutida (composição separada — abandonada na emenda do veredito)",
     "idle_antigo": "37ec5ea3-13ac-4deb-8c07-dbc956990e92",

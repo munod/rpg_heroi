@@ -54,6 +54,12 @@ const LINHAS_CEN = [
   faixa('folhagem-quente', 9),
   [['casa', 0], ['casa', 1], ['casa', 2], ['fogueira', 0]]
 ];
+// ícones de skill: 4 linhas na ordem da Skills.LISTA (8 por classe)
+for (let c = 0; c < 4; c++) {
+  const linha = [];
+  for (let i = 0; i < 8; i++) linha.push(['icone', c * 8 + i]);
+  LINHAS_CEN.push(linha);
+}
 const cenLinhas = LINHAS_CEN.map(linha => {
   const imgs = linha.map(([ch, i]) => {
     const im = Assets.cena(ch, i);
@@ -128,4 +134,4 @@ const saida = path.join(__dirname, 'previa-assets.png');
 escreverPNG(saida, W, H, folha);
 console.log('gerado: ' + saida + ' (' + W + 'x' + H + ')');
 console.log('linhas: ' + CLASSES.join(', ') + ' × ' + ANIMS.join('/') +
-  ' — 8 frames cada · cenário: 3 paletas × 9 + vila 4');
+  ' — 8 frames cada · cenário: 3 paletas × 9 + vila 4 + ícones 32');
