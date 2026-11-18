@@ -52,7 +52,8 @@ const LINHAS_CEN = [
   faixa('folhagem-verde', 9),
   faixa('folhagem-frio', 9),
   faixa('folhagem-quente', 9),
-  [['casa', 0], ['casa', 1], ['casa', 2], ['fogueira', 0]]
+  [['casa', 0], ['casa', 1], ['casa', 2], ['fogueira', 0]],
+  [['animal', 0], ['animal', 1], ['animal', 2], ['animal', 3]]
 ];
 // ícones de skill: 4 linhas na ordem da Skills.LISTA (8 por classe)
 for (let c = 0; c < 4; c++) {
@@ -134,4 +135,5 @@ const saida = path.join(__dirname, 'previa-assets.png');
 escreverPNG(saida, W, H, folha);
 console.log('gerado: ' + saida + ' (' + W + 'x' + H + ')');
 console.log('linhas: ' + CLASSES.join(', ') + ' × ' + ANIMS.join('/') +
-  ' — 8 frames cada · cenário: 3 paletas × 9 + vila 4 + ícones 32');
+  ' — 8 frames cada · cenário: 3 paletas × 9 + vila 4 + animais 4 + ' +
+  'ícones 32');

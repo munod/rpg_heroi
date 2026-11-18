@@ -1,7 +1,7 @@
 // Prepara os assets de CENÁRIO gerados no SpriteCook (spec mundos-vivos):
 // fatia as grades por alfa CONECTADO — fusão só de fragmentos minúsculos
-// (<12 px, ex.: chamas soltas da fogueira entram na peça dona) — recorta
-// no bbox e grava as peças individuais em assets/cenario/.
+// (<50 px: chamas soltas e a lenha da fogueira entram na peça dona) —
+// recorta no bbox e grava as peças individuais em assets/.
 //
 // Sem redução: a folhagem nasce no tamanho nativo (12-22px, densidade do
 // herói) e as casas são desenhadas ×ESC_CENARIO=2 no jogo (como a árvore
@@ -20,7 +20,9 @@ const FONTE = path.join(RAIZ, 'assets', 'fonte');
 const BASE = path.join(RAIZ, 'assets');
 const final = !process.argv.includes('--sem-final');
 
-const FRAG_MIN = 12;   // componente <12 px é fragmento: funde com o vizinho
+const FRAG_MIN = 50;   // componente <50 px é fragmento: funde com o
+                       // vizinho (sparks da fogueira n=2-3, lenha solta
+                       // n=44 — a peça real mínima é a folhagem com n=93)
 const VIZ_MIN = 8;     // raio de fusão (gap de bbox) do fragmento com a dona
 
 function faixa(prefixo, n) {
@@ -50,9 +52,12 @@ const FONTES = [
   { dir: 'npcs', arq: 'npcs-sheet.png', nomes: faixa('npc-', 25) },
   // animais: a grade vem 4 linhas × 4 perspectivas (lateral/frente/
   // costas) — leva a lateral de cada espécie (índices 0,4,8,12) p/ o
-  // jogo; o resto fica na folha-fonte (arquivo)
+  // jogo; o resto fica na folha-fonte (arquivo). `altos` = altura-alvo
+  // por peça (QA do mantenedor: veado mantido, os outros ≈1/3 do
+  // herói de 43px)
   { dir: 'animais', arq: 'animais-sheet.png',
-    pega: [0, 4, 8, 12], nomes: faixa('animal-', 4) },
+    pega: [0, 4, 8, 12], altos: [null, 13, 16, 11],
+    nomes: faixa('animal-', 4) },
   // ícones de skill (R-MV-6): ordem final = posição na Skills.LISTA
   // (guerreiro 0-7 · mago 8-15 · ladino 16-23 · clérigo 24-31). O
   // modelo desenha na ORDEM DELE (nem respeita 4×2), então `pega`
@@ -202,6 +207,25 @@ function quadrado(img, lado) {
   return { w: lado, h: lado, px: px2, al: al2 };
 }
 
+// altura-alvo proporcional (nearest) — ajusta PROPORÇÃO sem regenerar
+// a arte (QA do mantenedor: coelho/pássaro/sapo ≈1/3 do herói)
+function redimensionaAltura(img, alt) {
+  const w = Math.max(1, Math.round(img.w * alt / img.h));
+  const px = Buffer.alloc(w * alt * 3), al = Buffer.alloc(w * alt, 0);
+  for (let y = 0; y < alt; y++) {
+    const sy = Math.min(img.h - 1, Math.floor(y * img.h / alt));
+    for (let x = 0; x < w; x++) {
+      const sx = Math.min(img.w - 1, Math.floor(x * img.w / w));
+      const s = sy * img.w + sx, d = y * w + x;
+      px[d * 3] = img.px[s * 3];
+      px[d * 3 + 1] = img.px[s * 3 + 1];
+      px[d * 3 + 2] = img.px[s * 3 + 2];
+      al[d] = img.al[s];
+    }
+  }
+  return { w: w, h: alt, px: px, al: al };
+}
+
 // --------------------------------------------------------------- montagem
 const relatorio = {};
 const pecas = [];   // {nome, img} p/ QA
@@ -228,7 +252,9 @@ FONTES.forEach(function (fonte) {
   alvo.forEach(function (fi, k) {
     const f = frags[fi];
     const cru = recorta(sheet, f);
-    const img = fonte.quadro ? quadrado(cru, fonte.quadro) : cru;
+    let img = fonte.quadro ? quadrado(cru, fonte.quadro) : cru;
+    const alt = fonte.altos ? fonte.altos[k] : null;
+    if (alt) img = redimensionaAltura(img, alt);
     const nome = fonte.nomes[k];
     relatorio[fonte.arq].push({ nome: nome, tam: img.w + 'x' + img.h,
       px: f.n });

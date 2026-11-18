@@ -79,10 +79,10 @@
       "label": "Foliage quente/secas (3×3, preset Foliage)"
     },
     "vila": {
-      "asset_id": "ced61759-c4a4-4c1e-85ab-19258ecf0040",
-      "sha12": "c3360a2b47bd",
+      "asset_id": "65f61f50-a43f-473d-a320-44639b3d7806",
+      "sha12": "9c54a51a0560",
       "local": "assets/fonte/vila-sheet.png",
-      "label": "Vila: 3 casas + fogueira (2×2, preset Character & Props)"
+      "label": "Vila: 3 casas + fogueira (2×2, preset Character & Props — fachada FRONTAL reta, QA pós-correção)"
     }
   },
   "seres": {
@@ -140,7 +140,8 @@
     "nota": "piloto sem arma embutida (composição separada — abandonada na emenda do veredito)",
     "idle_antigo": "37ec5ea3-13ac-4deb-8c07-dbc956990e92",
     "walk_antigo": "9b55a3fe-29dc-4ed1-b678-1a5565ed713e",
-    "ataque_antigo": "b6d14ef9-7177-400c-8c75-f1f2aec838ea"
+    "ataque_antigo": "b6d14ef9-7177-400c-8c75-f1f2aec838ea",
+    "vila_isometrica": "ced61759-c4a4-4c1e-85ab-19258ecf0040 (QA do mantenedor: casas isométricas num projeto front-view — virou fachada frontal reta 65f61f50)"
   },
   "armas_separadas": {
     "removido": true,

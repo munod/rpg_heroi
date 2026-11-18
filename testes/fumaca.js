@@ -1551,6 +1551,16 @@ console.log('20b) vidas do mundo: NPCs na vila e animais (mundos-vivos)');
   conf(amb.animais >= 1 && amb.animais <= 12,
     'animais em cena (' + amb.animais + ' · teto 12)');
 
+  // --- proporções (QA do mantenedor: animais desproporcionais vs o
+  // herói de 43px — veado ficou bom, os outros ≈1/3)
+  const alts = [0, 1, 2, 3].map(i => {
+    const im = sandbox.Assets.cena('animal', i);
+    return im ? im.height : -1;
+  });
+  conf(alts[0] >= 30 && alts.slice(1).every(a => a > 0 && a <= 18),
+    'proporções dos animais: veado ' + alts[0] + 'px mantido · ' +
+    'pássaro/coelho/sapo ' + alts.slice(1).join('/') + 'px (≤18)');
+
   // --- determinismo: mesmo mapa = as mesmas vidas (semente = nº do mapa)
   // — captura no estado FRESCO (sem frame desde o restaurar)
   const vidas0 = JSON.stringify(amb);
