@@ -68,7 +68,12 @@
   hora + segurar-repetir + seletor ×1/×5/×50/MAX — ciclo `CICLO`,
   MAX = laço paramado pelas guardas: gasta tudo no `+`, esvai até o
   piso 1 no `−`); os demais botões do jogo agem no
-  render, pelo retorno de `UI.button`.
+  render, pelo retorno de `UI.button`. **`−` PAGA respec** (spec
+  `economia-de-pontos` R-EDP-1): `max(RESPEC_PISO 5, ceil(ouro ×
+  RESPEC_PCT 1%))` computado **uma vez por chamada** — sem saldo o
+  ponto não devolve, o ouro nunca fica negativo, `stats.ouroGasto`
+  conta; dica própria no retângulo do `−` (a da linha não o cobre —
+  contrato da seção 30 intacto).
 - O estado da batalha (onda/ts) é gravado pelo **dono** da batalha em
   memória (`Batalha.dono()`), nunca pelo personagem em foco — na seleção
   os dois podem ser heróis diferentes e gravar pelo focado corrompia o save.
@@ -182,6 +187,18 @@
   Regra: até a **base** (8+bônus de classe) vale o linear antigo
   (atributo baixo paga penalidade); acima dela, o mult. Metas de sanidade
   na seção 40 (vel ≤250, sub-passos, afixo, regen, cadência).
+- **Soft cap por atributo (spec `economia-de-pontos` R-EDP-2)** —
+  `valorInvestido(investido, porPonto)` é a **fonte única** da parte
+  investida: até `ATRIB_LIM = 3500` **idêntico** ao linear+3× de
+  sempre (build espalhada ~1.830/atributo na campanha nunca cruza =
+  baseline intacta); acima, o mult decai **suave 3× → piso 1×**
+  (`1 + 2×LIM/(LIM+exc)`, k=1, contínuo no limiar) — **mono-stat dump
+  vira jogada ruim** e o invariante linear × linear vale p/ quem
+  respeita o limiar (A/B = pior caso mono-FOR, R-EDP-4). `ganhoAtributo`
+  e os espelhos de `statusDetalhado` (`danoInv`/`hpInv`; o do crítico
+  já chama `ganhoAtributo`) usam a helper — **Σpartes fecha por
+  construção**; a dica do atributo avisa "acima de 3500 investidos:
+  retornos reduzidos".
 - Curva de progressão com fonte única em `Personagem.custoProximo`
   (**exponencial**: `146 × 1,07^(nv−1)` — leva `progressao-exponencial`
   calibrava 1,11; a leva `mundos` RE-BASEOU p/ `1,07` junto com H
@@ -202,7 +219,10 @@
   coluna nv/min; argv 2/3 = variante da escala de monstros; argv 4 =
   seed do `Math.random`, padrão 1 → run DETERMINÍSTICO, eventos
   aleatórios ATIVOS (mesma semente = mesmo run = A/B limpo; ≥4 seeds
-  por decisão); grava `resultados/ritmo.json` (gitignored) com
+  por decisão); **env `RITMO_SKILL=1`** = o investidor respeita o
+  soft cap e desbota o excedente em níveis de skill (o jogador que
+  gerencia os dois poços — sem o env é mono-FOR de sempre);
+  grava `resultados/ritmo.json` (gitignored) com
   config/marcos/níveis/métricas/commit; métricas: kpm/dps/ttk/espera%/uptime/xpm/gpm/eficiência
   ouro/mortes-h/hpMin/inimigos/clear-médio-p95-máx/atrasoPct; fica fora
   do `todos.js`) — **≥4 runs por decisão** (run único iludiu uma
@@ -452,7 +472,25 @@
   joga o baseline medido); `Skills.comRamo` faz o merge (**`aCada`
   arredonda ≥1** — o proc `area` usa `%`; **`gatilho` proibido** nos
   mods) e `carregadas` devolve as skills PRONTAS — **a batalha não
-  muda** (lê campos). Sentido buff/nerf em `Skills.SENTIDO` (todo
+  muda** (lê campos). **NÍVEL DE SKILL com pontos de atributo** (spec
+  `economia-de-pontos` R-EDP-3 — o2º poço de gasto): `p.skillNv =
+  {id: nv}` (`normalizaSkillNv`, teto 32 entradas, `SKILL_NV_MAX = 10`
+  **espelhado** nos dois arquivos) · `Skills.custoNivel(nv)` =
+  `round(10 × 1,5^nv)` = 10,15,23,…,384 (zerar uma skill = 1.138 pts
+  ≈ 12% da campanha → profundo vs largo é escolha) · `Skills.sobe(p,
+  id, n)` com guardas de desbloqueio/teto/saldo (compra parcial;
+  `Infinity` = MAX) · `Skills.aplicaNivel` multiplica campos de
+  **PODER** (`mult,pct,dps,impulso,dur,alcance`) × `1+8%×nv` —
+  **identidade em nv 0** (baseline intacta) e **frequência/gatilho
+  nunca escalam** (`aCada,intervalo,chance,gatilho`); aplicado em
+  `carregadas` **DEPOIS do comRamo** (fonte única — a batalha nem sabe
+  que `skillNv` existe). UI na aba Classe: **segmentado [Ramo][Nível]**
+  no cabeçalho (640/700,154,56,22 — a contagem virou `… (máx N) X/Y`
+  no rótulo, substring `máx` mantido) escolhe a função do **3º botão
+  da grade**: modo padrão `'ramo'` (contratos intactos) ou `'nível'`
+  (vira `+custo`, guardas de desbloqueio/teto/saldo, o **multiplicador
+  ×1/×5/×50/MAX vale** — MAX = maxar a skill; `Gravacao.msg` de
+  feedback). Sentido buff/nerf em `Skills.SENTIDO` (todo
   ramo mistura os dois — asserção na 43). UI na aba Classe: **grade
   2×4** (toggle 110 + ramo 52; linha `178+floor(i/2)*29`, coluna
   `416+(i%2)*174` — coordenadas viram contrato de teste), tooltips

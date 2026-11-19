@@ -376,6 +376,17 @@ clique(384 + dxL / 2, 418);   // aba Classe
 frame(4);
 salvar('tela-classe.png');
 
+// modo Nível (spec economia-de-pontos R-EDP-3): o segmentado do
+// cabeçalho troca o 3º botão da grade por '+custo' — foto dos dois
+// estados p/ QA (pontos p/ o botão habilitado, nv ≥ 6 p/ skill aberta)
+sandbox.Game.personagem.pontos =
+  Math.max(50, sandbox.Game.personagem.pontos || 0);
+sandbox.Game.personagem.nivel =
+  Math.max(6, sandbox.Game.personagem.nivel || 1);
+clique(728 + dxL, 165);       // segmento [Nível] (700,154,56,22)
+frame(4);
+salvar('tela-classe-nivel.png');
+
 // boss da onda 100 (anel full screen: espera o contato p/ a foto)
 sandbox.Batalha.restaurarOnda(100);
 for (let i = 0; i < 60 && sandbox.Batalha.info().onda < 100; i++) frame(1);

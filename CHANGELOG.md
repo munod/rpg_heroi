@@ -12,6 +12,27 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Economia de pontos: respec pago, soft cap e nível de skill (spec
+  `economia-de-pontos`)** — três frentes pra devolver **peso de
+  decisão** à distribuição ("jogador clica no MAX sem pensar"):
+  **(D)** o `−` de atributo agora **paga respec** —
+  `max(5 ouro, 1% do ouro atual)` por ponto (custo fixo por chamada;
+  sem saldo o ponto não devolve; `ouroGasto` conta; dica própria no
+  botão); **(A)** **retornos decrescentes** — `valorInvestido` é a
+  fonte única: até **`ATRIB_LIM` 3500** investidos tudo é idêntico ao
+  de sempre (baseline intacta), acima o mult decai **suave 3× → 1×** →
+  dump mono-stat vira jogada ruim, build espalhada nunca é nerfada
+  (Σpartes do rodapé fecha por construção; dica avisa o limiar);
+  **(S)** **nível de skill com pontos de atributo** — segundo poço de
+  gasto com custo de oportunidade real: `p.skillNv` +
+  `Skills.custoNivel` crescente (10…384; zerar uma skill ≈ 12% da
+  campanha), `aplicaNivel` dá **+8% de poder/nível** (identidade em
+  nv 0; frequência intocada) aplicado no `carregadas`, e a aba Classe
+  ganhou o segmentado **[Ramo][Nível]** — o 3º botão da grade vira
+  `+custo` (o multiplicador ×1/×5/×50/MAX vale: MAX = maxar a
+  skill). Terceiro eixo de decisão: *quais* (loadout) × *flavor*
+  (ramo) × *quão fundo* (nível). A/B no `ritmo.js` (R-EDP-4).
+
 - **Seletor de pontos ×50 e MAX** — o toggle de distribuição da aba
   Atributos cicla **×1 → ×5 → ×50 → MAX → ×1** (era ×1/×5): MAX
   gasta **todos** os pontos de uma vez no `+` ou **esvai o atributo
