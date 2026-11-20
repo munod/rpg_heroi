@@ -20,7 +20,8 @@
 //   ondas<300 na janela) e emite uma projeção linear de vitória
 //   (validada: erro ≤1,1% nos runs completos) — decisão de ritmo em
 //   minutos. Parede só de fim de jogo = testes/sonda-fim.js.
-// Saídas: console (marcos + métricas) e resultados/ritmo.json (gitignored)
+// Saídas: console (marcos + métricas) e resultados/ritmo<tag>.json
+// (gitignored; RITMO_TAG p/ A/B paralelos — sem tag = ritmo.json)
 // com config/marcos/níveis/métricas/commit p/ comparar versões.
 'use strict';
 const fs = require('fs');
@@ -51,6 +52,9 @@ const ritmoSkill = process.env.RITMO_SKILL === '1';
 // RITMO_SEM_PONTOS = não distribui atributos (diagnóstico L2).
 const janelaMin = parseFloat(process.env.RITMO_JANELA_MIN || '600');
 const semPontos = process.env.RITMO_SEM_PONTOS === '1';
+// RITMO_TAG = sufixo do JSON (A/B paralelos não se atropelam —
+// resultados/ritmo<tag>.json; sem tag mantém ritmo.json de sempre)
+const tagJson = process.env.RITMO_TAG || '';
 const ONDAS_VITORIA = 10000;      // 100 mapas × 100 ondas (chefe do 100)
 function ondasDe(mapa, onda) { return (mapa - 1) * 100 + onda; }
 const FPS_MS = 16.7;               // o harness avança 16,7ms por frame
@@ -473,9 +477,9 @@ function inf_final() { return Batalha.info(); }
 try {
   const dir = path.join(RAIZ, 'resultados');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'ritmo.json'),
+  fs.writeFileSync(path.join(dir, 'ritmo' + tagJson + '.json'),
     JSON.stringify(saida, null, 2) + '\n');
-  console.log('json: resultados/ritmo.json' +
+  console.log('json: resultados/ritmo' + tagJson + '.json' +
     (saida.commit ? ' (commit ' + saida.commit + ')' : ''));
 } catch (e) {
   console.log('json não gravado: ' + e.message);
