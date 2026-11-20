@@ -388,7 +388,12 @@ var Skills = (function () {
   var SKILL_NV_MAX = 10;
   var SKILL_CUSTO_BASE = 10;    // custo do 1º nível (0 → 1)
   var SKILL_CUSTO_FATOR = 1.5;  // crescente: escolha profundo vs largo
-  var SKILL_NV_PCT = 0.08;      // +8% de PODER por nível
+  // +25% de PODER por nível — BUFF pós-A/B (spec economia-de-pontos):
+  // com 8% o endpoint extremo do pivô (FOR parado no limiar + skills)
+  // ficava em ~67% do dps do mono-FOR e ESTOLOU no mapa 100; sonda de
+  // fim de jogo validada (def vence · skill falha) mede a calibragem
+  // em ~16min. Identidade em nv 0 intacta = baseline não muda.
+  var SKILL_NV_PCT = 0.25;
   // campos de PODER escalam com o nível; frequência/gatilho NUNCA
   // (aCada/intervalo/chance/gatilho = o ritmo medido da skill)
   var CAMPOS_PODER = ['mult', 'pct', 'dps', 'impulso', 'dur', 'alcance'];

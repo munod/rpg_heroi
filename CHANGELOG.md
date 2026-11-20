@@ -26,7 +26,7 @@ vive em `.specs/features/`.
   **(S)** **nível de skill com pontos de atributo** — segundo poço de
   gasto com custo de oportunidade real: `p.skillNv` +
   `Skills.custoNivel` crescente (10…384; zerar uma skill ≈ 12% da
-  campanha), `aplicaNivel` dá **+8% de poder/nível** (identidade em
+  campanha), `aplicaNivel` dá **+25% de poder/nível** (identidade em
   nv 0; frequência intocada) aplicado no `carregadas`, e a aba Classe
   ganhou o segmentado **[Ramo][Nível]** — o 3º botão da grade vira
   `+custo` (o multiplicador ×1/×5/×50/MAX vale: MAX = maxar a

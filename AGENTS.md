@@ -222,6 +222,15 @@
   por decisão); **env `RITMO_SKILL=1`** = o investidor respeita o
   soft cap e desbota o excedente em níveis de skill (o jogador que
   gerencia os dois poços — sem o env é mono-FOR de sempre);
+  **`RITMO_SEM_PONTOS=1`** = não distribui atributos (diagnóstico) e
+  **`RITMO_JANELA_MIN`** = janela do detector de estol (padrão 600);
+  o run **aborta sozinho** em estol (dnv < 0,1 + ondas < 300 na
+  janela — piso saudável ~2,4) e emite **projeção linear de vitória**
+  (validada: erro ≤1,1% nos runs completos → decisão de ritmo em
+  minutos; a projeção é **CEGA p/ parede de fim de jogo** — p/ isso
+  `testes/sonda-fim.js [min] [mapa] [def|skill|sem] [seed]` monta o
+  herói já na reta final (nv pela trajetória, gear sintetizado do
+  mapa, keystone) e corre até a parede em ~16min);
   grava `resultados/ritmo.json` (gitignored) com
   config/marcos/níveis/métricas/commit; métricas: kpm/dps/ttk/espera%/uptime/xpm/gpm/eficiência
   ouro/mortes-h/hpMin/inimigos/clear-médio-p95-máx/atrasoPct; fica fora
@@ -480,7 +489,8 @@
   ≈ 12% da campanha → profundo vs largo é escolha) · `Skills.sobe(p,
   id, n)` com guardas de desbloqueio/teto/saldo (compra parcial;
   `Infinity` = MAX) · `Skills.aplicaNivel` multiplica campos de
-  **PODER** (`mult,pct,dps,impulso,dur,alcance`) × `1+8%×nv` —
+  **PODER** (`mult,pct,dps,impulso,dur,alcance`) × `1+25%×nv`
+  (buff pós-A/B: 8% estolou o pivô na parede do mapa 100) —
   **identidade em nv 0** (baseline intacta) e **frequência/gatilho
   nunca escalam** (`aCada,intervalo,chance,gatilho`); aplicado em
   `carregadas` **DEPOIS do comRamo** (fonte única — a batalha nem sabe

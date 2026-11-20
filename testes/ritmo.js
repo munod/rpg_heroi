@@ -14,6 +14,12 @@
 // Os eventos aleatórios (Açougueiro/Gatuno/Enxame/Cofre) ficam ATIVOS —
 // só o RNG é semeado (decisão do mantenedor; determinístico junto).
 // Investe os pontos em Força a cada 10s de jogo para referência estável.
+// Env: RITMO_SKILL=1 (gerente dos dois poços) · RITMO_SEM_PONTOS=1
+//   (diagnóstico L2) · RITMO_JANELA_MIN (janela do detector de estol,
+//   padrão 600). O run ABORTA sozinho ao detectar estol (dnv<0,1 +
+//   ondas<300 na janela) e emite uma projeção linear de vitória
+//   (validada: erro ≤1,1% nos runs completos) — decisão de ritmo em
+//   minutos. Parede só de fim de jogo = testes/sonda-fim.js.
 // Saídas: console (marcos + métricas) e resultados/ritmo.json (gitignored)
 // com config/marcos/níveis/métricas/commit p/ comparar versões.
 'use strict';
@@ -33,6 +39,20 @@ const semente = Number.isFinite(sementeArg) && sementeArg >= 0 ? sementeArg : 1;
 // poços. Sem o env: mono-FOR puro = referência medida de sempre (e o
 // pior caso do soft cap: se ele passa, builds gerenciadas passam).
 const ritmoSkill = process.env.RITMO_SKILL === '1';
+// ---- projeção + aborto (testes rápidos p/ decisões de balance) -------
+// A taxa de ondas é linear pós-tutorial e a projeção foi VALIDADA
+// contra os runs completos: DEF projetado 3396min vs real 3433 = −1,1%
+// · BASE 3580 vs 3566 = +0,4%. Uso: decisão de ritmo em minutos, não
+// em horas. LIMITAÇÃO (medida): a projeção de taxa é CEGA pra parede
+// de fim de jogo — a via skill projetava vitória e estolou no mapa 100;
+// pra essa pergunta existe a `testes/sonda-fim.js`.
+// RITMO_JANELA_MIN = janela do detector de estol (padrão 600min — o
+// piso histórico saudável é ~2,4 nv/min, o estol é ~0,001).
+// RITMO_SEM_PONTOS = não distribui atributos (diagnóstico L2).
+const janelaMin = parseFloat(process.env.RITMO_JANELA_MIN || '600');
+const semPontos = process.env.RITMO_SEM_PONTOS === '1';
+const ONDAS_VITORIA = 10000;      // 100 mapas × 100 ondas (chefe do 100)
+function ondasDe(mapa, onda) { return (mapa - 1) * 100 + onda; }
 const FPS_MS = 16.7;               // o harness avança 16,7ms por frame
 const RAIZ = path.join(__dirname, '..');
 
@@ -72,7 +92,10 @@ if (temEscala) {
 
 let total = 0;
 function gastar() {
-  if (ritmoSkill) {
+  if (semPontos) {
+    // RITMO_SEM_PONTOS (diagnóstico L2): pontos parados — só a gestão
+    // de ouro roda (mede quanto a distribuição de atributos importa)
+  } else if (ritmoSkill) {
     // R-EDP-4: gerente dos dois poços — para o atributo de dano no
     // limiar do soft cap e joga o resto em nível de skill (a mais
     // barata não-máxima; custo crescente faz o investimento se
@@ -202,6 +225,7 @@ const marcos = [...new Set([1, 5, 15, 30, 45, 60, 90, 120, 180, 240,
   .filter(m => m <= minutos).sort((a, b) => a - b);
 let nvAnt = null, minAnt = null;
 let onda100 = null, mapa2 = null, onda10m2 = null, vitoria = null;
+let estol = null;               // detector de estol (aborto rápido)
 const marcosJson = [];
 let espAnt = 0, framesAnt = 0;   // delta de espera por marco
 
@@ -252,6 +276,27 @@ for (const m of marcos) {
     (dnv === null ? '' : ' | +' + dnv.toFixed(1) + ' nv/min') +
     (inf.morto ? ' (caído)' : ''));
   nvAnt = p.nivel; minAnt = m;
+  // detector de estol (aborto rápido p/ A/B): janela sem progresso de
+  // nível E de ondas = parede. Runs saudáveis têm ~2,4-2,7 nv/min e
+  // ~2,7 ondas/min — o limiar 0,1 fica 24× abaixo do piso histórico.
+  // Exceção: janela toda na onda 100 com poucas mortes = grindo do
+  // chefe legítimo (não aborta); morrendo muito no chefe = parede.
+  if (vitoria === null && estol === null && m.minuto >= janelaMin) {
+    const jan = marcosJson.filter(x =>
+      x.minuto >= m.minuto - janelaMin && x.minuto <= m.minuto);
+    if (jan.length >= 2) {
+      const pri = jan[0], ult = jan[jan.length - 1];
+      const dnv = (ult.nv - pri.nv) / Math.max(1, ult.minuto - pri.minuto);
+      const don = ondasDe(ult.mapa, ult.onda) - ondasDe(pri.mapa, pri.onda);
+      const dm = (ult.mortes || 0) - (pri.mortes || 0);
+      const chefe = ult.onda === 100 && dm <= 100;
+      if (dnv < 0.1 && don < 300 && !chefe) {
+        estol = { minuto: m.minuto, janela: janelaMin,
+                  dnv: +dnv.toFixed(3), ondasJanela: don, mortesJanela: dm };
+        break;
+      }
+    }
+  }
   if (vitoria !== null) break;      // campanha concluída: não segue
 }
 console.log(vitoria !== null
@@ -347,6 +392,55 @@ console.log('níveis: nv10 ' + fmt(amo.nv10) + ' · nv20 ' + fmt(amo.nv20) +
   ' · nv30 ' + fmt(amo.nv30) + ' · keystone ' + fmt(amo.keystone));
 function fmt(s) { return s === null ? '—' : s.toFixed(1) + 's'; }
 
+// ---------------------------------------------------- projeção matemática
+// Regressão linear ondas × tempo (marcos ≥240min, pré-vitória) — o
+// ritmo pós-tutorial é linear (validado: DEF −1,1% · BASE +0,4% do
+// real). R² alto = confiança. CEGA p/ parede de fim de jogo: serve p/
+// projetar DURAÇÃO, não sobrevivência (isso é teste da sonda-fim).
+function projetaVitoria() {
+  const pts = marcosJson.filter(x => x.minuto >= 240 && x.mapa <= 100);
+  if (pts.length < 2) return null;
+  const n = pts.length;
+  let sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (const q of pts) {
+    const y = ondasDe(q.mapa, q.onda);
+    sx += q.minuto; sy += y; sxx += q.minuto * q.minuto; sxy += q.minuto * y;
+  }
+  const den = n * sxx - sx * sx;
+  if (!den) return null;
+  const a = (n * sxy - sx * sy) / den;       // ondas por minuto
+  const b = (sy - a * sx) / n;               // intercepto
+  const media = sy / n;
+  let ssTot = 0, ssRes = 0;
+  for (const q of pts) {
+    const y = ondasDe(q.mapa, q.onda);
+    ssTot += (y - media) * (y - media);
+    ssRes += (y - (a * q.minuto + b)) * (y - (a * q.minuto + b));
+  }
+  return {
+    ondasPorMin: +a.toFixed(3),
+    r2: ssTot ? +(1 - ssRes / ssTot).toFixed(4) : null,
+    vitoriaProjetadaMin: a > 0 ? Math.round((ONDAS_VITORIA - b) / a) : null
+  };
+}
+const projecao = projetaVitoria();
+if (projecao && projecao.vitoriaProjetadaMin !== null) {
+  const erro = vitoria !== null
+    ? ' · real ' + Math.round(vitoria) + 'min (erro ' +
+      (100 * (projecao.vitoriaProjetadaMin - vitoria) / vitoria).toFixed(1) +
+      '%)'
+    : (vitoria === null && estol === null ? ' (run não terminou)' : '');
+  console.log('projeção: ' + projecao.ondasPorMin + ' ondas/min (R² ' +
+    projecao.r2 + ') → vitória projetada em ' +
+    projecao.vitoriaProjetadaMin + 'min' + erro);
+}
+if (estol) {
+  console.log('ESTOL: janela de ' + estol.janela + 'min sem progresso (dnv ' +
+    estol.dnv + ' · ondas +' + estol.ondasJanela + ' · mortes +' +
+    estol.mortesJanela + ') → abortado em ' + estol.minuto +
+    'min de ' + minutos + ' pretendidos');
+}
+
 // -------------------------------------------------------------- JSON
 function commitAtual() {
   try {
@@ -362,6 +456,8 @@ const saida = {
   },
   geradoEm: new Date().toISOString(),
   commit: commitAtual(),
+  projecao: projecao,
+  estol: estol,
   marcos: marcosJson,
   niveis: {
     nv10: amo.nv10, nv20: amo.nv20, nv30: amo.nv30, keystone: amo.keystone

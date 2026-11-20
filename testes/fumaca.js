@@ -6175,14 +6175,14 @@ console.log('55) economia de pontos: respec pago, soft cap e nível de skill (sp
   conf(Skills.sobe(p, Skills.daClasse('guerreiro')[7].id, 1) === 0,
     'skill bloqueada (nv 400) não sobe com herói nv 1');
 
-  // --- S3) aplicaNivel: identidade nv0 · +8% nv1 · frequência intacta
+  // --- S3) aplicaNivel: identidade nv0 · +25% nv1 · frequência intacta
   const base0 = Skills.LISTA[0];                  // golpe-bravo: mult 1.2, aCada 7
   conf(Skills.aplicaNivel(base0, 0) === base0 &&
        Skills.aplicaNivel(base0, null) === base0,
     'aplicaNivel(nv 0) é identidade (baseline medida intacta)');
   const nv1s = Skills.aplicaNivel(base0, 1);
-  conf(Math.abs(nv1s.mult - 1.2 * 1.08) < 1e-9 && nv1s.aCada === 7,
-    'nv 1: mult ×1,08 e aCada (frequência) intacto');
+  conf(Math.abs(nv1s.mult - 1.2 * 1.25) < 1e-9 && nv1s.aCada === 7,
+    'nv 1: mult ×1,25 e aCada (frequência) intacto');
   conf(nv1s.nvSkill === 1,
     'sonda nvSkill exposta na cópia');
 
@@ -6193,8 +6193,8 @@ console.log('55) economia de pontos: respec pago, soft cap e nível de skill (sp
   p.skillNv = { 'golpe-bravo': 5 };
   const vig = Skills.carregadas(p);
   conf(vig.length === 1 &&
-       Math.abs(vig[0].mult - 1.2 * (1 + 0.08 * 5)) < 1e-9,
-    'carregadas aplica +40% (nv 5) no mult (' +
+       Math.abs(vig[0].mult - 1.2 * (1 + 0.25 * 5)) < 1e-9,
+    'carregadas aplica +125% (nv 5) no mult (' +
     (vig[0] ? vig[0].mult.toFixed(3) : 'ausente') + ')');
   p.skillNv = null;
 

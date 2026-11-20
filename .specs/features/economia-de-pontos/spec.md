@@ -84,7 +84,10 @@ Decisões do usuário (fechadas na conversa):
   guarda `pontos ≥ custo` e `nv < SKILL_NV_MAX` (compra parcial — mesmo
   espírito das guardas de `aplicar`).
 - **Poder**: `Skills.aplicaNivel(sk, nv)` devolve cópia com campos de
-  **PODER** × `1 + 0,08 × nv` (`mult, pct, dps, impulso, dur, alcance`);
+  **PODER** × `1 + 0,25 × nv` (`mult, pct, dps, impulso, dur, alcance`) —
+  **buff pós-A/B**: com 0,08 o pivô extremo estolou (67% do dps do
+  mono-FOR); 0,25 compensa a base de dano dividida (skills escalam
+  com `stats.dano`);
   campos de **frequência/gatilho intactos** (`aCada, intervalo, chance,
   gatilho`). **Identidade quando `nv = 0`** — quem não investe tem
   poder **exatamente** o medido (baseline intacta, padrão "base neutra"
@@ -105,7 +108,7 @@ Decisões do usuário (fechadas na conversa):
     `Skills.sobe(p, id, passo)` (**aproveita o multiplicador**
     ×1/×5/×50/MAX — MAX = "maxar a skill de uma vez") +
     `Gravacao.msg` de feedback; dica mostra nv atual → próximo, custo,
-    +8% e o passo ativo.
+    +25% e o passo ativo.
 
 ### R-EDP-4 — Medição (A/B obrigatório — alavanca medida)
 
@@ -117,11 +120,71 @@ Decisões do usuário (fechadas na conversa):
   **níveis de skill** (skill mais barata não-máxima) — modelo do
   jogador que gerencia A+S juntos.
 - **A/B ≥4 seeds** (240min) + **sim completa** (13500min) vs a
-  referência documentada (vitória ~44h · 0 mortes · marcos nv10 3,5min ·
-  @240min mapa 12 / nv 1.050 / atraso 0).
+  referência **pós-`mundo-fullscreen`** (nv10 5,8min · keystone ~15min ·
+  15min = nv 31/onda 45 · @240min mapa 8 / nv 664 / atraso ~20% /
+  0 mortes) e o ground truth completo da própria leva (abaixo).
 - **Critério de aceite**: sem estol (4/4) · duração/marcos na faixa ·
   ttk/kpm sanos. Se estolar → sobe `ATRIB_LIM` ou suaviza `k`
   (calibragem, o instrumento existe).
+
+## Emenda: instrumento rápido + critério de estol (2026-11-20)
+
+Decisão do mantenedor: *"precisamos de testes mais rápidos que sirvam
+para projeções matemáticas"* + *"mortes têm que fazer parte do jogo
+[...] o jogo está muito fácil e não jogar parece mais compensador"*.
+
+### Instrumento rápido (projeção matemática — minutos, não horas)
+
+1. **Projeção linear no `ritmo.js`** — regressão ondas×tempo
+   (marcos ≥240min) → `ondasPorMin`, `R²` e **vitória projetada**.
+   **Validada contra os runs completos**: DEF projetado 3396min vs
+   real 3433 = **−1,1%** · BASE 3580 vs 3566 = **+0,4%**. Serve p/
+   decisões de ritmo/duração em minutos.
+   **Limite medido**: cega p/ parede de fim de jogo — a via skill
+   projetava vitória e estolou no mapa 100.
+2. **Aborto automático de estol** no `ritmo.js` (`RITMO_JANELA_MIN`,
+   padrão 600): janela sem progresso (dnv < 0,1 **E** ondas < 300 —
+   piso saudável ~2,4) → corta o run e grava `estol` no JSON.
+   Exceção: janela toda na onda 100 com poucas mortes = chefe
+   legítimo. Runs vencedores nunca disparam (abortam só no fim).
+3. **`testes/sonda-fim.js`** — monta o herói **já na reta final**
+   (nv = trajetória medida `0,9169×ondas − 35,6`, gear dos drops do
+   próprio mapa + teto8, keystone, loadout automático) e corre até a
+   parede: **600min em ~16min de parede**. Builds: `def|skill|sem`.
+   **Validação**: `def` venceu (41,4min · nv final 9171 = idêntico ao
+   run completo) — `skill` e `sem` em curso p/ fechar o ground truth.
+4. `RITMO_SEM_PONTOS=1` — diagnóstico "sem distribuir" (L2).
+
+### Critério de estol formalizado (substitui "quantas mortes?")
+
+**Estol = progresso parado** (mortes são MECANISMO/sintoma, não o
+critério — alvo antigo de mortes já foi rebaixado a sintoma no
+`progressao-exponencial`):
+
+| Critério | Limiar |
+|---|---|
+| Estol de nível | `dnv < 0,1 nv/min` sustentado ≥ **600min** (caso mapa 97: dnv0) |
+| Estol de onda/mapa | mesma onda **≥30min** (definição original) · mapa 1 **>40min** (porto seguro do mantenedor) |
+| Sim completa | **sem vitória** em 13500min |
+
+**Mortes = corroboração**: espiral confirmada quando mortes em taxa
+alta (≥10/h) **E** um critério de progresso zerado. Morte isolada na
+fronteira/chefe com `dnv` plano = **pressão saudável — não é estol**.
+Meta nova de mortes (emenda do mantenedor): **"0 mortes" deixa de ser
+alvo** — mortes na fronteira são pressão legítima que motiva
+gerenciamento; **estol continua proibido**.
+
+### Ground truth da leva (seed 1, mesma máquina)
+
+| Via | Vitória | Mortes | Estol |
+|---|---|---|---|
+| BASE (`5315631`) | **59,4h** | 0 | não |
+| DEF (soft cap, mono-FOR) | **57,2h** (−3,7%) | 2 | não |
+| SKILL (gerente A+S) | **falhou** — parede do mapa 100 (dnv0 de 4200→10800min) | 6.707+ | **sim** |
+
+A/B curto (4 seeds × 240min) ✅ idêntico à referência (@240: mapa 8,0
+/ nv 664,0 / 0 mortes). A via skill é a pendência: sonda diagnóstica
+em curso p/ decidir buff de skill vs estratégia do investidor.
 
 ## Fora do escopo (deliberado)
 
