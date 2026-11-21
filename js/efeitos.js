@@ -1,8 +1,10 @@
 // Efeitos de combate — dono único do feedback visual (base visual:
 // Docs/efeitos.md — pools com teto, receitas com valores exatos,
-// game feel e três camadas de desenho). Só primitivas que o
-// rasterizador de testes entende (fillRect, strokeRect, ellipse+fill,
-// rect+fill, drawImage com globalAlpha, translate/scale);
+// game feel e três camadas de desenho) + receitas de skill estilo
+// Vampire Survivors (spec visual-skills: zona/onda no chão, feixe,
+// carga de conjuração, rastro e escalação com nvSkill). Só primitivas
+// que o rasterizador de testes entende (fillRect, strokeRect,
+// ellipse+fill, rect+fill, drawImage com globalAlpha, translate/scale);
 // arc/stroke()/gradiente quebram o screenshot e 'lighter' é
 // inofensivo fora do navegador (só lá a camada soma).
 // Lógica de dano NÃO mora aqui: o missil recebe um callback e quem
@@ -11,8 +13,10 @@
 // chegada: a simulação offline precisa que ele voe).
 var Efeitos = (function () {
   // ------------------------------------------------------------ pools
-  var MAX = { parts: 380, nums: 50, aneis: 24, raios: 8, arcos: 10 };
+  var MAX = { parts: 380, nums: 50, aneis: 24, raios: 8, arcos: 10,
+    zonas: 10, ondas: 16, feixes: 6 };
   var parts = [], nums = [], aneis = [], raios = [], arcos = [];
+  var zonas = [], ondas = [], feixes = [];
 
   function limitar(lista, max) {
     while (lista.length > max) lista.shift();
@@ -22,6 +26,8 @@ var Efeitos = (function () {
   // ------------------------------------------------- estado singleton
   var flash = null;        // {cor, a, t, tMax} — luz de tela
   var borda = null;        // {cor, a, t, tMax} — vinheta de evento
+  var cargaAtual = null;   // {x, y, cor, prog, t} — conjuração do nuke
+  var ultZonaR = 0, ultOndaR = 0;   // sondas: raio da última (testes)
   var shakeT = 0, shakeFor = 0, shakeFase = 0;
   var hitStop = 0;
   var perigoFrac = 1;      // fração de vida 0..1 (vira vermelho <0,35)
@@ -52,7 +58,9 @@ var Efeitos = (function () {
       if (parts[i].tipo !== 'missil') parts.splice(i, 1);
     }
     nums.length = 0; aneis.length = 0; raios.length = 0; arcos.length = 0;
-    flash = null; borda = null;
+    zonas.length = 0; ondas.length = 0; feixes.length = 0;
+    flash = null; borda = null; cargaAtual = null;
+    ultZonaR = 0; ultOndaR = 0;
     shakeT = 0; shakeFor = 0; hitStop = 0;
   }
 
@@ -60,13 +68,16 @@ var Efeitos = (function () {
   function limpar() {
     parts.length = 0; nums.length = 0; aneis.length = 0;
     raios.length = 0; arcos.length = 0;
-    flash = null; borda = null;
+    zonas.length = 0; ondas.length = 0; feixes.length = 0;
+    flash = null; borda = null; cargaAtual = null;
+    ultZonaR = 0; ultOndaR = 0;
     shakeT = 0; shakeFor = 0; hitStop = 0;
   }
 
   function qtd() {
     return parts.length + nums.length + aneis.length +
-      raios.length + arcos.length;
+      raios.length + arcos.length + zonas.length + ondas.length +
+      feixes.length + (cargaAtual ? 1 : 0);
   }
 
   // ------------------------------------------------ sprites (doc §3)
@@ -398,6 +409,80 @@ var Efeitos = (function () {
     motePart(x, y + 4, cor, 7, 0.8, 1.2);
   }
 
+  // ------------------------------------ receitas VS (spec visual-skills)
+  // Base: Vampire Survivors — área com limite legível no chão (Garlic),
+  // pilar de luz (Holy Water), rastro fantasma e carga de conjuração.
+  // TODAS respeitam `mudo` (sim offline não gasta) e têm pool com teto.
+
+  // Zona no chão: círculo translúcido com BORDA legível + pulso — o
+  // raio do efeito fica visível no meio da briga. Desenhada em
+  // desenharBaixo (atrás das entidades). `dur` curto: marca onde o
+  // dano caiu, não vira "dano contínuo" enganoso.
+  function zona(x, y, r, cor, dur) {
+    if (mudo) return;
+    zonas.push({ x: x, y: y, r: r, cor: cor,
+      dur: dur === undefined ? 0.6 : dur, t: 0 });
+    limitar(zonas, MAX.zonas);
+    ultZonaR = r;
+  }
+
+  // Onda: disco expandindo com ease-out + borda (choque 360° da
+  // varredura, poeira do empurrão, medo). Some sozinha (tMax).
+  function onda(x, y, r0, r1, cor, tMax) {
+    if (mudo) return;
+    ondas.push({ x: x, y: y, r0: r0, r1: r1, cor: cor,
+      tMax: tMax === undefined ? 0.5 : tMax, t: 0 });
+    limitar(ondas, MAX.ondas);
+    ultOndaR = r1;
+  }
+
+  // Feixe: pilar vertical de luz (cura sagrada) — halo + miolo branco,
+  // nasce rápido e some com fade. Camada aditiva (desenharTopo).
+  function feixe(x, y, cor, alt) {
+    if (mudo) return;
+    feixes.push({ x: x, y: y, cor: cor, alt: alt, tMax: 0.5, t: 0 });
+    limitar(feixes, MAX.feixes);
+  }
+
+  // Carga de conjuração (singleton estilo `flash`): a batalha re-chama
+  // TODO frame na janela final do timer do nuke com `prog` 0→1 — o
+  // glow cresce e o anel contrai (energia reunindo). Sem refresh por
+  // 0,15s expira sozinho (o missil já partiu).
+  function carga(x, y, cor, prog) {
+    if (mudo) return;
+    cargaAtual = { x: x, y: y, cor: cor,
+      prog: prog === undefined ? 0 : prog, t: 0 };
+  }
+
+  // Nuvem de bolhas subindo (veneno) — fachada do motePart (hoje
+  // interno): mesmo movimento, nome de receita p/ a assinatura.
+  function nuvem(x, y, cor, n) {
+    if (mudo) return;
+    motePart(x, y, cor, n === undefined ? 7 : n, 0.6, 1.0);
+  }
+
+  // Rastro fantasma origem→destino (blink/esquiva): N glows ao longo
+  // da linha, o da origem envelhece primeiro (a trilha some "pra
+  // trás", reforçando a direção do salto).
+  function rastro(x0, y0, x1, y1, cor, n) {
+    if (mudo) return;
+    var q = n === undefined ? 7 : n;
+    for (var i = 0; i < q; i++) {
+      var f = q > 1 ? i / (q - 1) : 0;
+      push({ tipo: 'brilho',
+        x: x0 + (x1 - x0) * f, y: y0 + (y1 - y0) * f,
+        r: 4, dur: 0.45, t: (1 - f) * 0.12, cor: cor });
+    }
+  }
+
+  // Escalação visual com o nível investido da skill (R-VS-3): fonte
+  // única da régua 1 + 10% por nv (nv 10 = 2×). SÓ tamanho/contagem —
+  // nunca dano/tempo. `nv` ausente/0 = 1 (baseline idêntica à de hoje).
+  function escala(nv) {
+    var n = (typeof nv === 'number' && nv > 0) ? Math.min(nv, 10) : 0;
+    return 1 + 0.1 * n;
+  }
+
   // ------------------------------------------------ receitas (doc §5)
   function impacto(x, y, cor, crit) {
     if (mudo) return;
@@ -578,14 +663,18 @@ var Efeitos = (function () {
       var off = Math.sin(k * Math.PI) * e.curva;
       e.x = px + e.nx * off;
       e.y = py + e.ny * off;
-      // rastro (decorativo — some no mudo)
-      if (!mudo && Math.random() < 0.9) {
-        push({
-          tipo: 'brasa', x: e.x, y: e.y,
-          vx: rand(-10, 10), vy: rand(-10, 10),
-          grav: 40, dur: 0.25, t: 0, fase: Math.random() * 6,
-          cor: e.cor
-        });
+      // rastro denso estilo VS (spec visual-skills): 2/frame (era 1
+      // com p=0,9), dispersão menor e vida maior — o missil deixa uma
+      // trilha contínua em vez de faíscas soltas
+      if (!mudo) {
+        for (var tr = 0; tr < 2; tr++) {
+          push({
+            tipo: 'brasa', x: e.x, y: e.y,
+            vx: rand(-5, 5), vy: rand(-5, 5),
+            grav: 20, dur: 0.4, t: 0, fase: Math.random() * 6,
+            cor: e.cor
+          });
+        }
       }
     }
   }
@@ -641,6 +730,27 @@ var Efeitos = (function () {
       e = arcos[i];
       e.t += dt;
       if (e.t >= e.tMax) arcos.splice(i, 1);
+    }
+    for (i = zonas.length - 1; i >= 0; i--) {
+      e = zonas[i];
+      e.t += dt;
+      if (e.t >= e.dur) zonas.splice(i, 1);
+    }
+    for (i = ondas.length - 1; i >= 0; i--) {
+      e = ondas[i];
+      e.t += dt;
+      if (e.t >= e.tMax) ondas.splice(i, 1);
+    }
+    for (i = feixes.length - 1; i >= 0; i--) {
+      e = feixes[i];
+      e.t += dt;
+      if (e.t >= e.tMax) feixes.splice(i, 1);
+    }
+    // carga (singleton): expira sozinha se a batalha parar de
+    // atualizar (o missil já partiu — fade curto, sem "estalo")
+    if (cargaAtual) {
+      cargaAtual.t += dt;
+      if (cargaAtual.t > 0.15) cargaAtual = null;
     }
   }
 
@@ -749,6 +859,115 @@ var Efeitos = (function () {
       var tam = spr.width * (raio / 16);
       ctx.globalAlpha = alpha;
       ctx.drawImage(spr, a.x - tam / 2, a.y - tam / 2, tam, tam);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Zona no chão (spec visual-skills): disco translúcido com BORDA
+  // legível (anelSprite escalado — stroke() é no-op no harness) +
+  // pulso. Camada de baixo: fica atrás das entidades, como o terreno.
+  function desenhaZonas(ctx) {
+    for (var i = 0; i < zonas.length; i++) {
+      var z = zonas[i];
+      var k = Math.min(1, z.t / z.dur);
+      // alpha: estabiliza, pulsa, e some nos últimos 25% (sem estalo)
+      var some = k > 0.75 ? (1 - k) / 0.25 : 1;
+      var a = (0.55 + 0.15 * Math.sin(z.t * 9)) * some;
+      if (a <= 0.02) continue;
+      // preenchimento (raio do efeito visível no meio da briga)
+      ctx.globalAlpha = a * 0.32;
+      ctx.fillStyle = z.cor;
+      ctx.beginPath();
+      ctx.ellipse(z.x, z.y, z.r, z.r, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // borda legível
+      var spr = anelSprite(z.cor);
+      var tam = spr.width * (z.r / 16);
+      ctx.globalAlpha = a * 0.9;
+      ctx.drawImage(spr, z.x - tam / 2, z.y - tam / 2, tam, tam);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Onda: disco expandindo com ease-out + borda (choque 360°, poeira,
+  // medo). Mesma curva do anel; alpha cai com o tempo até sumir.
+  function desenhaOndas(ctx) {
+    for (var i = 0; i < ondas.length; i++) {
+      var o = ondas[i];
+      var prog = 1 - o.t / o.tMax;
+      if (prog <= 0) continue;
+      var raio = o.r0 + (o.r1 - o.r0) * (1 - (1 - prog) * (1 - prog));
+      var alpha = 0.75 * prog;
+      if (alpha <= 0.02) continue;
+      ctx.globalAlpha = alpha * 0.4;
+      ctx.fillStyle = o.cor;
+      ctx.beginPath();
+      ctx.ellipse(o.x, o.y, raio, raio, 0, 0, Math.PI * 2);
+      ctx.fill();
+      var spr = anelSprite(o.cor);
+      var tam = spr.width * (raio / 16);
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(spr, o.x - tam / 2, o.y - tam / 2, tam, tam);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Feixe: pilar vertical de luz — halo colorido largo + miolo branco
+  // + glow na base. Nasce rápido (0,12s) e some com fade; desenhado
+  // na camada ADITIVA (desenharTopo) — no navegador soma como luz.
+  function desenhaFeixes(ctx) {
+    for (var i = 0; i < feixes.length; i++) {
+      var f = feixes[i];
+      var k = Math.min(1, f.t / f.tMax);
+      var sobe = Math.min(1, f.t / 0.12);          // crescimento rápido
+      var some = k > 0.6 ? (1 - k) / 0.4 : 1;      // fade no fim
+      var alt = f.alt * sobe;
+      if (alt < 1 || some <= 0.02) continue;
+      var x = Math.round(f.x);
+      var yTopo = Math.round(f.y - alt);
+      var altR = Math.round(alt);
+      // halo colorido (largo, alpha baixo)
+      ctx.globalAlpha = 0.4 * some;
+      ctx.fillStyle = f.cor;
+      ctx.fillRect(x - 4, yTopo, 8, altR);
+      // miolo branco
+      ctx.globalAlpha = 0.85 * some;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x - 1, yTopo, 2, altR);
+      // glow na base (pé do pilar)
+      ctx.globalAlpha = 0.7 * some;
+      var g = glow(f.cor, 6);
+      ctx.drawImage(g, x - 6, Math.round(f.y) - 6);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Carga de conjuração (singleton): glow que cresce com `prog` +
+  // anel que contrai (energia reunindo antes do nuke). Sem refresh por
+  // 0,15s, fade curto e some (atualizar cuida disso).
+  function desenhaCarga(ctx) {
+    if (!cargaAtual) return;
+    var c = cargaAtual;
+    var fade = c.t > 0.08 ? Math.max(0, 1 - (c.t - 0.08) / 0.07) : 1;
+    if (fade <= 0.02) return;
+    var p = Math.max(0, Math.min(1, c.prog));
+    var x = Math.round(c.x), y = Math.round(c.y);
+    // glow crescente
+    var r = Math.round(3 + 7 * p);
+    ctx.globalAlpha = (0.45 + 0.4 * p) * fade;
+    var g = glow(c.cor, r);
+    ctx.drawImage(g, x - r, y - r);
+    // anel contraindo (16 → 6)
+    var raio = 16 - 10 * p;
+    var spr = anelSprite(c.cor);
+    var tam = spr.width * (raio / 16);
+    ctx.globalAlpha = (0.4 + 0.4 * p) * fade;
+    ctx.drawImage(spr, x - tam / 2, y - tam / 2, tam, tam);
+    // miolo branco pulsante no clímax
+    if (p > 0.5) {
+      ctx.globalAlpha = (p - 0.5) * 1.6 * fade;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x - 1, y - 1, 3, 3);
     }
     ctx.globalAlpha = 1;
   }
@@ -864,8 +1083,11 @@ var Efeitos = (function () {
     ctx.globalAlpha = 1;
   }
 
-  // camada de baixo: anéis de choque no chão (atrás das entidades)
+  // camada de baixo: zonas/ondas no chão + anéis de choque (atrás
+  // das entidades — o chão é o fundo, a onda varre por cima dele)
   function desenharBaixo(ctx) {
+    desenhaZonas(ctx);
+    desenhaOndas(ctx);
     desenhaAneis(ctx);
   }
 
@@ -882,6 +1104,8 @@ var Efeitos = (function () {
     }
     desenhaArcos(ctx);
     desenhaRaios(ctx);
+    desenhaFeixes(ctx);      // pilares de luz (aditivo = somem como luz)
+    desenhaCarga(ctx);       // conjuração do nuke
     ctx.globalCompositeOperation = 'source-over';
     for (i = 0; i < parts.length; i++) {
       var p = parts[i];
@@ -941,13 +1165,22 @@ var Efeitos = (function () {
     ctx.globalAlpha = 1;
   }
 
-  // sonda p/ testes (seção 49)
+  // sonda p/ testes (seção 49 + 56)
   function info() {
-    var ests = [];
+    var ests = [], nMotes = 0, nBrilhos = 0;
     for (var i = 0; i < nums.length; i++) ests.push(nums[i].est);
+    for (i = 0; i < parts.length; i++) {
+      if (parts[i].tipo === 'mote') nMotes++;
+      else if (parts[i].tipo === 'brilho') nBrilhos++;
+    }
     return {
       parts: parts.length, nums: nums.length, aneis: aneis.length,
-      raios: raios.length, arcos: arcos.length, qtd: qtd(),
+      raios: raios.length, arcos: arcos.length,
+      zonas: zonas.length, ondas: ondas.length, feixes: feixes.length,
+      motes: nMotes, brilhos: nBrilhos,
+      carga: cargaAtual ? { prog: cargaAtual.prog } : null,
+      zonaR: ultZonaR, ondaR: ultOndaR,
+      qtd: qtd(),
       shake: Math.max(0, Math.round(shakeT * 100) / 100),
       hitStop: Math.round(hitStop * 1000) / 1000,
       flash: flash ? { cor: flash.cor, a: flash.a,
@@ -987,6 +1220,14 @@ var Efeitos = (function () {
     bossChegou: bossChegou,
     raio: raio,
     raioRadial: raioRadial,
+    // receitas VS (spec visual-skills)
+    zona: zona,
+    onda: onda,
+    feixe: feixe,
+    carga: carga,
+    nuvem: nuvem,
+    rastro: rastro,
+    escala: escala,
     // game feel
     sacudir: sacudir,
     shakeOffset: shakeOffset,

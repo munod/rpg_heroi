@@ -1393,12 +1393,16 @@ var Batalha = (function () {
   // Nuke vira missil teleguiado: clarão no conjuro, rastro no voo e o
   // dano só cai na chegada (callback). mg/alvo são PARÂMETROS — o
   // closure captura valores por invocação (não a variável do laço).
+  // Assinatura VS (spec visual-skills): escala com nvSkill, zona no
+  // ponto de impacto e flash de tela só p/ nuke pesado (mult ≥ 2,5 —
+  // o flashTela já gateia em Opcoes.liga('flash') e no mudo).
   function conjuraNuke(mg, alvo) {
     var mult = mg.mult;
+    var esc = Efeitos.escala(mg.nvSkill);
     numero(heroi.x, heroi.y - 30, mg.nome, mg.cor, true);
     Efeitos.brasas(heroi.x, heroi.y - 12, mg.cor, 5, 40, 45);   // clarão
     Efeitos.missil({ x: heroi.x, y: heroi.y - 16 }, alvo, mg.cor,
-      1 + (mult - 1) * 0.6,
+      esc * (1 + (mult - 1) * 0.6),
       function () {
         var idx = inimigos.indexOf(alvo);
         if (idx < 0) return;              // alvo morreu durante o voo
@@ -1407,6 +1411,10 @@ var Batalha = (function () {
         alvo.hp -= dmg;
         stat('danoCausado', dmg);
         alvo.hitFlash = 0.15;
+        // marca no chão onde o dano caiu (zona temporária, 0,6s) +
+        // flash de evento grande p/ nuke pesado (R-VS-4)
+        Efeitos.zona(alvo.x, alvo.y, 16 * esc, mg.cor, 0.6);
+        if (mult >= 2.5) Efeitos.flashTela(mg.cor, 0.18, 0.2);
         numero(alvo.x, alvo.y - 18, String(dmg), '#ffffff', false);
         Efeitos.impacto(alvo.x, alvo.y - 4, mg.cor, false);
         if (alvo.hp <= 0) mataInimigo(idx, alvo);
@@ -1422,6 +1430,10 @@ var Batalha = (function () {
   }
 
   // Nuke/cura periódicos (rodando a cada frame com alvo em mãos).
+  // Carga visual do nuke (spec visual-skills): nos últimos 0,35s do
+  // timer, com alvo em campo, a batalha re-chama Efeitos.carga com
+  // prog 0→1 — o singleton acompanha o herói e some sozinho depois.
+  var CARGA_NUKE = 0.35;
   function skillsPeriodicas(dt, alvo) {
     var agu = aguHeroi();
     for (var i = 0; i < skillsVigentes.length; i++) {
@@ -1429,7 +1441,13 @@ var Batalha = (function () {
       if (mg.tipo !== 'nuke' && mg.tipo !== 'cura') continue;
       var st = estadoSkill(mg.id);
       st.t -= dt;
-      if (st.t > 0) continue;
+      if (st.t > 0) {
+        if (mg.tipo === 'nuke' && alvo && st.t <= CARGA_NUKE) {
+          Efeitos.carga(heroi.x, heroi.y - 12, mg.cor,
+            1 - st.t / CARGA_NUKE);
+        }
+        continue;
+      }
       st.t = IA.skillEfeito(mg, agu).intervalo || mg.intervalo;
       if (mg.tipo === 'nuke') {
         if (!alvo) continue;
@@ -1441,6 +1459,9 @@ var Batalha = (function () {
         heroi.hp = Math.min(heroi.hpMax, heroi.hp + cura);
         var ganho = Math.round(heroi.hp - antes);
         if (ganho > 0) {
+          // feixe de luz + motes (assinatura VS da cura — spec visual-skills)
+          Efeitos.feixe(heroi.x, heroi.y, mg.cor,
+            Math.round(70 * Efeitos.escala(mg.nvSkill)));
           Efeitos.cura(heroi.x, heroi.y - 6, mg.cor);
           numero(heroi.x, heroi.y - 34, '+' + ganho, mg.cor, false);
           numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
@@ -1470,12 +1491,17 @@ var Batalha = (function () {
     }
   }
 
-  // Varredura da skill 'area': acerta todos os inimigos.
+  // Varredura da skill 'area': acerta todos os inimigos. Assinatura
+  // VS (spec visual-skills): onda de choque 360° no chão — o raio é
+  // generoso (200×esc) porque o golpe acerta todos, e cresce com o
+  // nvSkill junto do corte.
   function varredura(mg) {
     var st = heroi.stats;
+    var esc = Efeitos.escala(mg.nvSkill);
     numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
+    Efeitos.onda(heroi.x, heroi.y, 14, 200 * esc, mg.cor, 0.55);
     Efeitos.corte(heroi.x, heroi.y - 10, mg.cor,
-      1 + (mg.mult - 1) * 0.8, heroi.facing);
+      (1 + (mg.mult - 1) * 0.8) * esc, heroi.facing);
     Efeitos.sacudir(0.1 + (mg.mult - 1) * 0.15);
     for (var i = inimigos.length - 1; i >= 0; i--) {
       var en = inimigos[i];
@@ -1503,7 +1529,10 @@ var Batalha = (function () {
         acc: 0,
         cor: mg.cor
       };
-      Efeitos.brasas(en.x, en.y - 8, mg.cor, 5, 60, 45);
+      // nuvem de bolhas subindo (assinatura VS do veneno — spec
+      // visual-skills); escala com o nvSkill da skill
+      Efeitos.nuvem(en.x, en.y - 8, mg.cor,
+        Math.round(7 * Efeitos.escala(mg.nvSkill)));
       numero(en.x, en.y - 30, mg.nome, mg.cor, false);
     }
   }
@@ -1537,10 +1566,13 @@ var Batalha = (function () {
   }
 
   // Empurrão (guerreiro): arremessa o bando para longe em curta rajada —
-  // o inimigo empurrado não reage à IA durante o voo.
+  // o inimigo empurrado não reage à IA durante o voo. Onda de poeira
+  // no chão até o alcance real do empurrão (spec visual-skills).
   function empurra(sk) {
+    var esc = Efeitos.escala(sk.nvSkill);
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
-    Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 1.5, heroi.facing);
+    Efeitos.onda(heroi.x, heroi.y, 12, sk.alcance * esc, sk.cor, 0.45);
+    Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 1.5 * esc, heroi.facing);
     Efeitos.sacudir(0.25);
     var r2 = sk.alcance * sk.alcance;
     for (var i = 0; i < inimigos.length; i++) {
@@ -1570,29 +1602,42 @@ var Batalha = (function () {
     // direção da fuga fica registrada 0,6s: monstros astutos antecipam
     heroi.escapa = { x: ux, y: uy, t: 0.6 };
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
+    var esc = Efeitos.escala(sk.nvSkill);
     if (sk.modo === 'blink') {
-      Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 0.9);
+      Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 0.9 * esc);
+      var ox = heroi.x, oy = heroi.y;      // origem p/ o rastro
       // sem clamp de borda (spec mapa-infinito R-INF-2): o mundo não tem
       // limites — o clamp antigo (MW/MH) arrastava o herói de volta para
       // o canto 384×268 depois que ele andava para longe
       heroi.x += ux * sk.distancia;
       heroi.y += uy * sk.distancia;
       resolve(heroi, 6);
-      Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 1.1);
+      // rastro fantasma origem→destino (spec visual-skills)
+      Efeitos.rastro(ox, oy - 10, heroi.x, heroi.y - 10, sk.cor,
+        Math.round(7 * esc));
+      Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 1.1 * esc);
       Efeitos.brasas(heroi.x, heroi.y - 6, sk.cor, 8, 90, 60);
     } else {
-      // esquiva: rajada curta — corre por sk.distancia em 0,18s
+      // esquiva: rajada curta — corre por sk.distancia em 0,18s; o
+      // rastro desenha a linha prevista (mesma direção do fuga)
+      var dxE = heroi.x + ux * sk.distancia;
+      var dyE = heroi.y + uy * sk.distancia;
+      Efeitos.rastro(heroi.x, heroi.y - 10, dxE, dyE - 10, sk.cor,
+        Math.round(6 * esc));
       heroi.fuga = { t: 0.18, vx: ux * sk.distancia / 0.18,
                      vy: uy * sk.distancia / 0.18 };
-      Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 0.9, heroi.facing);
+      Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 0.9 * esc, heroi.facing);
     }
   }
 
   // Amedronta (clérigo): os inimigos no raio fogem por sk.dur segundos —
-  // correm para longe e não atacam enquanto durar o medo.
+  // correm para longe e não atacam enquanto durar o medo. Onda roxa
+  // até o alcance real (spec visual-skills — acurado: o medo age lá).
   function aplicaMedo(sk) {
+    var esc = Efeitos.escala(sk.nvSkill);
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
-    Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 1.0);
+    Efeitos.onda(heroi.x, heroi.y, 12, sk.alcance * esc, sk.cor, 0.5);
+    Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 1.0 * esc);
     Efeitos.sacudir(0.15);
     var r2 = sk.alcance * sk.alcance;
     for (var i = 0; i < inimigos.length; i++) {
