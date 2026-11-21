@@ -6255,6 +6255,219 @@ console.log('55) economia de pontos: respec pago, soft cap e nível de skill (sp
   clique(240, 418); frame(2);        // volta pra Atributos
   clique(708, 234); frame(2);        // MAX → ×1 (ciclo fecha)
 }
+console.log('56) Visual skills: receitas VS, escalação nvSkill e flash de nuke');
+{
+  const Efeitos = sandbox.Efeitos;
+  const Batalha = sandbox.Batalha;
+  const p = Game.personagem;
+
+  if (Batalha.info().pausada) Batalha.alternarPausa();
+
+  // --- a) pools novos com teto (R-VS-1)
+  Efeitos.limpar();
+  for (let i = 0; i < 30; i++) Efeitos.zona(50, 50, 20, '#12ab34', 1);
+  conf(Efeitos.info().zonas === 10,
+    'pool de zonas com teto 10 (' + Efeitos.info().zonas + ')');
+  Efeitos.limpar();
+  for (let i = 0; i < 30; i++) Efeitos.onda(50, 50, 10, 80, '#8a6bff');
+  conf(Efeitos.info().ondas === 16,
+    'pool de ondas com teto 16 (' + Efeitos.info().ondas + ')');
+  Efeitos.limpar();
+  for (let i = 0; i < 30; i++) Efeitos.feixe(50, 50, '#ffe89a', 70);
+  conf(Efeitos.info().feixes === 6,
+    'pool de feixes com teto 6 (' + Efeitos.info().feixes + ')');
+
+  // --- b) silenciar/limpar zeram os pools novos + a carga (contrato 49)
+  Efeitos.zona(60, 60, 20, '#12ab34', 1);
+  Efeitos.onda(60, 60, 10, 80, '#8a6bff');
+  Efeitos.feixe(60, 60, '#ffe89a', 70);
+  Efeitos.carga(60, 50, '#ff6b3a', 0.5);
+  conf(Efeitos.info().qtd >= 4 &&
+       Efeitos.info().carga && Efeitos.info().carga.prog === 0.5,
+    'receitas novas + carga visíveis em info() (qtd ' +
+    Efeitos.info().qtd + ')');
+  Efeitos.silenciar(true);
+  const infM = Efeitos.info();
+  conf(infM.mudo && infM.zonas === 0 && infM.ondas === 0 &&
+       infM.feixes === 0 && !infM.carga && infM.qtd === 0,
+    'mudo zera zonas/ondas/feixes/carga (qtd ' + infM.qtd + ')');
+  Efeitos.zona(70, 70, 20, '#12ab34', 1);      // bloqueadas no mudo
+  Efeitos.onda(70, 70, 10, 80, '#8a6bff');
+  Efeitos.feixe(70, 70, '#ffe89a', 70);
+  Efeitos.carga(70, 60, '#ff6b3a', 0.9);
+  Efeitos.nuvem(70, 70, '#7ed957', 7);
+  Efeitos.rastro(10, 70, 60, 70, '#b06bff', 7);
+  const infM2 = Efeitos.info();
+  conf(infM2.mudo && infM2.qtd === 0 && infM2.motes === 0 &&
+       infM2.brilhos === 0,
+    'no mudo nenhuma receita nova nasce (qtd ' + infM2.qtd + ')');
+  Efeitos.silenciar(false);
+  Efeitos.zona(80, 80, 20, '#12ab34', 1);
+  Efeitos.onda(80, 80, 10, 80, '#8a6bff');
+  Efeitos.feixe(80, 80, '#ffe89a', 70);
+  Efeitos.limpar();
+  conf(Efeitos.info().qtd === 0 && !Efeitos.info().carga,
+    'limpar zera os pools novos e a carga (qtd ' + Efeitos.info().qtd + ')');
+
+  // --- c) receitas gastam o pool certo (R-VS-1)
+  Efeitos.zona(90, 90, 24, '#12ab34', 0.6);
+  conf(Efeitos.info().zonas === 1 && Efeitos.info().zonaR === 24,
+    'zona: pool próprio + sonda de raio (24)');
+  Efeitos.onda(90, 90, 12, 140, '#8a6bff');
+  conf(Efeitos.info().ondas === 1 && Efeitos.info().ondaR === 140,
+    'onda: pool próprio + sonda do raio final (140)');
+  Efeitos.feixe(90, 90, '#ffe89a', 70);
+  conf(Efeitos.info().feixes === 1, 'feixe: pool próprio');
+  Efeitos.limpar();
+  Efeitos.nuvem(90, 90, '#7ed957', 8);
+  conf(Efeitos.info().motes >= 8,
+    'nuvem: 8 motes subindo (' + Efeitos.info().motes + ')');
+  Efeitos.limpar();
+  Efeitos.rastro(10, 90, 90, 90, '#b06bff', 7);
+  conf(Efeitos.info().brilhos >= 7,
+    'rastro: 7 glows na linha origem→destino (' +
+    Efeitos.info().brilhos + ')');
+
+  // --- d) carga: singleton que expira sem refresh (R-VS-1)
+  Efeitos.limpar();
+  Efeitos.carga(100, 100, '#ff6b3a', 0.7);
+  conf(!!Efeitos.info().carga, 'carga armada em info()');
+  Efeitos.atualizar(0.2);                    // > 0,15s sem chamar de novo
+  conf(Efeitos.info().carga === null,
+    'carga expira sozinha sem refresh (0,15s)');
+
+  // --- e) escala: fonte única da régua visual (R-VS-3)
+  conf(Efeitos.escala(0) === 1 && Efeitos.escala(undefined) === 1 &&
+       Efeitos.escala(5) === 1.5 && Efeitos.escala(10) === 2 &&
+       Efeitos.escala(99) === 2,
+    'escala(nv): 1 em nv 0/ausente, 1,5 no nv 5, 2× no teto 10');
+
+  // --- f) desenho: receitas novas passam pelo rasterizador (R-VS-5)
+  Efeitos.limpar();
+  Efeitos.zona(140, 140, 30, '#12fe9a', 0.6);
+  Efeitos.onda(140, 140, 10, 200, '#33d8ff');
+  Efeitos.feixe(180, 180, '#ffe89a', 70);
+  Efeitos.carga(160, 150, '#ff6b3a', 0.9);
+  frame(2);                                   // renderiza a arena
+  conf(Efeitos.info().zonas === 1 && Efeitos.info().ondas === 1 &&
+       Efeitos.info().feixes >= 0,
+    'zonas/ondas/feixes/carga desenham sem lançar no rasterizador');
+  Efeitos.limpar();
+
+  // --- g) integracional: varredura gera a onda 360° no chão (R-VS-2)
+  p.classe = 'guerreiro';
+  p.nivel = 6;
+  p.atributos = { for: 50, des: 8, con: 999, int: 8, car: 8 };
+  p.pontos = 0;
+  p.loadout = ['golpe-bravo'];              // única skill desbloqueada
+  p.ramos = null;
+  p.skillNv = null;
+  p.xp = 0;
+  p.xpProx = 1e9;                           // sem level-up na janela
+  Batalha.iniciar();
+  Batalha.restaurarOnda(3);
+  jogoCanvas._textos = [];
+  let varreu = false;
+  for (let i = 0; i < 2500 && !varreu; i++) {
+    frame(1);
+    varreu = (jogoCanvas._textos || []).some(t => t === 'Golpe Embravecido');
+  }
+  conf(varreu, 'guerreiro nv 6 faz a varredura (loadout golpe-bravo)');
+  conf(Efeitos.info().ondas > 0 && Efeitos.info().ondaR === 200,
+    'varredura gera onda 360° com raio base 200 (ondaR ' +
+    Efeitos.info().ondaR + ', vivas ' + Efeitos.info().ondas + ')');
+
+  // --- h) integracional: meteoro (mult 3,0 ≥ 2,5) → carga + zona + flash
+  p.classe = 'mago';
+  p.nivel = 35;
+  p.atributos = { for: 1, des: 8, con: 200, int: 20, car: 8 };
+  p.pontos = 0;
+  p.loadout = ['meteoro'];
+  p.ramos = null;
+  p.skillNv = null;
+  p.xp = 0;
+  p.xpProx = 1e9;                           // sem level-up: o flash de
+  // nível (0,26) bloquearia o do nuke (0,18) e o teste flutuaria
+  Batalha.iniciar();
+  const enM = Batalha.spawn({ tipo: 'slime' });
+  const hm = Batalha.info().heroi;
+  enM.x = hm.x + 50; enM.y = hm.y;          // alvo garantido p/ a IA
+  enM.hp = 1e6;                             // não morre durante o voo
+  jogoCanvas._textos = [];
+  let conjurou = false, viuCarga = false, viuZona = false, viuFlash = false;
+  for (let i = 0; i < 460 &&
+       !(conjurou && viuCarga && viuZona && viuFlash); i++) {
+    frame(1);
+    const inf = Efeitos.info();
+    if (!conjurou &&
+        (jogoCanvas._textos || []).some(t => t === 'Meteoro')) conjurou = true;
+    if (inf.carga) viuCarga = true;
+    if (inf.zonas > 0) viuZona = true;
+    if (inf.flash && inf.flash.cor === '#ffb066') viuFlash = true;
+  }
+  conf(conjurou, 'mago nv 35 conjura Meteoro (loadout dedicado)');
+  conf(viuCarga, 'carga de conjuração aparece na janela final do timer');
+  conf(viuZona && Efeitos.info().zonaR === 16,
+    'impacto do nuke deixa a zona no chão (r 16 — escala base)');
+  conf(viuFlash, 'nuke mult 3,0 ≥ 2,5 flasha a tela na cor da skill');
+
+  // --- i) escalação no call site do nuke: skillNv 10 dobra a zona
+  p.classe = 'mago';
+  p.nivel = 35;
+  p.atributos = { for: 1, des: 8, con: 200, int: 20, car: 8 };
+  p.pontos = 0;
+  p.loadout = ['meteoro'];
+  p.ramos = null;
+  p.skillNv = { meteoro: 10 };
+  p.xp = 0;
+  p.xpProx = 1e9;
+  Batalha.iniciar();
+  const enM2 = Batalha.spawn({ tipo: 'slime' });
+  const hm2 = Batalha.info().heroi;
+  enM2.x = hm2.x + 50; enM2.y = hm2.y;
+  enM2.hp = 1e6;
+  let zona32 = false;
+  for (let i = 0; i < 120 && !zona32; i++) {
+    frame(1);
+    zona32 = Efeitos.info().zonas > 0 && Efeitos.info().zonaR === 32;
+  }
+  conf(zona32,
+    'nvSkill 10 dobra a zona do nuke (16 → 32 — escala 2×)');
+
+  // --- j) negativo: bola de fogo (mult 1,8 < 2,5) NÃO flasha (R-VS-4)
+  p.classe = 'mago';
+  p.nivel = 5;
+  p.atributos = { for: 1, des: 8, con: 200, int: 20, car: 8 };
+  p.pontos = 0;
+  p.loadout = ['bola-fogo'];
+  p.ramos = null;
+  p.skillNv = null;
+  p.xp = 0;
+  p.xpProx = 1e9;
+  Batalha.iniciar();
+  const enB = Batalha.spawn({ tipo: 'slime' });
+  const hb = Batalha.info().heroi;
+  enB.x = hb.x + 50; enB.y = hb.y;
+  enB.hp = 1e6;
+  let zonaB = false, flashRuim = false;
+  for (let i = 0; i < 90 && !zonaB; i++) {
+    frame(1);
+    const inf = Efeitos.info();
+    if (inf.flash && inf.flash.cor === '#ff6b3a') flashRuim = true;
+    if (inf.zonas > 0) zonaB = true;
+  }
+  for (let i = 0; i < 15 && !flashRuim; i++) {  // folga p/ flash atrasado
+    frame(1);
+    const inf = Efeitos.info();
+    if (inf.flash && inf.flash.cor === '#ff6b3a') flashRuim = true;
+  }
+  conf(zonaB && Efeitos.info().zonaR === 16,
+    'bola de fogo (mult 1,8) deixa a zona no chão (r 16)');
+  conf(!flashRuim,
+    'nuke mult 1,8 < 2,5 NÃO flasha na cor da skill (#ff6b3a)');
+
+  Batalha.iniciar();                         // não vaza estado p/ artefatos
+}
 if (falhas) {
   console.log(falhas + ' FALHA(S)');
   process.exit(1);

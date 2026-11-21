@@ -446,6 +446,56 @@ for (let i = 0; i < 1800 && !ferido; i++) {
 }
 capturaSkill('clerigo', 'tela-skill-cura.png');    // motes + anel de cura
 
+// receitas novas da spec visual-skills: captura quando o POOL específico
+// nasce (zona/onda/feixe vivem < 0,7s → salvar no MESMO frame em que
+// nasce; o capturaSkill genérico não distingue qual receita disparou)
+function capturaReceita(prepara, cond, arquivo) {
+  prepara();
+  sandbox.Efeitos.limpar();
+  let espera = 0;
+  while (!cond() && espera < 3600) {
+    frame(1);
+    espera++;
+  }
+  const ok = cond();               // pool ainda vivo no frame do save
+  salvar(arquivo);
+  console.log('receita/' + arquivo + ': ' +
+    (ok ? 'ok em ' + espera + ' frames' : 'NÃO DISPAROU') +
+    ' -> ' + arquivo);
+}
+// onda 360° da varredura (guerreiro · golpe-bravo a cada 7 golpes)
+capturaReceita(function () {
+  const p = sandbox.Game.personagem;
+  p.classe = 'guerreiro';
+  p.nivel = Math.max(6, p.nivel);
+  p.loadout = ['golpe-bravo'];
+}, function () { return sandbox.Efeitos.info().ondas > 0; },
+'tela-skill-onda.png');
+// zona no impacto do nuke (mago · Bola de Fogo — nasce na chegada)
+capturaReceita(function () {
+  const p = sandbox.Game.personagem;
+  p.classe = 'mago';
+  p.nivel = Math.max(6, p.nivel);
+  p.loadout = ['bola-fogo'];
+}, function () { return sandbox.Efeitos.info().zonas > 0; },
+'tela-skill-zona.png');
+// feixe da Bênção (clérigo · precisa estar ferido — re-ferido aqui,
+// a Bênção anterior da captura de cima pode ter curado tudo)
+capturaReceita(function () {
+  const p = sandbox.Game.personagem;
+  p.classe = 'clerigo';
+  p.nivel = Math.max(6, p.nivel);
+  p.loadout = ['bencao'];
+  p.atributos.con = 1;             // pool de HP baixo: ferido em 1 hit
+  for (let i = 0; i < 900; i++) {
+    frame(1);
+    const inf = sandbox.Batalha.info();
+    if (!inf.morto &&
+        inf.hp < sandbox.Personagem.status(p).hpMax - 5) break;
+  }
+}, function () { return sandbox.Efeitos.info().feixes > 0; },
+'tela-skill-feixe.png');
+
 // aba Stats: estatísticas do jogador (5ª aba da grade)
 clique(528 + dxL / 2, 418);
 frame(4);
