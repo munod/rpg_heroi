@@ -1,7 +1,9 @@
 # Spec: Visual skills — assinatura por tipo estilo Vampire Survivors
 
-Status: **concluída** (gate 3× = 694 + 25 confs · `ritmo 60` intacto
-mapa 1 em 33,0min na faixa 31,5/33,5 · 3 capturas por pool no cena) ·
+Status: **em execução (emenda pós-feedback)** · leva original concluída
+(gate 3× = 694 + 25 confs · `ritmo 60` intacto mapa 1 em 33,0min) mas
+**direção rejeitada pelo mantenedor** (círculo gigante sem identidade)
+→ ver "Ajuste pós-avaliação" ao final (batch área → QA → batch resto) ·
 Data: 2026-11-21 · Iniciativa: mantenedor
 (pedido: *"trabalhar nos efeitos especiais das skills. A base de
 efeitos visuais é o Vampire Survivors. Pesquisa online como eles são
@@ -134,3 +136,75 @@ muda número, nunca o visual; nuke pesado não sinaliza em tela.
   vs o registro corrente do STATE) · QA humano nos efeitos.
 - Docs (CHANGELOG, AGENTS, STATE, ROADMAP) · commits Conventional em
   pt-BR · **push por último** (decisão do mantenedor).
+
+## Ajuste pós-avaliação (feedback do mantenedor, pré-push)
+
+**Rejeição**: *"Não gostei esse círculo gigante. Ex: Rajada arcana
+deveria ser algo como tiros, talvez para todos os lados no varredura.
+Cada skill deveria ter seu próprio efeito e sub-efeitos dos seus
+ramos."* — a direção **por tipo** (6 assinaturas p/ 32 skills) era
+coarse demais: toda `area` saiu igual (a `onda` de raio 200 da
+varredura = meia tela lavada, sem identidade) e os ramos só mudavam
+números.
+
+**Decisões da emenda** (mantém: visual puro, escala `nvSkill`, gates
+`Opcoes`, pools+teto+`silenciar`, primitivas do rasterizador, lição
+de RNG; **reverte** "efeito por skill individual" do fora de escopo):
+
+1. **Identidade mora nos dados** — campo `vfx` em cada skill **e em
+   cada ramo** (`skills.js`). `comRamo` mescla `vfx` (ramo vence por
+   chave; sem ramo = base intacta, contrato "base neutra" preservado)
+   → no call site `mg.vfx` já vem com o ramo escolhido.
+2. **Dispatch por `vfx.tipo`** em `batalha.js` (não por id de skill):
+   `efeitoArea(mg, esc)` etc. com `switch` + fallback seguro (corte,
+   sem círculo) p/ skill futura sem `vfx`. `mg.vfx` é read-only
+   (referência compartilhada da `LISTA`). `efeitos.js` continua sem
+   conhecimento de skills — só receitas.
+3. **A `onda` r200 morre** — `onda` só onde é semântica: empurrão e
+   medo (raio = `alcance` real, acurado) e terremoto (moderada, junto
+   da fissura).
+4. **Ramos ganham `vfx` explícito** (override por chave, 64 ramos no
+   total) — não derivado dos mods (implícito/difícil de tunar).
+
+**Faseamento** (decisão do mantenedor): **batch `area` primeiro**
+(com QA/screenshots validando a direção) → depois o resto na mesma
+leva.
+
+### Requisitos da emenda
+
+- **R-VS-7 (batch área)** — `vfx` nas 7 skills `area` + seus 14
+  ramos; 5 receitas novas em `efeitos.js`: `tiro` (projétil reto com
+  rastro, partícula `tiro`), `chuva` (cai do teto com estilhaço,
+  partícula `cai`), `pilares` (N `feixe` com `atraso` escalonado),
+  `giro` (arcos rotativos, extende o pool `arcos`), `fissura` (pool
+  `fissuras` teto 8, geometria pré-calculada no spawn) +
+  `faiscaMuita` com `ang`/`abertura` opcionais (default = círculo
+  total, chamadores intactos). Sondas novas: `tiros`, `cais`,
+  `fissuras`, `giros`. Mapeamento: Golpe Embravecido `crescente` ·
+  Terremoto `fissura` (+ onda moderada 140) · Fúria `giro` · Nova
+  Arcana `estrela` (receitas existentes) · **Rajada `radial` (tiros p/
+  todos os lados)** · Chuva de Adagas `chuva` · Julgamento `pilares`.
+- **R-VS-8 (batch resto)** — nukes: `vfx = {trilha, impacto}` (estilo
+  do rastro do missil + receita de impacto na chegada; **Adaga Gêmea =
+  2º missil decorativo sem callback**, dano continua no missil real) ·
+  cura: `feixe`/`escudo`/`halo` (composições) · medo: onda com raio =
+  `alcance` sempre + extras (anéis, motes) · veneno/mobilidade: params
+  `n`/`esc` · `vfx` nos 50 ramos restantes · conf "32/32 skills e
+  64/64 ramos com `vfx`".
+- **R-VS-9 (verificação da emenda)** — 43: skills `area` + ramos têm
+  `vfx`, ramo sobrepõe só a chave dele, sem ramo = base intacta · 56:
+  terremoto → `fissuras` + `ondaR 140` (nv10 → 280, escala mantida) ·
+  rajada → `tiros` · chuva → `cais` · unitários das receitas (pool,
+  silenciar, draw) · seção 56 do batch resto: 1-2 representativos por
+  tipo + "32/32 e 64/64 com `vfx`" · `cena.js`: captura da onda migra
+  p/ fixture do terremoto + `tela-skill-rajada.png`. Gate 3× +
+  `ritmo 60` + QA navegador por batch.
+
+**Timing inalterado** (regra da emenda): origem/destino do missil não
+mudam (senão o tempo de voo muda); missil decorativo da Gêmea não tem
+callback; nenhuma receita nova chama `parar`/`sacudir` além dos
+existentes.
+
+**Commits**: emenda por cima dos 4 commits locais não-pushados
+(precendente `visual-heroi-spritecook`); entrada do CHANGELOG
+`[Unreleased]` reescrita antes do push.
