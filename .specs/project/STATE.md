@@ -763,6 +763,31 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   da parede = **build skill** (o gerenciado da `economia-de-pontos`);
   def vira **hard mode** (estola na parede se ignora skills — dá pra
   respecar, sem soft-lock).
+- **Efeitos especiais das skills estilo Vampire Survivors (spec
+  `visual-skills`, 2026-11-21)** — pedido do mantenedor: *"pesquisa
+  online como eles são para aplicar e deixar o game mais chamativo"*.
+  Pesquisa → 5 princípios VS: **luz (aditivo) · assinatura por arma ·
+  área com limite legível · flash reservado a evento grande +
+  toggle · densidade escala com o poder**. Aplicado como **assinatura
+  por TIPO** (6 tipos, não 32 skills): receitas novas `zona`/`onda`/
+  `feixe`/`carga`/`nuvem`/`rastro` + missil de rastro denso, cada uma
+  com pool+teto+`silenciar`. **Decisões**: (a) `carga` é **singleton**
+  estilo `flash` (não pool — só 1 conjuração por vez, expira sozinho
+  em 0,15s sem refresh); (b) escalação do `nvSkill` = **fonte única**
+  `Efeitos.escala(nv)` testável em unit (`1+0,1×nv`, teto 10 = 2×),
+  aplicada só a raio/altura/contagem — **nunca dano/tempo** (nv 0 =
+  baseline intacta, contrato da `economia-de-pontos` preservado);
+  (c) flash de nuke = `mult ≥ 2,5` **dentro do `flashTela`**
+  (o gate de acessibilidade/`mudo` já existia — nada novo de opção);
+  (d) zona nasce **no ponto onde o dano caiu** com lifetime 0,6s
+  (não vira "dano contínuo" enganoso); (e) onda de empurrão/medo usa
+  o **`alcance` real** da skill (acurado). **RNG**: mais draws nos
+  efeitos deslocou a sequência — o gate 3× passou sem cair fixture
+  (lição da spec: se cair, reduzir draws na receita, nunca afrouxar
+  o teste). Gate 3× verde · `ritmo 60` intacto (mapa 1 em 33,0min,
+  faixa 31,5/33,5) · 25 confs novas (seção 56) + 3 capturas por pool
+  no `cena.js` (`capturaReceita` — o `capturaSkill` genérico salvava
+  5 frames depois e perdia pools de <0,7s).
 
 ## Bloqueios
 

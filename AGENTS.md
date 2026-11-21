@@ -703,6 +703,39 @@
   passa. Em teste, para zerar TUDO use `Batalha.limparEfeitos()` (=
   `Efeitos.limpar()` — cobre nums/parts/anéis/shake/hit-stop/flash
   desde esta spec). Fumaça seção 49.
+- **Efeitos especiais das skills estilo Vampire Survivors (spec
+  `visual-skills`)** — assinatura visual por TIPO em `efeitos.js` +
+  `batalha.js` (visual puro: dano/tempo intocados). **Receitas novas**
+  (cada uma com pool+teto+`silenciar`+`qtd`+`info()`): **`zona`**
+  (círculo no chão com borda por `anelSprite` escalado + pulso —
+  `desenharBaixo`; lifetime curto onde o dano caiu, não vira "dano
+  contínuo"), **`onda`** (disco expandindo ease-out + borda, teto 16 —
+  choque 360° da varredura/poeira do empurrão/medo), **`feixe`**
+  (pilar vertical halo+miolo, camada aditiva do `desenharTopo` — cura
+  sagrada), **`carga`** (**singleton** estilo `flash`: glow crescente +
+  anel contraindo; a batalha re-chama na janela final do timer do
+  nuke, sem refresh por 0,15s expira — `info().carga`), **`nuvem`**
+  (bolhas subindo, fachada do `motePart`) e **`rastro`** (N glows
+  origem→destino, o da origem envelhece primeiro). **Missil com rastro
+  denso**: 2 partículas/frame (era 1 com p=0,9), dispersão menor,
+  `dur` 0,4. **Call sites**: `varredura` → onda 360° (raio 200×esc =
+  cobre a janela) + corte · `conjuraNuke` → zona no impacto +
+  `flashTela(mg.cor, 0,18, 0,2)` só quando **`mult ≥ 2,5`** (gate
+  interno do `flashTela` já respeita `Opcoes.liga('flash')`/mudo) ·
+  cura → feixe · veneno → nuvem · `foge` → rastro (blink e esquiva) ·
+  `empurra`/`aplicaMedo` → onda até o **`alcance` real** (acurado).
+  **Escalação `nvSkill`** = `Efeitos.escala(nv)` = `1 + 0,1 × min(nv,
+  10)` (fonte única testável; nv 0/ausente = 1 = baseline intacta) —
+  aplicada a raio/altura/contagem nos call sites, **nunca** a
+  dano/tempo; o 2º poço de pontos vira espetáculo (VS: upar arma =
+  efeito maior). `CARGA_NUKE = 0,35s` (janela do timer; só com alvo).
+  **Fumaça seção 56** (25 confs: tetos · silenciar/limpar · receitas ·
+  carga expira · escala · rasterizador · integracionais varredura/
+  meteoro/negativo) e `cena.js` com **capturas por pool**
+  (`capturaReceita` — zona/onda/feixe vivem <0,7s, o `capturaSkill`
+  genérico salvava 5 frames depois e perdia). RNG: mais draws nos
+  efeitos desloca a sequência — se fixture da 16 cair, reduzir draws
+  na receita, nunca afrouxar o teste.
 
 ## Testes — peculiaridades
 
