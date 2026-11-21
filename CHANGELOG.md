@@ -12,6 +12,23 @@ vive em `.specs/features/`.
 
 ### Added
 
+- **Instrumento de projeção matemática rápida (leva
+  `economia-de-pontos`/`pressao-mortalidade`)** — decisões de balance
+  deixaram de exigir sim de 6h: `testes/ritmo.js` ganhou
+  **projeção linear** ondas×tempo (marcos ≥240min → `ondasPorMin`,
+  `R²` e vitória projetada; **validada**: erro +1,4% do real a partir
+  de 16min de run, R² 0,9999 — cega p/ parede de fim de jogo, p/ isso
+  existe a sonda), **aborto automático de estol** (`RITMO_JANELA_MIN`
+  600: dnv<0,1 + ondas<300 na janela → corta e grava `estol`),
+  `RITMO_SEM_PONTOS=1` (diagnóstico "sem distribuir": fecha o mapa 1
+  mas **trava no mapa 2** — 16 mapas de diferença em 10h) e
+  `RITMO_TAG` (JSONs de A/B paralelo). **`testes/sonda-fim.js`
+  (novo)**: monta o herói **já na reta final** (nv = trajetória
+  medida, gear dos drops do próprio mapa, keystone) e corre a parede
+  do mapa 100 — **600min em ~16min**; validada 3/3 nos ground truths.
+  Foi a sonda que calibrou o `ESC_DMG` (6 valores × 2 builds) e
+  detectou a espiral do 0,06.
+
 - **Economia de pontos: respec pago, soft cap e nível de skill (spec
   `economia-de-pontos`)** — três frentes pra devolver **peso de
   decisão** à distribuição ("jogador clica no MAX sem pensar"):
@@ -180,6 +197,19 @@ vive em `.specs/features/`.
 
 ### Changed
 
+- **Pressão de mortalidade: `ESC_DMG 0,037 → 0,055` (spec
+  `pressao-mortalidade` R-PM-1)** — o build gerenciado vencia com
+  0-2 mortes em 59h ("jogo fácil"; mantenedor: *"mortes têm que fazer
+  parte do jogo"*; **"0 mortes" deixou de ser alvo**, estol continua
+  proibido). **Calibragem por escada na parede** com a sonda nova:
+  o build **def (mono-FOR) não tem folga** acima de 0,037 (espiral na
+  onda 1 do mapa 100; o produto do cliff `≤0,086` **não pegou** essa
+  parede) → guarda emendada (aprovada) = **build skill** (o
+  gerenciado; def vira hard mode). A/B 4 seeds × 600min: **0,06
+  reprovado** (1/4 seeds em espiral de 146 mortes — morte −10% ouro
+  composto fomeia aprimoramento; duração +30%) → **0,055 aprovado**
+  (4/4 igual ao baseline, duração −0,4%, **3 mortes vs 0** — pressão
+  presente sem variância destrutiva).
 - **CI com gate obrigatório** — `.github/workflows/deploy.yml` roda
   `node --check` + `node testes/todos.js` em push/PR e o deploy do Pages
   só acontece na `main` com `needs: test`.

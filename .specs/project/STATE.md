@@ -729,6 +729,40 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   + `id` no bicho) + fuga que **desliza pela parede** + até 3
   candidatos — lição: teste de comportamento nunca deve ler o mínimo
   global de entidades que você não controla.
+- **Instrumento rápido de projeção matemática (2026-11-20, pedido
+  explícito do mantenedor: *"testes mais rápidos que sirvam para
+  projeções matemáticas"*)** — três peças, todas validadas contra
+  ground truth: (1) **projeção linear** no `ritmo.js` (ondas×tempo,
+  marcos ≥240min): R² 0,9999 e **erro +1,4% do real** a partir de
+  16min (validada nos runs completos 3432,7min); **limite medido** =
+  cega p/ parede de fim de jogo (o skill projetava vitória e estolou);
+  (2) **aborto automático de estol** (`RITMO_JANELA_MIN` 600:
+  dnv<0,1 + ondas<300 — exceção de chefe legítimo) → runs mortos
+  cortam em minutos; (3) **`sonda-fim.js`** — herói já na reta final
+  (nv = trajetória `0,9169×ondas−35,6`, gear dos drops do mapa,
+  keystone) correndo a parede: **600min em ~16min**, validada 3/3
+  (def vence/nv final idêntico · skill(8%) falha · sem falha). O
+  loop de decisão de balance passou de 6h para 16min. Achados:
+  `RITMO_SEM_PONTOS` mediu o achado do mantenedor (**sem pontos
+  fecha o mapa 1 mas trava no mapa 2** — 16 mapas/10h: gestão
+  importa; falta era desafio p/ quem gestiona BEM) e a sonda
+  calibrou a leva `pressao-mortalidade` (6 valores × 2 builds).
+- **Pressão de mortalidade: guarda = build skill · `ESC_DMG 0,055`
+  (2026-11-20, mantenedor escolheu entre as opções medidas)** —
+  contexto: 0-2 mortes em 59h = "jogo fácil"; **"0 mortes" deixou
+  de ser alvo** e o **critério de estol formalizado** = progresso
+  parado (dnv<0,1×600min · onda ≥30min · sim sem vitória), mortes =
+  corroboração. **Escada na parede** provou que o **def (mono-FOR)
+  não tem folga** acima de 0,037 (≥0,04 = espiral na onda 1 do mapa
+  100; o produto do cliff `≤0,086` não pegou essa parede — **cliff é
+  de campanha, parede é restrição própria; filtro = sonda**). A/B
+  4 seeds × 600min: **0,06 reprovado** (1/4 seeds em espiral de 146
+  mortes — morte −10% ouro composto fomeia aprimoramento → fraco →
+  morre mais; duração +30%) · **0,055 aprovado** (4/4 = baseline,
+  duração −0,4%, 3 mortes vs 0). **Emenda R-PM-3 aprovada**: referência
+  da parede = **build skill** (o gerenciado da `economia-de-pontos`);
+  def vira **hard mode** (estola na parede se ignora skills — dá pra
+  respecar, sem soft-lock).
 
 ## Bloqueios
 

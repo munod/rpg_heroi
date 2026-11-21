@@ -91,7 +91,9 @@
   `progressao-exponencial`): **ESC_HP 1,90 · ESC_DMG 0,045** — e a leva
   `balance-dopamina` (R-BAL-3/6) chegou em **ESC_HP 1,25 · ESC_DMG
   0,037** (TTK de esponja ↓; produto 0,0463 = folga máxima no cliff;
-  DMG compensa a densidade k0,75: perigo total do fim ≈ baseline).
+  DMG compensa a densidade k0,75: perigo total do fim ≈ baseline) — e
+  a leva `pressao-mortalidade` (R-PM-1) calibrou **ESC_DMG 0,055**
+  (ver bullet próprio; a folga do cliff não vale p/ a parede final).
 - **Monstros com skill própria (spec `monstros-novos`)** — 10 espécies
   em `Batalha.TIPOS` (eram 4): **`atirador`** (`ranged: {alcance 90,
   cd 2,2}` — no loop de inimigos o ramo `en.ranged` fica FORA do
@@ -199,13 +201,27 @@
   já chama `ganhoAtributo`) usam a helper — **Σpartes fecha por
   construção**; a dica do atributo avisa "acima de 3500 investidos:
   retornos reduzidos".
+- **Pressão de mortalidade (spec `pressao-mortalidade` R-PM-1/2)** —
+  `ESC_DMG 0,037 → **0,055**` (mantenedor: mortes como desafio;
+  "0 mortes" deixou de ser alvo; estol continua proibido). **Calibragem
+  por escada na parede** (`sonda-fim`, 6 valores × 2 builds): o **def
+  (mono-FOR) não tem folga** acima de 0,037 (espiral na onda 1 do
+  mapa 100 — o produto do cliff `≤0,086` **não pegou** essa parede:
+  cliff = estol de campanha, parede = restrição própria; **filtro
+  real = sonda da parede**); a guarda R-PM-3 passou a ser o **build
+  skill** (emenda aprovada — referência = o gerenciado da
+  `economia-de-pontos`; def vira hard mode, respeca p/ sair). A/B
+  4 seeds × 600min (`RITMO_SKILL=1`): 0,06 **reprovado** (1/4 seeds
+  em espiral de 146 mortes — morte −10% ouro composto fomeia
+  aprimoramento; duração +30%) → **0,055 aprovado** (4/4 igual ao
+  baseline, duração −0,4%, 3 mortes vs 0).
 - Curva de progressão com fonte única em `Personagem.custoProximo`
   (**exponencial**: `146 × 1,07^(nv−1)` — leva `progressao-exponencial`
   calibrava 1,11; a leva `mundos` RE-BASEOU p/ `1,07` junto com H
   `1,10→1,064`, mantendo o ratio `ln(H)/ln(G)` ≈ 0,916 — o linear
   antigo estolava) e renda em `Batalha.xpAbate`
   (**`12 × 1,064^ondaTotal`**, harmônica com o custo → tempo/nível
-  estável). Combate em `Batalha`: `ESC_HP 1,25 · ESC_DMG 0,037 ·
+  estável). Combate em `Batalha`: `ESC_HP 1,25 · ESC_DMG 0,055 ·
   onda-timer` (**spec `onda-timer`**: sem espera entre ondas — o clear
   dá a batida de `BEAT 2s` e cada onda tem cota de `ONDA_SEG 20s`
   (era 30; mantenedor reduziu p/ 15 e recusou — virou fluxo contínuo;

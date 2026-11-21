@@ -5,6 +5,30 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 
 ## Entregue
 
+### Unreleased — 2026-11-21 — levas "economia-de-pontos" + "pressao-mortalidade" (peso de decisão × pressão)
+- **`economia-de-pontos`** (D/A/S) — respec pago (`−` cobra
+  `max(5, 1% ouro)`), **soft cap** `ATRIB_LIM 3500` (`valorInvestido`
+  fonte única; mono-stat vira jogada ruim) e **nível de skill com
+  pontos** (2º poço, `custoNivel` 10…384, **+25% poder/nível** após
+  buff, aba Classe `[Ramo][Nível]`) — `3080501` `9862b19` `e382761`
+  `e3d31af` · A/B + ground truth (DEF 57,2h · SKILL(8%) estolou →
+  buff validado pela sonda: 8% estola / 25% vence 36min/0 mortes) ·
+  **T9 fechada**: skill@0,037 completa **57,5h · 0 mortes** (nv 9171)
+- **Instrumento de projeção matemática rápida** (pedido do
+  mantenedor) — projeção linear no `ritmo.js` (R² 0,9999, erro
+  +1,4% do real em 16min), aborto de estol, `RITMO_SEM_PONTOS`/
+  `RITMO_TAG` e **`sonda-fim.js`** (parede do mapa 100 em ~16min,
+  validada 3/3) — `55383ad`
+- **`pressao-mortalidade`** — `ESC_DMG 0,037 → 0,055` (mantenedor:
+  mortes como desafio; "0 mortes" deixou de ser alvo). **Calibragem
+  por escada na parede** (6 valores × 2 builds): def sem folga
+  ≥0,037 → **guarda emendada = build skill** (aprovada) · A/B 4
+  seeds: **0,06 reprovado** (espiral 146 mortes em 1/4, +30% duração)
+  → **0,055 aprovado** (4/4 = baseline, −0,4%) · **T6**: completa
+  **59,1h · 2 mortes** (+2,8% vs 57,5h/0 — dentro do ≤+15%) —
+  `2168fe3` `567e402` + emenda final (constante 0,055, spec/tasks/
+  AGENTS/CHANGELOG/STATE)
+
 ### Unreleased — 2026-11-18 — leva "mundos-vivos" (cenário/vidas/ícones)
 - **Fase 1** — folhagem por chunk (preset Foliage, 3 paletas
   mapeadas aos 10 temas) + **vila por mapa** (preset Character & Props:
