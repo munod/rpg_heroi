@@ -156,12 +156,17 @@ var Batalha = (function () {
   // mundo10 = +22% de monstros vs o baseline k0,5/teto9): perigo TOTAL
   // do fim = 11×0,037 = 0,407 ≈ 9×0,045 = 0,405 do baseline medido
   // (222,5h sem estol). A progressão da sim completa manda (R-BAL-4c).
-  // PRESSAO-MORTALIDADE R-PM-1: 0,037 → 0,06 — o build gerenciado
+  // PRESSAO-MORTALIDADE R-PM-1: 0,037 → 0,055 — o build gerenciado
   // vencia com 0-2 mortes em 59h (jogo fácil demais; mantenedor pediu
-  // mortes como desafio). Produto do cliff 1,25×0,06 = 0,075 ≤ 0,086
-  // (folga medida: ≤0,086 passa / ≥0,095 estola 4/4). Calibragem:
-  // estolou ou duração inflou → recuar (0,055 → 0,05; teto 0,069).
-  var ESC_DMG = 0.06;     // dano do inimigo por onda
+  // mortes como desafio). CALIBRADO POR ESCADA NA PAREDE (sonda-fim,
+  // 6 valores × 2 builds): o def (mono-FOR) NÃO tem folga (>0,037 =
+  // espiral na onda 1 do mapa 100) — a guarda da parede passou a ser
+  // o build SKILL (emenda R-PM-3 aprovada pelo mantenedor: referência
+  // = o gerenciado). skill: 0,055 vence a parede com 1 morte · 0,06
+  // vence mas o A/B 4 seeds mostrou espiral em 1/4 (s4: 146 mortes,
+  // duração +30%) → 0,055 = maior valor ESTÁVEL (A/B: 4/4 igual ao
+  // baseline, duração −0,4%, 3 mortes vs 0). def vira hard mode.
+  var ESC_DMG = 0.055;    // dano do inimigo por onda
   // Teto da regen (spec gestao-atributos): era 500 hp/s. Early intocado
   // (4-20 hp/s); no late corta 2.800. Critério: manter mortes como
   // eventos na medição comparativa (T9: 6 mortes em 2400min).
