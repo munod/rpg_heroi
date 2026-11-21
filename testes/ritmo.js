@@ -251,6 +251,8 @@ for (const m of marcos) {
     }
     if (vitoria === null && f.mapa > Batalha.fimCampanha()) {
       vitoria = total * FPS_MS / 1000;   // chefe do mundo 10 = fim de jogo
+      // (SEGUNDOS — a linha VITÓRIA divide p/ 60; o erro da projeção
+      //  também divide; marcos.minuto é minuto mesmo)
     }
   }
   gastar();
@@ -430,8 +432,9 @@ function projetaVitoria() {
 const projecao = projetaVitoria();
 if (projecao && projecao.vitoriaProjetadaMin !== null) {
   const erro = vitoria !== null
-    ? ' · real ' + Math.round(vitoria) + 'min (erro ' +
-      (100 * (projecao.vitoriaProjetadaMin - vitoria) / vitoria).toFixed(1) +
+    ? ' · real ' + Math.round(vitoria / 60) + 'min (erro ' +
+      (100 * (projecao.vitoriaProjetadaMin - vitoria / 60) /
+        (vitoria / 60)).toFixed(1) +
       '%)'
     : (vitoria === null && estol === null ? ' (run não terminou)' : '');
   console.log('projeção: ' + projecao.ondasPorMin + ' ondas/min (R² ' +
@@ -468,7 +471,8 @@ const saida = {
   },
   metricas: metricas,
   fim: {
-    vitoria: vitoria, onda100: onda100, mapa2: mapa2, onda10m2: onda10m2,
+    vitoria: vitoria,   // SEGUNDOS (marcos.minuto = minutos)
+    onda100: onda100, mapa2: mapa2, onda10m2: onda10m2,
     mapa: inf_final().mapa, onda: inf_final().onda,
     nvFinal: p.nivel, mortes: mortesF, ouro: Math.round(p.ouro || 0)
   }
