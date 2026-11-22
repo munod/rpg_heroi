@@ -200,6 +200,21 @@ leva.
   p/ fixture do terremoto + `tela-skill-rajada.png`. Gate 3× +
   `ritmo 60` + QA navegador por batch.
 
+**Regra de RNG do batch resto** (decisão de implementação, E7): os
+extras de identidade usam **só receitas livres de `Math.random`**
+(medição empírica com contador de draws por receita — não inspeção de
+código: `impacto` custa 49 draws, `cura` 35, `explosao` 36, `corte` 24;
+`zona`/`onda`/`feixe`/`estrela`/`anel`/`raioRadial`/`fissura`/`tiro`/
+`chuva`/`pilares`/`giro`/`rastro` custam **0**). A baseline antiga
+continua intacta **por cima** (zona+impacto+flash do nuke, feixe+motes
+da cura, nuvem do veneno, onda+explosão do medo, explosão+rastro da
+mobilidade) e os extras entram **depois** — logo, a sequência de RNG do
+jogo não desloca e as fixtures da seção 16 sobrevivem sem tocar nelas.
+O missil **decorativo** da Gêmea troca `rand` por `hash01` (curva 0,
+rastro e estouro determinísticos): 0 draws e sem callback.
+As `trilha`s do missil variam só gravidade/vida/dispersão — o nº de
+partículas por frame (e portanto de draws) é sempre o mesmo da baseline.
+
 **Timing inalterado** (regra da emenda): origem/destino do missil não
 mudam (senão o tempo de voo muda); missil decorativo da Gêmea não tem
 callback; nenhuma receita nova chama `parar`/`sacudir` além dos

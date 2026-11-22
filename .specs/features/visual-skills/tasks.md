@@ -19,14 +19,14 @@ Status: ⬜ pendente / ✅ feito · `[P]` paralelo
 | # | Task | Dep | Status |
 |---|------|-----|--------|
 | E1 | Emenda na spec + tasks (R-VS-7/8/9) | — | ✅ |
-| E2 | `skills.js`: `vfx` nas 7 skills `area` + 14 ramos · `comRamo` mescla `vfx` | E1 | ⬜ |
-| E3 | `efeitos.js`: receitas `tiro`/`chuva`/`pilares`/`giro`/`fissura` + `faiscaMuita(ang,abertura)` + sondas + desenho | E2 | ⬜ |
-| E4 | `batalha.js`: `efeitoArea` por `vfx.tipo` (mata a onda r200; fallback = corte) | E3 | ⬜ |
-| E5 | Testes: 43 (vfx/merge) + 56 (fissuras/ondaR140/tiros/cais) + `cena.js` (terremoto + rajada) | E4 | ⬜ |
-| E6 | Gate 3× + `ritmo 60` + QA (cena + navegador) → **checkpoint p/ mantenedor** | E5 | ⬜ |
-| E7 | Batch resto: `vfx` em nuke/cura/veneno/mobilidade/medo + 50 ramos (R-VS-8) | E6 | ⬜ |
-| E8 | Testes do batch resto + gate 3× + `ritmo 60` + QA | E7 | ⬜ |
-| E9 | Docs da emenda (CHANGELOG reescrito, AGENTS, STATE, ROADMAP) + commits | E8 | ⬜ |
+| E2 | `skills.js`: `vfx` nas 7 skills `area` + 14 ramos · `comRamo` mescla `vfx` | E1 | ✅ |
+| E3 | `efeitos.js`: receitas `tiro`/`chuva`/`pilares`/`giro`/`fissura` + `faiscaMuita(ang,abertura)` + sondas + desenho | E2 | ✅ |
+| E4 | `batalha.js`: `efeitoArea` por `vfx.tipo` (mata a onda r200; fallback = corte) | E3 | ✅ |
+| E5 | Testes: 43 (vfx/merge) + 56 (fissuras/ondaR140/tiros/cais) + `cena.js` (terremoto + rajada) | E4 | ✅ |
+| E6 | Gate 3× + `ritmo 60` + QA (cena + navegador) → **checkpoint p/ mantenedor** | E5 | ✅ |
+| E7 | Batch resto: `vfx` em nuke/cura/veneno/mobilidade/medo + 50 ramos (R-VS-8) | E6 | ✅ |
+| E8 | Testes do batch resto + gate 3× + `ritmo 60` + QA | E7 | ✅ |
+| E9 | Docs da emenda (CHANGELOG reescrito, AGENTS, STATE, ROADMAP) + commits | E8 | ✅ |
 | E10 | Push (por último — aval do mantenedor) | E9 | ⬜ |
 
 ## Verificação por task

@@ -704,38 +704,59 @@
   `Efeitos.limpar()` — cobre nums/parts/anéis/shake/hit-stop/flash
   desde esta spec). Fumaça seção 49.
 - **Efeitos especiais das skills estilo Vampire Survivors (spec
-  `visual-skills`)** — assinatura visual por TIPO em `efeitos.js` +
-  `batalha.js` (visual puro: dano/tempo intocados). **Receitas novas**
-  (cada uma com pool+teto+`silenciar`+`qtd`+`info()`): **`zona`**
-  (círculo no chão com borda por `anelSprite` escalado + pulso —
-  `desenharBaixo`; lifetime curto onde o dano caiu, não vira "dano
-  contínuo"), **`onda`** (disco expandindo ease-out + borda, teto 16 —
-  choque 360° da varredura/poeira do empurrão/medo), **`feixe`**
-  (pilar vertical halo+miolo, camada aditiva do `desenharTopo` — cura
-  sagrada), **`carga`** (**singleton** estilo `flash`: glow crescente +
-  anel contraindo; a batalha re-chama na janela final do timer do
-  nuke, sem refresh por 0,15s expira — `info().carga`), **`nuvem`**
-  (bolhas subindo, fachada do `motePart`) e **`rastro`** (N glows
-  origem→destino, o da origem envelhece primeiro). **Missil com rastro
-  denso**: 2 partículas/frame (era 1 com p=0,9), dispersão menor,
-  `dur` 0,4. **Call sites**: `varredura` → onda 360° (raio 200×esc =
-  cobre a janela) + corte · `conjuraNuke` → zona no impacto +
-  `flashTela(mg.cor, 0,18, 0,2)` só quando **`mult ≥ 2,5`** (gate
-  interno do `flashTela` já respeita `Opcoes.liga('flash')`/mudo) ·
-  cura → feixe · veneno → nuvem · `foge` → rastro (blink e esquiva) ·
-  `empurra`/`aplicaMedo` → onda até o **`alcance` real** (acurado).
+  `visual-skills`)** — identidade **por skill** (emenda p/ feedback do
+  mantenedor: "cada skill seu próprio efeito"), visual puro: dano/tempo
+  intocados. **Receitas** (cada uma com pool+teto+`silenciar`+`qtd`+
+  `info()`): **`zona`** (círculo no chão com borda por `anelSprite`
+  escalado + pulso — `desenharBaixo`), **`onda`** (disco expandindo
+  ease-out + borda), **`feixe`** (pilar vertical halo+miolo, camada
+  aditiva), **`carga`** (**singleton**: glow crescente + anel
+  contraindo; expira sozinho em 0,15s — `info().carga`), **`nuvem`**
+  (bolhas subindo) e **`rastro`** (N glows origem→destino); do batch
+  área: **`tiro`** (projétil reto, partícula `tiro`), **`chuva`**
+  (cai do teto, partícula `cai`), **`pilares`** (N `feixe` com
+  `atraso` no pool), **`giro`** (arcos rotativos no pool `arcos` com
+  flag `giro`) e **`fissura`** (pool `fissuras` teto 8, geometria
+  pré-calculada). **`hash01`** = pseudo-random por índice SEM
+  `Math.random` nas receitas novas (a sequência do jogo não desloca).
+  **Missil com rastro denso**: 2 partículas/frame; `Efeitos.missil(de,
+  para, cor, esc, cb, op)` com `op.trilha` (estilo do rastro:
+  `chama`/`peso`/`fina`/`sombra`/`divina` — muda gravidade/vida/
+  dispersão, **nunca** a contagem de draws) e `op.decorativo` (2º
+  missil da **Adaga Gêmea**: sem callback, 0 draws, hash01).
+  **Identidade nos dados**: campo `vfx` em **32/32 skills** e **64/64
+  ramos** de `skills.js` — o ramo sobrepõe **por chave** (cópia rasa,
+  `LISTA` nunca mutada, sem ramo = base intacta). **Dispatch por
+  `vfx.tipo` em `batalha.js`** (nunca por id): `efeitoArea`,
+  `efeitoNuke`, `efeitoCura`, `efeitoMedo`, `efeitoVeneno`,
+  `efeitoMobilidade` — **todos exportados** p/ teste; sem `vfx` ou
+  tipo futuro = fallback seguro (corte, sem círculo). **A `onda` r200
+  da varredura morreu**: onda só onde é semântica (empurrão/medo com
+  raio = `alcance` real; terremoto moderada 140 junto da fissura).
+  **Call sites**: `efeitoArea` na `varredura` · `conjuraNuke` → carga
+  na janela final do timer → missil (`trilha` + gêmea) → zona no
+  impacto + `flashTela` só quando **`mult ≥ 2,5`** + `efeitoNuke` ·
+  cura → feixe (`alt` do vfx) + `efeitoCura` · veneno → nuvem +
+  `efeitoVeneno` · `foge`/`empurra` → rastro/onda + `efeitoMobilidade`
+  · `aplicaMedo` → onda até o **`alcance` real** + `efeitoMedo`.
   **Escalação `nvSkill`** = `Efeitos.escala(nv)` = `1 + 0,1 × min(nv,
   10)` (fonte única testável; nv 0/ausente = 1 = baseline intacta) —
   aplicada a raio/altura/contagem nos call sites, **nunca** a
-  dano/tempo; o 2º poço de pontos vira espetáculo (VS: upar arma =
-  efeito maior). `CARGA_NUKE = 0,35s` (janela do timer; só com alvo).
-  **Fumaça seção 56** (25 confs: tetos · silenciar/limpar · receitas ·
-  carga expira · escala · rasterizador · integracionais varredura/
-  meteoro/negativo) e `cena.js` com **capturas por pool**
-  (`capturaReceita` — zona/onda/feixe vivem <0,7s, o `capturaSkill`
-  genérico salvava 5 frames depois e perdia). RNG: mais draws nos
-  efeitos desloca a sequência — se fixture da 16 cair, reduzir draws
-  na receita, nunca afrouxar o teste.
+  dano/tempo. `CARGA_NUKE = 0,35s`.
+  **Regra de RNG da emenda** (medição empírica com contador de draws,
+  não inspeção): `impacto` custa 49 draws, `cura`/`nuvem` 35,
+  `explosao` 36, `corte` 24, `brasas` 20; `zona`/`onda`/`feixe`/
+  `estrela`/`anel`/`raioRadial`/`fissura`/`tiro`/`chuva`/`pilares`/
+  `giro`/`rastro` custam **0**. Os extras da emenda usam só as de 0
+  draws **por cima** da baseline intacta → a sequência do jogo não
+  desloca e as fixtures da seção 16 sobrevivem sem toque.
+  **Fumaça seção 56** (tetos · silenciar/limpar · receitas · carga ·
+  escala · rasterizador · dispatchs por tipo · RNG 0 draws · fallback ·
+  integracionais terremoto/meteoro/bola-fogo) + **seção 43** (32/32 e
+  64/64 com `vfx`, merge, base intacta) + `cena.js` com **capturas por
+  pool** (`capturaReceita` — zona/onda/feixe vivem <0,7s). RNG: mais
+  draws nos efeitos desloca a sequência — se fixture da 16 cair,
+  reduzir draws na receita, nunca afrouxar o teste.
 
 ## Testes — peculiaridades
 

@@ -8,19 +8,28 @@ feature correspondente; cada linha futura nasce aqui antes de virar spec.
 ### Unreleased — 2026-11-21 — leva "visual-skills" (efeitos especiais estilo Vampire Survivors)
 - **`visual-skills`** — pesquisa do VS → 5 princípios (luz aditivo ·
   assinatura por arma · área com limite legível · flash reservado a
-  evento grande + toggle · densidade escala com o poder) aplicados
-  como **assinatura por TIPO** (6 tipos, não 32 skills): receitas
-  novas `zona` (círculo no chão estilo Garlic) · `onda` (choque 360°/
-  poeira/medo) · `feixe` (pilar de luz na cura) · `carga`
-  (singleton estilo `flash` antes do nuke) · `nuvem` (bolhas do
-  veneno) · `rastro` (fantasma do blink/esquiva) + **missil de rastro
-  denso** (2 parts/frame). Call sites em `batalha.js` com **acurácia
-  de raio** (onda de empurrão/medo = `alcance` real). **Escalação
-  `nvSkill`** = `Efeitos.escala` fonte única (1+0,1×nv, teto 2× — só
-  visual, nv 0 = baseline) e **flash de nuke** `mult ≥ 2,5` na cor
-  da skill (gate de acessibilidade existente). Gate **3×** · `ritmo
-  60` intacto (mapa 1 em 33,0min, faixa 31,5/33,5) · **seção 56**
-  (25 confs) + **3 capturas por pool** no `cena.js`
+  evento grande + toggle · densidade escala com o poder). **Emendada no
+  mesmo dia** p/ feedback do mantenedor ("não gostei desse círculo
+  gigante… cada skill deveria ter seu próprio efeito"): a assinatura
+  **por tipo** virou **por skill** — `vfx` em **32/32 skills** e
+  **64/64 ramos**, **dispatch por `vfx.tipo`** nos 6 call sites
+  (`efeitoArea`/`efeitoNuke`/`efeitoCura`/`efeitoMedo`/
+  `efeitoVeneno`/`efeitoMobilidade`, exportados, fallback seguro), e a
+  **`onda` r200 da varredura morreu**. Receitas novas: `zona` ·
+  `onda` · `feixe` · `carga` (singleton) · `nuvem` · `rastro` +
+  batch área `tiro` · `chuva` · `pilares` · `giro` · `fissura` +
+  **`hash01`** (sem `Math.random` nas novas). Missil ganhou
+  **`op.trilha`** (estilo do rastro sem mudar draws) e
+  **`op.decorativo`** (2º missil da **Adaga Gêmea**, sem callback,
+  0 draws). **Escalação `nvSkill`** = `Efeitos.escala` fonte única
+  (1+0,1×min(nv,10) — só visual) e **flash de nuke** `mult ≥ 2,5`
+  (gate de acessibilidade existente). **Regra de RNG**: extras usam só
+  receitas **medidas** com 0 draws por cima da baseline intacta →
+  sequência do jogo não desloca. Gate **3×** · `ritmo 60` intacto
+  (mapa 1 em **33,1min**, faixa 31,5/33,5) · **seções 43 e 56** +
+  capturas por pool no `cena.js` (`tela-skill-onda` migrou p/ o
+  Terremoto, `tela-skill-rajada` nova) · **QA navegador** 7/7 + 5
+  categorias + par gêmeo, 0 erros
 
 ### Unreleased — 2026-11-21 — levas "economia-de-pontos" + "pressao-mortalidade" (peso de decisão × pressão)
 - **`economia-de-pontos`** (D/A/S) — respec pago (`−` cobra

@@ -764,30 +764,51 @@ lições). É daqui que uma sessão nova retoma o contexto de produto.
   def vira **hard mode** (estola na parede se ignora skills — dá pra
   respecar, sem soft-lock).
 - **Efeitos especiais das skills estilo Vampire Survivors (spec
-  `visual-skills`, 2026-11-21)** — pedido do mantenedor: *"pesquisa
-  online como eles são para aplicar e deixar o game mais chamativo"*.
-  Pesquisa → 5 princípios VS: **luz (aditivo) · assinatura por arma ·
-  área com limite legível · flash reservado a evento grande +
-  toggle · densidade escala com o poder**. Aplicado como **assinatura
-  por TIPO** (6 tipos, não 32 skills): receitas novas `zona`/`onda`/
-  `feixe`/`carga`/`nuvem`/`rastro` + missil de rastro denso, cada uma
-  com pool+teto+`silenciar`. **Decisões**: (a) `carga` é **singleton**
-  estilo `flash` (não pool — só 1 conjuração por vez, expira sozinho
-  em 0,15s sem refresh); (b) escalação do `nvSkill` = **fonte única**
-  `Efeitos.escala(nv)` testável em unit (`1+0,1×nv`, teto 10 = 2×),
-  aplicada só a raio/altura/contagem — **nunca dano/tempo** (nv 0 =
-  baseline intacta, contrato da `economia-de-pontos` preservado);
-  (c) flash de nuke = `mult ≥ 2,5` **dentro do `flashTela`**
-  (o gate de acessibilidade/`mudo` já existia — nada novo de opção);
-  (d) zona nasce **no ponto onde o dano caiu** com lifetime 0,6s
-  (não vira "dano contínuo" enganoso); (e) onda de empurrão/medo usa
-  o **`alcance` real** da skill (acurado). **RNG**: mais draws nos
-  efeitos deslocou a sequência — o gate 3× passou sem cair fixture
-  (lição da spec: se cair, reduzir draws na receita, nunca afrouxar
-  o teste). Gate 3× verde · `ritmo 60` intacto (mapa 1 em 33,0min,
-  faixa 31,5/33,5) · 25 confs novas (seção 56) + 3 capturas por pool
-  no `cena.js` (`capturaReceita` — o `capturaSkill` genérico salvava
-  5 frames depois e perdia pools de <0,7s).
+  `visual-skills`, 2026-11-21, **emendada no mesmo dia**)** — pedido
+  do mantenedor: *"pesquisa online como eles são para aplicar e deixar o
+  game mais chamativo"*. Pesquisa → 5 princípios VS: **luz (aditivo) ·
+  assinatura por arma · área com limite legível · flash reservado a
+  evento grande + toggle · densidade escala com o poder**. Primeira
+  versão aplicou **assinatura por TIPO** (6 tipos) com receitas
+  `zona`/`onda`/`feixe`/`carga`/`nuvem`/`rastro` + missil de rastro
+  denso. **Emenda (feedback do mantenedor, pré-push)**: *"Não gostei
+  desse círculo gigante. Ex: Rajada arcana deveria ser algo como tiros,
+  talvez para todos os lados no varredura. Cada skill deveria ter seu
+  próprio efeito e sub-efeitos dos seus ramos."* → a direção virou
+  **identidade POR SKILL**: campo `vfx` em **32/32 skills** e **64/64
+  ramos** (ramo sobrepõe por chave, cópia rasa, `LISTA` nunca mutada,
+  sem ramo = base intacta), **dispatch por `vfx.tipo`** em `batalha.js`
+  (`efeitoArea`/`efeitoNuke`/`efeitoCura`/`efeitoMedo`/
+  `efeitoVeneno`/`efeitoMobilidade`, todos exportados; fallback seguro
+  sem `vfx`). **A `onda` r200 da varredura morreu** — Rajada virou
+  **10 tiros p/ todos os lados**, Terremoto rachaduras + onda moderada
+  140, e as demais ganharam receita própria (`tiro`/`chuva`/`pilares`/
+  `giro`/`fissura` + `faiscaMuita(ang,abertura)`).
+  **Decisões**: (a) `carga` é **singleton** estilo `flash` (expira
+  sozinho em 0,15s sem refresh); (b) escalação do `nvSkill` = **fonte
+  única** `Efeitos.escala(nv)` (`1+0,1×min(nv,10)`), aplicada só a
+  raio/altura/contagem — **nunca dano/tempo**; (c) flash de nuke =
+  `mult ≥ 2,5` **dentro do `flashTela`** (gate de acessibilidade já
+  existia); (d) zona nasce **onde o dano caiu**, lifetime 0,6s; (e) onda
+  de empurrão/medo usa o **`alcance` real**; (f) **Adaga Gêmea = 2º
+  missil decorativo** sem callback (dano só no real) feito de `hash01`
+  = **0 draws**; (g) `op.trilha` muda o estilo do rastro **sem mudar a
+  contagem de draws**.
+  **RNG — a lição virou regra de projeto**: medi empíricamente (contador
+  de draws por receita) que `impacto` custa 49, `cura`/`nuvem` 35,
+  `explosao` 36, `corte` 24; `zona`/`onda`/`feixe`/`estrela`/`anel`/
+  `raioRadial`/`fissura`/`tiro`/`chuva`/`pilares`/`giro`/`rastro`
+  custam **0**. Os extras da emenda usam só as de 0 draws **por cima**
+  da baseline intacta → **a sequência do jogo não desloca** e as
+  fixtures da seção 16 sobrevivem sem toque (asserção nova: "extras do
+  batch resto: 0 draws de RNG").
+  **Verificação**: gate 3× verde (5 arquivos) · `ritmo 60` intacto
+  (**33,1min**, faixa 31,5/33,5 — idêntico ao do batch área) · seções
+  43 (32/32, 64/64, merge, base intacta) e 56 (tetos · silenciar ·
+  receitas · escala · rasterizador · **6 dispatchs** · RNG 0 ·
+  fallback · integracionais) · **QA no navegador real** (chromium/CDP):
+  7/7 identidades do batch área + 5 categorias do batch resto + par
+  gêmeo em voo, **0 erros de página**.
 
 ## Bloqueios
 

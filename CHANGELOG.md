@@ -13,36 +13,49 @@ vive em `.specs/features/`.
 ### Added
 
 - **Efeitos especiais das skills estilo Vampire Survivors (spec
-  `visual-skills`)** — as skills ganharam **assinatura visual própria**
-  por tipo (pesquisa do VS: efeito = luz, área com limite legível,
+  `visual-skills`)** — as skills ganharam **assinatura visual própria**,
+  **por skill** (pesquisa do VS: efeito = luz, área com limite legível,
   flash reservado a evento grande, densidade escala com o poder).
   **Receitas novas em `efeitos.js`** (cada uma com pool+teto+`silenciar`+
   `info()`): **`zona`** (círculo no chão com borda legível + pulso —
   estilo Garlic, `desenharBaixo`), **`onda`** (disco expandindo com
-  ease-out — choque 360°/poeira/medo), **`feixe`** (pilar de luz na
-  camada aditiva — Holy Water), **`carga`** (singleton estilo `flash`:
-  glow crescente + anel contraindo antes do nuke, expira sozinho em
-  0,15s sem refresh), **`nuvem`** (bolhas subindo — fachada do
-  `motePart`) e **`rastro`** (glows fantasma origem→destino);
-  **missil com rastro denso** (2 partículas/frame, era 1 com p=0,9).
-  **Assinatura por tipo em `batalha.js`**: varredura → onda 360° +
-  corte · nuke → carga na janela final do timer → missil → zona no
-  impacto · cura → feixe + motes · veneno → nuvem · mobilidade →
-  rastro (blink/esquiva) · empurrão/medo → onda até o `alcance` real.
-  **Escalação com `nvSkill`** — `Efeitos.escala(nv)` = `1 + 0,1 × nv`
-  (teto 10 = 2×) aplicada a raio/altura/contagem em todos os call
-  sites (fonte única testável; **nunca** dano/tempo; nv 0 = baseline
-  intacta) — o 2º poço de pontos vira espetáculo, como upar arma no
-  VS. **Flash de nuke pesado** (`mult ≥ 2,5`) na cor da skill, atrás
-  do gate existente `Opcoes.liga('flash')` (padrão VS: flash reservado
-  a evento grande + acessibilidade). **Seção 56** da fumaça (25 confs:
-  tetos, `silenciar`/`limpar`, receitas, `carga`, `escala`,
-  rasterizador + integracionais: varredura→onda r200, meteoro→carga +
-  zona r16 + flash, nvSkill 10→zona r32, bola-fogo sem flash) e
-  **3 capturas novas** no `cena.js` (`tela-skill-onda/zona/feixe.png`
-  — esperam o pool nascer, o `capturaSkill` genérico não distingue).
-  Gate 3× verde · `ritmo 60` intacto (mapa 1 em 33,0min, na faixa
-  31,5/33,5 do registro).
+  ease-out — choque/poeira/medo), **`feixe`** (pilar de luz na camada
+  aditiva — Holy Water), **`carga`** (singleton estilo `flash`), +
+  **`nuvem`** e **`rastro`**; do batch área: **`tiro`** (projétil reto
+  com rastro), **`chuva`** (lâminas do teto), **`pilares`** (feixes
+  escalonados), **`giro`** (órbita de lâminas) e **`fissura`** (pool
+  teto 8); **missil com rastro denso** (2 partículas/frame) e
+  **`faiscaMuita(ang,abertura)`** opcional.
+  **Identidade mora nos dados** — campo `vfx` em **32/32 skills** e
+  **64/64 ramos** (ramo sobrepõe por chave, cópia rasa, `LISTA` nunca
+  mutada; sem ramo = base intacta), com **dispatch por `vfx.tipo`** em
+  `batalha.js` (`efeitoArea`/`efeitoNuke`/`efeitoCura`/`efeitoMedo`/
+  `efeitoVeneno`/`efeitoMobilidade`, todos exportados; sem `vfx` ou
+  tipo futuro = fallback seguro). **A `onda` r200 da varredura morreu**:
+  cada skill de área tem a cara dela — Golpe Embravecido → arco de
+  lâmina · Terremoto → rachaduras + onda moderada 140 · Fúria → órbita
+  · Nova Arcana → relâmpago radial + estrelas · **Rajada → 10 tiros p/
+  todos os lados** · Chuva → lâminas do teto · Julgamento → pilares.
+  Nukes ganham `trilha` (estilo do rastro do missil) + receita de
+  impacto própria; **Adaga Gêmea = 2º missil decorativo** sem callback
+  e feito só de `hash01` (0 draws de RNG); cura/medo/veneno/mobilidade
+  ganham extras por tipo. **Escalação com `nvSkill`** —
+  `Efeitos.escala(nv)` = `1 + 0,1 × min(nv, 10)` aplicada a
+  raio/altura/contagem, **nunca** dano/tempo; nv 0 = baseline intacta.
+  **Flash de nuke pesado** (`mult ≥ 2,5`) atrás do gate existente
+  `Opcoes.liga('flash')`. **Regra de RNG da emenda**: os extras usam
+  só receitas **medidas** como livres de `Math.random` (0 draws) por
+  cima da baseline intacta — a sequência do jogo não desloca e as
+  fixtures da seção 16 sobrevivem sem tocar nelas. Testes: **seção 56**
+  (tetos · silenciar/limpar · receitas · carga · escala · rasterizador ·
+  dispatchs por tipo · RNG 0 draws · fallback · integracionais) +
+  **seção 43** (32/32 e 64/64 com `vfx`, merge, base intacta) +
+  **capturas por pool** no `cena.js` (`tela-skill-onda` migrou p/
+  fixture do Terremoto, `tela-skill-rajada` nova). **Gate 3× verde** ·
+  `ritmo 60` intacto (mapa 1 em **33,1min**, na faixa 31,5/33,5) ·
+  **QA no navegador real** (chromium/CDP): 7/7 identidades do batch
+  área + 5 categorias do batch resto + par gêmeo em voo, 0 erros de
+  página.
 
 - **Instrumento de projeção matemática rápida (leva
   `economia-de-pontos`/`pressao-mortalidade`)** — decisões de balance
