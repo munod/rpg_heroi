@@ -4909,6 +4909,61 @@ console.log('43) árvore de skills: 8 por classe, ramos e loadout escalonado');
   conf(Skills.comRamo(bravo, 'ramo-inexistente') === bravo,
     'ramo inválido cai na base neutra');
 
+  // --- 6b) vfx: identidade visual por skill e por ramo (emenda R-VS-7/8)
+  conf(Skills.LISTA.length === 32 && Skills.LISTA.every(sk =>
+        sk.vfx && typeof sk.vfx.tipo === 'string' && sk.vfx.tipo.length > 0),
+    '32/32 skills com vfx.tipo (dispatch por tipo, não por id) — faltando ' +
+    Skills.LISTA.filter(sk => !(sk.vfx && sk.vfx.tipo)).length);
+  const totalRamos = Skills.LISTA.reduce((s, sk) =>
+    s + (Array.isArray(sk.ramos) ? sk.ramos.length : 0), 0);
+  const ramosComVfx = Skills.LISTA.reduce((s, sk) =>
+    s + (Array.isArray(sk.ramos)
+      ? sk.ramos.filter(r => r.vfx && typeof r.vfx === 'object').length : 0), 0);
+  conf(totalRamos === 64 && ramosComVfx === 64,
+    '64/64 ramos com vfx explícito (achei ' + ramosComVfx + '/' +
+    totalRamos + ')');
+  // as 6 categorias da LISTA têm dispatch próprio em batalha.js
+  const categorias = ['area', 'nuke', 'cura', 'medo', 'veneno', 'mobilidade'];
+  conf(categorias.every(t => Skills.LISTA.some(sk => sk.tipo === t)),
+    'as 6 categorias existem na LISTA');
+  conf(categorias.every(t => Skills.LISTA.filter(sk => sk.tipo === t)
+        .every(sk => sk.vfx && sk.vfx.tipo)),
+    'toda categoria tem vfx.tipo em todas as skills dela');
+  conf(['efeitoArea', 'efeitoNuke', 'efeitoCura', 'efeitoMedo',
+        'efeitoVeneno', 'efeitoMobilidade']
+       .every(k => typeof Batalha[k] === 'function'),
+    'os 6 dispatchs por vfx.tipo estão exportados');
+  const comVfx = Skills.LISTA.filter(sk => sk.tipo === 'area');
+  conf(comVfx.length === 7,
+    '7 skills tipo area com vfx (achei ' + comVfx.length + ')');
+  conf(comVfx.every(sk => sk.vfx && typeof sk.vfx.tipo === 'string' &&
+        sk.vfx.tipo.length > 0),
+    'toda skill area tem vfx.tipo (dispatch por tipo, não por id)');
+  conf(comVfx.every(sk => Array.isArray(sk.ramos) && sk.ramos.length === 2 &&
+        sk.ramos.every(r => r.vfx && typeof r.vfx === 'object')),
+    'todos os 14 ramos das skills area têm vfx explícito');
+  conf(comVfx.every(sk => sk.ramos.every(r =>
+        Object.keys(r.vfx).every(k => k in sk.vfx))),
+    'vfx do ramo só usa chaves que existem no vfx base (merge por chave)');
+  // merge: ramo vence por chave, cópia rasa (a LISTA nunca é mutada)
+  const terremoto = Skills.LISTA.find(sk => sk.id === 'terremoto');
+  conf(!!terremoto && terremoto.vfx.raios === 7 && terremoto.vfx.raio === 60,
+    'base do terremoto tem raios 7 / raio 60');
+  const ramTer = terremoto && Skills.comRamo(terremoto,
+    terremoto.ramos[0].id);
+  conf(!!ramTer && ramTer !== terremoto &&
+       ramTer.vfx !== terremoto.vfx,
+    'comRamo devolve cópia do vfx (referência nova, não a da LISTA)');
+  conf(!!ramTer && typeof ramTer.vfx.tipo === 'string' &&
+       ramTer.vfx.tipo === terremoto.vfx.tipo,
+    'mescla mantém o tipo da base (o ramo só sobrepõe chaves dele)');
+  conf(!!terremoto && terremoto.vfx.raios === 7 &&
+       terremoto.vfx.raio === 60 && terremoto.vfx.onda === 140,
+    'a base NÃO é mutada pelo merge (vfx intacto)');
+  // sem ramo = base intacta (contrato "base neutra" da leva original)
+  conf(Skills.comRamo(terremoto, null).vfx === terremoto.vfx,
+    'sem ramo = vfx base (referência original, valores intactos)');
+
   // --- 7) ciclo: base → A → B → base (e limpa p.ramos)
   p.ramos = null;
   const ciclo = [];
@@ -6259,6 +6314,7 @@ console.log('56) Visual skills: receitas VS, escalação nvSkill e flash de nuke
 {
   const Efeitos = sandbox.Efeitos;
   const Batalha = sandbox.Batalha;
+  const Skills = sandbox.Skills;
   const p = Game.personagem;
 
   if (Batalha.info().pausada) Batalha.alternarPausa();
@@ -6276,30 +6332,42 @@ console.log('56) Visual skills: receitas VS, escalação nvSkill e flash de nuke
   for (let i = 0; i < 30; i++) Efeitos.feixe(50, 50, '#ffe89a', 70);
   conf(Efeitos.info().feixes === 6,
     'pool de feixes com teto 6 (' + Efeitos.info().feixes + ')');
+  Efeitos.limpar();
+  for (let i = 0; i < 30; i++) Efeitos.fissura(50, 50, 5, 40, '#ff8844');
+  conf(Efeitos.info().fissuras === 8,
+    'pool de fissuras com teto 8 (' + Efeitos.info().fissuras + ')');
 
   // --- b) silenciar/limpar zeram os pools novos + a carga (contrato 49)
   Efeitos.zona(60, 60, 20, '#12ab34', 1);
   Efeitos.onda(60, 60, 10, 80, '#8a6bff');
   Efeitos.feixe(60, 60, '#ffe89a', 70);
+  Efeitos.fissura(60, 60, 5, 40, '#ff8844');
   Efeitos.carga(60, 50, '#ff6b3a', 0.5);
-  conf(Efeitos.info().qtd >= 4 &&
+  conf(Efeitos.info().qtd >= 5 &&
        Efeitos.info().carga && Efeitos.info().carga.prog === 0.5,
     'receitas novas + carga visíveis em info() (qtd ' +
     Efeitos.info().qtd + ')');
   Efeitos.silenciar(true);
   const infM = Efeitos.info();
   conf(infM.mudo && infM.zonas === 0 && infM.ondas === 0 &&
-       infM.feixes === 0 && !infM.carga && infM.qtd === 0,
-    'mudo zera zonas/ondas/feixes/carga (qtd ' + infM.qtd + ')');
+       infM.feixes === 0 && infM.fissuras === 0 && !infM.carga &&
+       infM.qtd === 0,
+    'mudo zera zonas/ondas/feixes/fissuras/carga (qtd ' + infM.qtd + ')');
   Efeitos.zona(70, 70, 20, '#12ab34', 1);      // bloqueadas no mudo
   Efeitos.onda(70, 70, 10, 80, '#8a6bff');
   Efeitos.feixe(70, 70, '#ffe89a', 70);
+  Efeitos.fissura(70, 70, 5, 40, '#ff8844');
+  Efeitos.tiro(70, 70, 1, 240, '#88ccff', 1);
+  Efeitos.chuva(70, 70, 40, 4, '#ccccff', 1);
+  Efeitos.pilares(70, 70, 40, 3, '#ffffff', 60, 0.1);
+  Efeitos.giro(70, 70, 30, 3, '#ffaa55', 0.7, 5);
   Efeitos.carga(70, 60, '#ff6b3a', 0.9);
   Efeitos.nuvem(70, 70, '#7ed957', 7);
   Efeitos.rastro(10, 70, 60, 70, '#b06bff', 7);
   const infM2 = Efeitos.info();
   conf(infM2.mudo && infM2.qtd === 0 && infM2.motes === 0 &&
-       infM2.brilhos === 0,
+       infM2.brilhos === 0 && infM2.tiros === 0 && infM2.cais === 0 &&
+       infM2.giros === 0 && infM2.fissuras === 0,
     'no mudo nenhuma receita nova nasce (qtd ' + infM2.qtd + ')');
   Efeitos.silenciar(false);
   Efeitos.zona(80, 80, 20, '#12ab34', 1);
@@ -6319,8 +6387,27 @@ console.log('56) Visual skills: receitas VS, escalação nvSkill e flash de nuke
   Efeitos.feixe(90, 90, '#ffe89a', 70);
   conf(Efeitos.info().feixes === 1, 'feixe: pool próprio');
   Efeitos.limpar();
-  Efeitos.nuvem(90, 90, '#7ed957', 8);
-  conf(Efeitos.info().motes >= 8,
+  Efeitos.tiro(90, 90, 0.7, 240, '#88ccff', 1);
+  conf(Efeitos.info().tiros === 1 && Efeitos.info().parts === 1,
+    'tiro: partícula própria (tiros ' + Efeitos.info().tiros + ')');
+  Efeitos.limpar();
+  Efeitos.chuva(90, 90, 50, 6, '#d8d8f0', 1);
+  conf(Efeitos.info().cais === 6,
+    'chuva: 6 lâminas descendo (cais ' + Efeitos.info().cais + ')');
+  Efeitos.limpar();
+  Efeitos.pilares(90, 90, 50, 4, '#ffe89a', 70, 0.14);
+  conf(Efeitos.info().feixes === 4,
+    'pilares: 4 feixes no pool (feixes ' + Efeitos.info().feixes + ')');
+  Efeitos.limpar();
+  Efeitos.giro(90, 90, 32, 3, '#ff5a3a', 0.75, 5.5);
+  conf(Efeitos.info().giros === 1 && Efeitos.info().arcos === 1,
+    'giro: órbita no pool arcos (giros ' + Efeitos.info().giros + ')');
+  Efeitos.limpar();
+  Efeitos.fissura(90, 90, 7, 60, '#ffd866');
+  conf(Efeitos.info().fissuras === 1,
+    'fissura: pool próprio (fissuras ' + Efeitos.info().fissuras + ')');
+  Efeitos.limpar();
+  Efeitos.nuvem(90, 90, '#7ed957', 8);  conf(Efeitos.info().motes >= 8,
     'nuvem: 8 motes subindo (' + Efeitos.info().motes + ')');
   Efeitos.limpar();
   Efeitos.rastro(10, 90, 90, 90, '#b06bff', 7);
@@ -6348,34 +6435,103 @@ console.log('56) Visual skills: receitas VS, escalação nvSkill e flash de nuke
   Efeitos.onda(140, 140, 10, 200, '#33d8ff');
   Efeitos.feixe(180, 180, '#ffe89a', 70);
   Efeitos.carga(160, 150, '#ff6b3a', 0.9);
+  Efeitos.tiro(120, 160, 1.2, 240, '#88ccff', 1);
+  Efeitos.chuva(200, 200, 60, 5, '#d8d8f0', 1);
+  Efeitos.pilares(150, 210, 60, 3, '#ffe89a', 70, 0.1);
+  Efeitos.giro(170, 170, 34, 3, '#ff5a3a', 0.7, 5);
+  Efeitos.fissura(190, 190, 6, 55, '#ffd866');
   frame(2);                                   // renderiza a arena
   conf(Efeitos.info().zonas === 1 && Efeitos.info().ondas === 1 &&
-       Efeitos.info().feixes >= 0,
-    'zonas/ondas/feixes/carga desenham sem lançar no rasterizador');
+       Efeitos.info().feixes >= 0 && Efeitos.info().tiros === 1 &&
+       Efeitos.info().cais === 5 && Efeitos.info().giros === 1 &&
+       Efeitos.info().fissuras === 1,
+    'todas as receitas desenham sem lançar no rasterizador (qtd ' +
+    Efeitos.info().qtd + ')');
   Efeitos.limpar();
 
-  // --- g) integracional: varredura gera a onda 360° no chão (R-VS-2)
+  // --- g) integracional: varredura do Terremoto → fissuras + onda
+  // moderada (emenda R-VS-7: a onda r200 da varredura morreu)
   p.classe = 'guerreiro';
-  p.nivel = 6;
+  p.nivel = 16;
   p.atributos = { for: 50, des: 8, con: 999, int: 8, car: 8 };
   p.pontos = 0;
-  p.loadout = ['golpe-bravo'];              // única skill desbloqueada
+  p.loadout = ['terremoto'];                 // skill area desbloqueada
   p.ramos = null;
   p.skillNv = null;
   p.xp = 0;
   p.xpProx = 1e9;                           // sem level-up na janela
   Batalha.iniciar();
   Batalha.restaurarOnda(3);
+  Efeitos.limpar();
   jogoCanvas._textos = [];
   let varreu = false;
   for (let i = 0; i < 2500 && !varreu; i++) {
     frame(1);
-    varreu = (jogoCanvas._textos || []).some(t => t === 'Golpe Embravecido');
+    varreu = (jogoCanvas._textos || []).some(t => t === 'Terremoto');
   }
-  conf(varreu, 'guerreiro nv 6 faz a varredura (loadout golpe-bravo)');
-  conf(Efeitos.info().ondas > 0 && Efeitos.info().ondaR === 200,
-    'varredura gera onda 360° com raio base 200 (ondaR ' +
+  conf(varreu, 'guerreiro nv 16 faz a varredura (loadout terremoto)');
+  conf(Efeitos.info().fissuras > 0,
+    'varredura do Terremoto abre fissuras no chão (fissuras ' +
+    Efeitos.info().fissuras + ')');
+  conf(Efeitos.info().ondas > 0 && Efeitos.info().ondaR === 140,
+    'Terremoto gera onda MODERADA 140 — a r200 morreu (ondaR ' +
     Efeitos.info().ondaR + ', vivas ' + Efeitos.info().ondas + ')');
+
+  // --- g2) dispatch por vfx.tipo: cada skill cai na receita dela
+  const skDe = id => Skills.LISTA.find(s => s.id === id);
+  Efeitos.limpar();
+  Batalha.efeitoArea(skDe('golpe-bravo'), 1);
+  conf(Efeitos.info().arcos > 0 && Efeitos.info().ondas === 0,
+    'crescente: corte de lâmina, SEM onda (arcos ' +
+    Efeitos.info().arcos + ', ondas ' + Efeitos.info().ondas + ')');
+  Efeitos.limpar();
+  Batalha.efeitoArea(skDe('terremoto'), 1);
+  conf(Efeitos.info().fissuras === 1 && Efeitos.info().ondaR === 140,
+    'fissura: rachaduras + onda 140 (fissuras ' +
+    Efeitos.info().fissuras + ', ondaR ' + Efeitos.info().ondaR + ')');
+  Efeitos.limpar();
+  Batalha.efeitoArea(skDe('furia-guerreira'), 1);
+  conf(Efeitos.info().giros === 1,
+    'giro: órbita de lâminas (giros ' + Efeitos.info().giros + ')');
+  Efeitos.limpar();
+  Batalha.efeitoArea(skDe('nova-arcano'), 1);
+  conf(Efeitos.info().raios >= 1,
+    'estrela: relâmpago radial (raios ' + Efeitos.info().raios + ')');
+  Efeitos.limpar();
+  Batalha.efeitoArea(skDe('rajada-arcana'), 1);
+  conf(Efeitos.info().tiros === 10,
+    'radial: 10 tiros p/ todos os lados (tiros ' +
+    Efeitos.info().tiros + ')');
+  Efeitos.limpar();
+  Batalha.efeitoArea(skDe('chuva-adagas'), 1);
+  conf(Efeitos.info().cais === 9,
+    'chuva: 9 lâminas do teto (cais ' + Efeitos.info().cais + ')');
+  Efeitos.limpar();
+  Batalha.efeitoArea(skDe('julgamento'), 1);
+  conf(Efeitos.info().feixes === 4,
+    'pilares: 4 feixes escalonados (feixes ' +
+    Efeitos.info().feixes + ')');
+
+  // --- g3) fallback: skill sem vfx / tipo futuro = corte, sem círculo
+  Efeitos.limpar();
+  Batalha.efeitoArea({ nome: 'Futura', cor: '#ffffff', mult: 1.5 }, 1);
+  conf(Efeitos.info().arcos > 0 && Efeitos.info().ondas === 0,
+    'sem vfx: fallback = corte (sem onda r200 — arc ' +
+    Efeitos.info().arcos + ', ondas ' + Efeitos.info().ondas + ')');
+  Efeitos.limpar();
+  Batalha.efeitoArea({ nome: 'Futura', cor: '#ffffff', mult: 1.5,
+    vfx: { tipo: 'ainda-nao-existe' } }, 1);
+  conf(Efeitos.info().arcos > 0 && Efeitos.info().ondas === 0,
+    'tipo desconhecido: fallback = corte (arc ' +
+    Efeitos.info().arcos + ', ondas ' + Efeitos.info().ondas + ')');
+  Efeitos.limpar();
+
+  // --- g4) escala no dispatch: nvSkill 10 dobra a onda do terremoto
+  Batalha.efeitoArea(skDe('terremoto'), 2);
+  conf(Efeitos.info().ondaR === 280,
+    'nvSkill 10 → onda do Terremoto 140 → 280 (escala 2×, ondaR ' +
+    Efeitos.info().ondaR + ')');
+  Efeitos.limpar();
 
   // --- h) integracional: meteoro (mult 3,0 ≥ 2,5) → carga + zona + flash
   p.classe = 'mago';
@@ -6465,6 +6621,122 @@ console.log('56) Visual skills: receitas VS, escalação nvSkill e flash de nuke
     'bola de fogo (mult 1,8) deixa a zona no chão (r 16)');
   conf(!flashRuim,
     'nuke mult 1,8 < 2,5 NÃO flasha na cor da skill (#ff6b3a)');
+
+  // --- k) batch resto (R-VS-8): dispatch por vfx.tipo nas 5 categorias
+  // que faltavam + RNG neutro (extras livres de draws) + fallback puro
+  const porId = id => Skills.LISTA.find(s => s.id === id);
+  const alvoT = { x: 400, y: 300, hp: 1e9, tipo: null };
+  const enT = { x: 320, y: 300, hp: 1e9, tipo: null };
+  const categorias = [
+    ['nuke', 'efeitoNuke', sk => Batalha.efeitoNuke(sk, 1, alvoT)],
+    ['cura', 'efeitoCura', sk => Batalha.efeitoCura(sk, 1)],
+    ['medo', 'efeitoMedo', sk => Batalha.efeitoMedo(sk, 1)],
+    ['veneno', 'efeitoVeneno',
+      sk => Batalha.efeitoVeneno(sk, 1, enT)],
+    ['mobilidade', 'efeitoMobilidade',
+      sk => Batalha.efeitoMobilidade(sk, 1)]
+  ];
+  let extraPorTipo = true, tiposOk = true;
+  for (const [tipo, fn, chama] of categorias) {
+    const sks = Skills.LISTA.filter(s => s.tipo === tipo);
+    if (!sks.length || typeof Batalha[fn] !== 'function') {
+      tiposOk = false; continue;
+    }
+    for (const sk of sks) {
+      Efeitos.limpar();
+      chama(sk);
+      if (Efeitos.info().qtd === 0) {
+        extraPorTipo = false;
+        console.log('    [dbg ' + tipo + '/' + sk.id + '] qtd 0');
+      }
+    }
+  }
+  conf(tiposOk, 'as 5 categorias do batch resto têm dispatch exportado');
+  conf(extraPorTipo,
+    'todas as 25 skills das 5 categorias geram extras (qtd > 0)');
+
+  // fallback: skill sem vfx = baseline pura (nenhum extra)
+  const semVfx = { nome: 'Futura', cor: '#ffffff', mult: 2, alcance: 50 };
+  let fallbackOk = true;
+  for (const [, fn, chama] of categorias) {
+    Efeitos.limpar();
+    if (fn === 'efeitoNuke') Batalha.efeitoNuke(semVfx, 1, alvoT);
+    else if (fn === 'efeitoVeneno') Batalha.efeitoVeneno(semVfx, 1, enT);
+    else Batalha[fn](semVfx, 1);
+    if (Efeitos.info().qtd !== 0) fallbackOk = false;
+  }
+  conf(fallbackOk, 'skill sem vfx = 0 extras em todas as categorias');
+
+  // tipo desconhecido (skill futura) = default, sem lançar
+  const futuro = { nome: 'Futura', cor: '#ffffff', mult: 2, alcance: 50,
+    vfx: { tipo: 'ainda-nao-existe' } };
+  let futOk = true;
+  try {
+    for (const [, fn] of categorias) {
+      Efeitos.limpar();
+      if (fn === 'efeitoNuke') Batalha.efeitoNuke(futuro, 1, alvoT);
+      else if (fn === 'efeitoVeneno') Batalha.efeitoVeneno(futuro, 1, enT);
+      else Batalha[fn](futuro, 1);
+      Efeitos.atualizar(0.05);
+    }
+    frame(1);
+  } catch (e) { futOk = false; console.log('    [dbg futuro] ' + e.message); }
+  conf(futOk, 'tipo desconhecido cai no default sem lançar (5 categorias)');
+
+  // RNG: TODOS os extras das 25 skills = 0 draws (baseline intacta)
+  Efeitos.limpar();
+  const mOrig = Math.random;
+  let draws = 0;
+  Math.random = () => { draws++; return mOrig(); };
+  try {
+    for (const [, fn, chama] of categorias) {
+      for (const sk of Skills.LISTA.filter(s =>
+        s.tipo === (fn === 'efeitoNuke' ? 'nuke' :
+          fn === 'efeitoCura' ? 'cura' :
+            fn === 'efeitoMedo' ? 'medo' :
+              fn === 'efeitoVeneno' ? 'veneno' : 'mobilidade'))) chama(sk);
+    }
+  } finally { Math.random = mOrig; }
+  conf(draws === 0,
+    'extras do batch resto: 0 draws de RNG (deu ' + draws + ')');
+
+  // Adaga Gêmea: 2º missil decorativo sem callback e sem draws
+  Efeitos.limpar();
+  let draws2 = 0;
+  Math.random = () => { draws2++; return mOrig(); };
+  Efeitos.missil({ x: 0, y: 0 }, { x: 90, y: 0 }, '#b06bff', 1, null,
+    { decorativo: true, trilha: 'sombria' });
+  const gSpawn = draws2;
+  Math.random = mOrig;
+  conf(gSpawn === 0,
+    'missil decorativo da Gêmea: 0 draws no spawn (deu ' + gSpawn + ')');
+  conf(Efeitos.info().decor === 1,
+    'sonda decor = 1 (missil gêmea voando)');
+  let chamou = false;
+  Efeitos.missil({ x: 0, y: 0 }, { x: 60, y: 0 }, '#b06bff', 1,
+    () => { chamou = true; },
+    { decorativo: true, trilha: 'sombria' });
+  for (let i = 0; i < 40; i++) Efeitos.atualizar(0.016);
+  conf(!chamou, 'missil decorativo NÃO tem callback (dano = só no real)');
+  conf(Efeitos.info().qtd > 0, 'o 2º missil voa e estoura (qtd > 0)');
+
+  // desenho: o batch inteiro passa pelo rasterizador
+  Efeitos.limpar();
+  for (const [, fn, chama] of categorias) {
+    for (const sk of Skills.LISTA.filter(s =>
+      s.tipo === (fn === 'efeitoNuke' ? 'nuke' :
+        fn === 'efeitoCura' ? 'cura' :
+          fn === 'efeitoMedo' ? 'medo' :
+            fn === 'efeitoVeneno' ? 'veneno' : 'mobilidade'))) chama(sk);
+  }
+  Efeitos.atualizar(0.05);
+  let drawOk = true;
+  try { frame(2); } catch (e) { drawOk = false; console.log('    [dbg draw] ' + e.message); }
+  conf(drawOk && Efeitos.info().qtd > 0,
+    'batch resto desenha sem lançar no rasterizador (qtd ' +
+    Efeitos.info().qtd + ')');
+  Efeitos.limpar();
+  conf(Efeitos.info().qtd === 0, 'limpar zera o batch inteiro');
 
   Batalha.iniciar();                         // não vaza estado p/ artefatos
 }

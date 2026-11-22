@@ -463,14 +463,25 @@ function capturaReceita(prepara, cond, arquivo) {
     (ok ? 'ok em ' + espera + ' frames' : 'NÃO DISPAROU') +
     ' -> ' + arquivo);
 }
-// onda 360° da varredura (guerreiro · golpe-bravo a cada 7 golpes)
+// onda moderada + fissuras do Terremoto (guerreiro · terremoto a cada
+// 8 golpes) — emenda R-VS-7: a onda r200 do golpe-bravo morreu, a
+// captura migrou p/ a skill que ainda tem onda semântica no chão
 capturaReceita(function () {
   const p = sandbox.Game.personagem;
   p.classe = 'guerreiro';
-  p.nivel = Math.max(6, p.nivel);
-  p.loadout = ['golpe-bravo'];
+  p.nivel = Math.max(16, p.nivel);
+  p.loadout = ['terremoto'];
 }, function () { return sandbox.Efeitos.info().ondas > 0; },
 'tela-skill-onda.png');
+// rajada de tiros p/ todos os lados (mago · rajada-arcana a cada 5
+// golpes — a identidade nova da varredura, emenda R-VS-7)
+capturaReceita(function () {
+  const p = sandbox.Game.personagem;
+  p.classe = 'mago';
+  p.nivel = Math.max(45, p.nivel);
+  p.loadout = ['rajada-arcana'];
+}, function () { return sandbox.Efeitos.info().tiros > 0; },
+'tela-skill-rajada.png');
 // zona no impacto do nuke (mago · Bola de Fogo — nasce na chegada)
 capturaReceita(function () {
   const p = sandbox.Game.personagem;
