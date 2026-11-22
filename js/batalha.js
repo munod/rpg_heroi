@@ -1399,8 +1399,10 @@ var Batalha = (function () {
   function conjuraNuke(mg, alvo) {
     var mult = mg.mult;
     var esc = Efeitos.escala(mg.nvSkill);
+    var v = mg.vfx || {};
     numero(heroi.x, heroi.y - 30, mg.nome, mg.cor, true);
     Efeitos.brasas(heroi.x, heroi.y - 12, mg.cor, 5, 40, 45);   // clarão
+    // trilha estilizada (R-VS-8): só o ESTILO muda — nº de draws idêntico
     Efeitos.missil({ x: heroi.x, y: heroi.y - 16 }, alvo, mg.cor,
       esc * (1 + (mult - 1) * 0.6),
       function () {
@@ -1417,8 +1419,21 @@ var Batalha = (function () {
         if (mult >= 2.5) Efeitos.flashTela(mg.cor, 0.18, 0.2);
         numero(alvo.x, alvo.y - 18, String(dmg), '#ffffff', false);
         Efeitos.impacto(alvo.x, alvo.y - 4, mg.cor, false);
+        // identidade da skill (R-VS-8): extras livres de RNG, depois
+        // da baseline — o impacto antigo continua intacto
+        efeitoNuke(mg, esc, alvo);
         if (alvo.hp <= 0) mataInimigo(idx, alvo);
-      });
+      },
+      { trilha: v.trilha });
+    // Adaga Gêmea (R-VS-8): 2º missil DECORATIVO — sem callback (o
+    // dano continua no real), feito só de hash01 (0 draws de RNG).
+    // Nasce ~4px ao lado, na mesma direção: parece um par de lâminas.
+    if (v.gemea) {
+      Efeitos.missil({ x: heroi.x + (heroi.facing >= 0 ? 5 : -5),
+        y: heroi.y - 8 }, alvo, mg.cor,
+        esc * (1 + (mult - 1) * 0.6) * 0.85, null,
+        { decorativo: true, trilha: v.trilha });
+    }
   }
 
   // Agudeza da INT vigente — a mesma régua de IA.agudeza do cérebro;
@@ -1459,10 +1474,14 @@ var Batalha = (function () {
         heroi.hp = Math.min(heroi.hpMax, heroi.hp + cura);
         var ganho = Math.round(heroi.hp - antes);
         if (ganho > 0) {
-          // feixe de luz + motes (assinatura VS da cura — spec visual-skills)
+          // feixe de luz + motes (assinatura VS da cura — spec visual-skills).
+          // `alt` do vfx (R-VS-8) só muda a altura do pilar; sem vfx = 70
+          var altCura = ((mg.vfx && mg.vfx.alt) || 70);
           Efeitos.feixe(heroi.x, heroi.y, mg.cor,
-            Math.round(70 * Efeitos.escala(mg.nvSkill)));
+            Math.round(altCura * Efeitos.escala(mg.nvSkill)));
           Efeitos.cura(heroi.x, heroi.y - 6, mg.cor);
+          // identidade da skill (R-VS-8): extras livres de RNG por cima
+          efeitoCura(mg, Efeitos.escala(mg.nvSkill));
           numero(heroi.x, heroi.y - 34, '+' + ganho, mg.cor, false);
           numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
           // égide santificada: a cura respinga o mesmo valor nos
@@ -1491,17 +1510,333 @@ var Batalha = (function () {
     }
   }
 
-  // Varredura da skill 'area': acerta todos os inimigos. Assinatura
-  // VS (spec visual-skills): onda de choque 360° no chão — o raio é
-  // generoso (200×esc) porque o golpe acerta todos, e cresce com o
-  // nvSkill junto do corte.
+  // Varredura da skill 'area': acerta todos os inimigos.
+  // Identidade POR SKILL (emenda R-VS-7): o visual vem de `mg.vfx`
+  // (já com o ramo escolhido — `Skills.comRamo` mescla) e o dispatch
+  // é por `vfx.tipo`, nunca por id de skill. Sem `vfx`/tipo = fallback
+  // = corte de sempre (sem o círculo gigante, rejeitado na avaliação).
+  function efeitoArea(mg, esc) {
+    var v = mg.vfx;
+    var x = heroi.x, y = heroi.y;
+    if (!v || !v.tipo) {
+      Efeitos.corte(x, y - 10, mg.cor,
+        (1 + (mg.mult - 1) * 0.8) * esc, heroi.facing);
+      return;
+    }
+    var i, ang, raio;
+    switch (v.tipo) {
+      case 'crescente':
+        // Golpe Embravecido: n arcos de lâmina (o 2º espelha o facing)
+        var nC = v.n || 1;
+        for (i = 0; i < nC; i++) {
+          Efeitos.corte(x, y - 10 - i * 7, mg.cor,
+            (v.esc || 1.8) * esc * (1 - i * 0.25),
+            i % 2 === 0 ? heroi.facing : -heroi.facing);
+        }
+        break;
+      case 'fissura':
+        // Terremoto: rachaduras no chão + onda moderada junto (R-VS-7)
+        Efeitos.fissura(x, y, v.raios || 7, (v.raio || 60) * esc, mg.cor);
+        Efeitos.onda(x, y, 14, (v.onda || 140) * esc, mg.cor, 0.55);
+        break;
+      case 'giro':
+        // Fúria Guerreira: órbita de lâminas girando ao redor do herói
+        Efeitos.giro(x, y - 8, (v.raio || 32) * esc, v.n || 3, mg.cor,
+          undefined, v.vel);
+        break;
+      case 'estrela':
+        // Nova Arcana: relâmpago radial (n° de raios do vfx) + anel de
+        // estrelas girando no raio do vfx
+        Efeitos.raioRadial(x, y - 8, v.raios);
+        raio = (v.raio || 70) * esc;
+        var nE = v.estrelas || 6;
+        for (i = 0; i < nE; i++) {
+          ang = (i / nE) * Math.PI * 2;
+          Efeitos.estrela(x + Math.cos(ang) * raio,
+            y - 8 + Math.sin(ang) * raio * 0.8, mg.cor,
+            Math.round(6 * esc), 0.55);
+        }
+        break;
+      case 'radial':
+        // Rajada Arcana: tiros p/ TODOS OS LADOS (emenda — era onda r200)
+        var nR = v.n || 10;
+        for (i = 0; i < nR; i++) {
+          ang = (i / nR) * Math.PI * 2;
+          Efeitos.tiro(x, y - 12, ang, v.vel || 240, mg.cor,
+            (v.esc || 1) * esc);
+        }
+        break;
+      case 'chuva':
+        // Chuva de Adagas: lâminas caindo do teto na área
+        Efeitos.chuva(x, y, (v.raio || 75) * esc, v.n || 9, mg.cor,
+          (v.esc || 1) * esc);
+        break;
+      case 'pilares':
+        // Julgamento Divino: N feixes escalonados (atraso por pilar)
+        Efeitos.pilares(x, y, (v.raio || 85) * esc, v.n || 4, mg.cor,
+          Math.round((v.alt || 70) * esc), v.atraso);
+        break;
+      default:
+        Efeitos.corte(x, y - 10, mg.cor,
+          (1 + (mg.mult - 1) * 0.8) * esc, heroi.facing);
+    }
+  }
+
+  // ------------------------------------- identidade das skills (R-VS-8)
+  // REGRA DE RNG: os extras da emenda usam SÓ receitas livres de
+  // Math.random (zona/onda/feixe/estrela/anel/raioRadial/fissura/
+  // tiro/chuva/pilares/giro/rastro) — a baseline antiga (impacto/
+  // cura/nuvem/explosao/corte, que consomem draws) continua intacta
+  // por cima, então a sequência de RNG do jogo NÃO desloca. Medido
+  // com contador de draws em cada receita, não por inspeção.
+
+  // anel expandindo com atraso (energia reunindo — reutiliza o pool
+  // de anéis que já tem suporte a `atraso`)
+  function anelAtrasado(x, y, r, cor, atraso) {
+    Efeitos.anel(x, y, 4, r, 0.5, cor, 0.8, atraso);
+  }
+
+  // Nuke: identidade do IMPACTO por `vfx.tipo`, na chegada do missil.
+  // A `zona` do chão (R-VS-4) continua sendo da baseline — aqui só
+  // entra o que é exclusivo da skill.
+  function efeitoNuke(mg, esc, alvo) {
+    var v = mg.vfx;
+    if (!v || !v.tipo) return;              // sem vfx = baseline pura
+    var x = alvo.x, y = alvo.y - 6, c = mg.cor;
+    var raio = (v.raio || 30) * esc, n = v.raios || 5, i, ang;
+    switch (v.tipo) {
+      case 'sismo':                         // Golpe Fulminante: o chão abre
+        Efeitos.fissura(x, alvo.y, Math.min(8, n), raio, c);
+        Efeitos.onda(x, alvo.y, 12, raio * 1.5, c, 0.45);
+        break;
+      case 'estocada':                      // Estocada: estrelas em fio reto
+        for (i = 0; i < n; i++) {
+          Efeitos.estrela(x + (i - n / 2) * 9 * esc, y, c, 5, 0.42);
+        }
+        Efeitos.anel(x, y, 3, raio * 0.8, 0.3, c, 0.7);
+        break;
+      case 'bola':                          // Bola de Fogo: halo + anel quente
+        Efeitos.anel(x, y, 4, raio, 0.4, c, 0.85);
+        for (i = 0; i < n; i++) {
+          ang = (i / n) * Math.PI * 2;
+          Efeitos.estrela(x + Math.cos(ang) * raio * 0.7,
+            y + Math.sin(ang) * raio * 0.55, c, 5, 0.5);
+        }
+        break;
+      case 'cratera':                       // Meteoro: cratera + onda forte
+        Efeitos.fissura(x, alvo.y, 8, raio, c);
+        Efeitos.onda(x, alvo.y, 14, raio * 2.1, c, 0.6);
+        break;
+      case 'sombria':                       // Adaga Sombria: estrelas escuras
+        for (i = 0; i < n; i++) {
+          ang = (i / n) * Math.PI * 2 + 0.4;
+          Efeitos.estrela(x + Math.cos(ang) * raio,
+            y + Math.sin(ang) * raio * 0.75, c, 4, 0.55);
+        }
+        Efeitos.anel(x, y, 3, raio * 0.6, 0.35, c, 0.6);
+        break;
+      case 'gemea':                         // Adaga Gêmea: 2 impactos simétricos
+        Efeitos.estrela(x - 8 * esc, y, c, 6, 0.5);
+        Efeitos.estrela(x + 8 * esc, y, c, 6, 0.5);
+        Efeitos.anel(x, y, 3, raio, 0.35, c, 0.8);
+        break;
+      case 'perfuro':                       // Adaga Perfurante: fio longo
+        for (i = 0; i < n; i++) {
+          Efeitos.tiro(x, y, 0, 160, c, 1.4 * esc);
+          Efeitos.estrela(x, y - i * 7 * esc, c, 4, 0.4);
+        }
+        break;
+      case 'castigo':                       // Castigo: pilar + anel de luz
+        Efeitos.feixe(x, alvo.y, c, Math.round(54 * esc));
+        Efeitos.anel(x, y, 5, raio, 0.5, c, 0.9);
+        break;
+      case 'celestia':                      // Ira Celestial: raios + pilar
+        Efeitos.raioRadial(x, y, Math.min(17, n + 4));
+        Efeitos.feixe(x, alvo.y, c, Math.round(74 * esc));
+        for (i = 0; i < n; i++) {
+          ang = (i / n) * Math.PI * 2;
+          Efeitos.estrela(x + Math.cos(ang) * raio * 0.8,
+            y + Math.sin(ang) * raio * 0.6, c, 6, 0.55);
+        }
+        break;
+      default:
+        Efeitos.anel(x, y, 4, raio, 0.4, c, 0.85);
+    }
+  }
+
+  // Cura: identidade por `vfx.tipo` em cima do feixe+motes da baseline
+  // (`alt` é lido no call site — a baseline usa 70 fixo).
+  function efeitoCura(mg, esc) {
+    var v = mg.vfx;
+    if (!v || !v.tipo) return;
+    var x = heroi.x, y = heroi.y - 6, c = mg.cor;
+    var n = v.n || 7, i, ang;
+    switch (v.tipo) {
+      case 'impeto':                        // Ímpeto: anel de escudo terreno
+        Efeitos.anel(x, heroi.y, 6, 34 * esc, 0.5, c, 0.75);
+        anelAtrasado(x, heroi.y, 24 * esc, c, 0.18);
+        break;
+      case 'escudo':                        // Escudo Arcano: anel duplo alto
+        Efeitos.anel(x, y, 5, 46 * esc, 0.5, c, 0.8);
+        anelAtrasado(x, y, 32 * esc, c, 0.16);
+        for (i = 0; i < n; i++) {
+          ang = (i / n) * Math.PI * 2;
+          Efeitos.estrela(x + Math.cos(ang) * 26 * esc,
+            y + Math.sin(ang) * 20 * esc, c, 4, 0.6);
+        }
+        break;
+      case 'bandagem':                      // Bandagem: estrelas em cruz
+        for (i = 0; i < n; i++) {
+          ang = (i / n) * Math.PI * 2;
+          Efeitos.estrela(x + Math.cos(ang) * 16 * esc,
+            y - 8 + Math.sin(ang) * 12 * esc, c, 4, 0.5);
+        }
+        break;
+      case 'bencao':                        // Bênção: estrelas em órbita
+        for (i = 0; i < n; i++) {
+          ang = (i / n) * Math.PI * 2 + 0.3;
+          Efeitos.estrela(x + Math.cos(ang) * 30 * esc,
+            y + Math.sin(ang) * 22 * esc, c, 5, 0.55);
+        }
+        break;
+      case 'oracao':                        // Oração: raios + estrelas
+        Efeitos.raioRadial(x, y, Math.min(17, n));
+        for (i = 0; i < n; i++) {
+          ang = (i / n) * Math.PI * 2 + 0.7;
+          Efeitos.estrela(x + Math.cos(ang) * 34 * esc,
+            y + Math.sin(ang) * 24 * esc, c, 5, 0.6);
+        }
+        break;
+      default:
+        Efeitos.anel(x, y, 5, 30 * esc, 0.5, c, 0.8);
+    }
+  }
+
+  // Medo: baseline = onda no ALCANCE real + explosão. Extras por
+  // `vfx.tipo` (anéis em eco) — o alcance nunca é inventado aqui.
+  function efeitoMedo(sk, esc) {
+    var v = sk.vfx;
+    if (!v || !v.tipo) return;
+    var x = heroi.x, y = heroi.y - 8, c = sk.cor;
+    var n = v.n || 6, e2 = (v.esc || 1) * esc, i;
+    switch (v.tipo) {
+      case 'grito':                         // Grito: 3 anéis em eco
+        for (i = 0; i < 3; i++) {
+          anelAtrasado(x, y, (34 + i * 18) * e2, c, i * 0.13);
+        }
+        break;
+      case 'horror':                        // Horror: anéis + estrelas escuras
+        Efeitos.anel(x, y, 8, 52 * e2, 0.5, c, 0.85);
+        anelAtrasado(x, y, 34 * e2, c, 0.14);
+        for (i = 0; i < n; i++) {
+          Efeitos.estrela(x + ((i * 37) % 61 - 30) * e2,
+            y + ((i * 23) % 41 - 20) * e2, c, 4, 0.7);
+        }
+        break;
+      case 'vulto':                         // Vulto: anel + estrelas em coroa
+        Efeitos.anel(x, y, 6, 44 * e2, 0.45, c, 0.8);
+        for (i = 0; i < n; i++) {
+          var a = (i / n) * Math.PI * 2;
+          Efeitos.estrela(x + Math.cos(a) * 30 * e2,
+            y + Math.sin(a) * 22 * e2, c, 4, 0.6);
+        }
+        break;
+      case 'terror':                        // Terror: eco largo + coroa
+        for (i = 0; i < 2; i++) {
+          anelAtrasado(x, y, (40 + i * 26) * e2, c, i * 0.16);
+        }
+        for (i = 0; i < n; i++) {
+          Efeitos.estrela(x + ((i * 29) % 53 - 26) * e2,
+            y - 10 + ((i * 41) % 37 - 18) * e2, c, 4, 0.65);
+        }
+        break;
+      default:
+        Efeitos.anel(x, y, 6, 40 * e2, 0.5, c, 0.8);
+    }
+  }
+
+  // Veneno: baseline = nuvem de motes no inimigo. Extras por `vfx.tipo`
+  // (`n`/`esc`): uma coroa de estrelas em volta do envenenado.
+  function efeitoVeneno(mg, esc, en) {
+    var v = mg.vfx;
+    if (!v || !v.tipo) return;
+    var x = en.x, y = en.y - 8, c = mg.cor;
+    var n = v.n || 7, e2 = (v.esc || 1) * esc, i, a;
+    switch (v.tipo) {
+      case 'veneno':                        // Ladino: coroa fechada
+        for (i = 0; i < n; i++) {
+          a = (i / n) * Math.PI * 2;
+          Efeitos.estrela(x + Math.cos(a) * 14 * e2,
+            y + Math.sin(a) * 10 * e2, c, 3, 0.5);
+        }
+        break;
+      case 'toxina':                        // Mago: coroa larga + anel
+        Efeitos.anel(x, y, 4, 26 * e2, 0.45, c, 0.7);
+        for (i = 0; i < n; i++) {
+          a = (i / n) * Math.PI * 2 + 0.5;
+          Efeitos.estrela(x + Math.cos(a) * 22 * e2,
+            y + Math.sin(a) * 15 * e2, c, 4, 0.55);
+        }
+        break;
+      case 'peste':                         // Clérigo: coroa + pilar breve
+        for (i = 0; i < n; i++) {
+          a = (i / n) * Math.PI * 2 + 0.9;
+          Efeitos.estrela(x + Math.cos(a) * 18 * e2,
+            y + Math.sin(a) * 13 * e2, c, 4, 0.55);
+        }
+        Efeitos.anel(x, y, 5, 30 * e2, 0.5, c, 0.75);
+        break;
+      default:
+        Efeitos.anel(x, y, 4, 24 * e2, 0.45, c, 0.7);
+    }
+  }
+
+  // Mobilidade: baseline = explosão de partida/chegada + rastro (blink)
+  // ou rastro+corte (esquiva). Extras por `vfx.tipo`.
+  function efeitoMobilidade(mg, esc) {
+    var v = mg.vfx;
+    if (!v || !v.tipo) return;
+    var x = heroi.x, y = heroi.y - 8, c = mg.cor;
+    var n = v.n || 7, e2 = (v.esc || 1) * esc, i, a;
+    switch (v.tipo) {
+      case 'blink':                         // Teleporte: coroa na chegada
+        for (i = 0; i < n; i++) {
+          a = (i / n) * Math.PI * 2 + 0.2;
+          Efeitos.estrela(x + Math.cos(a) * 26 * e2,
+            y + Math.sin(a) * 18 * e2, c, 4, 0.5);
+        }
+        break;
+      case 'esquiva':                       // Esquiva: estrelas no rastro
+        for (i = 0; i < n; i++) {
+          Efeitos.estrela(x + ((i * 31) % 57 - 28) * e2,
+            y + ((i * 17) % 33 - 16) * e2, c, 3, 0.45);
+        }
+        break;
+      case 'passo':                         // Passo Sagrado: anel + estrelas
+        Efeitos.anel(x, y, 5, 38 * e2, 0.5, c, 0.8);
+        for (i = 0; i < n; i++) {
+          a = (i / n) * Math.PI * 2 + 0.6;
+          Efeitos.estrela(x + Math.cos(a) * 30 * e2,
+            y + Math.sin(a) * 20 * e2, c, 4, 0.55);
+        }
+        break;
+      case 'empurrao':                      // Empurrão: coroa larga
+        for (i = 0; i < n; i++) {
+          a = (i / n) * Math.PI * 2 + 0.1;
+          Efeitos.estrela(x + Math.cos(a) * 34 * e2,
+            y + Math.sin(a) * 24 * e2, c, 4, 0.5);
+        }
+        break;
+      default:
+        Efeitos.anel(x, y, 5, 32 * e2, 0.5, c, 0.8);
+    }
+  }
+
   function varredura(mg) {
     var st = heroi.stats;
     var esc = Efeitos.escala(mg.nvSkill);
     numero(heroi.x, heroi.y - 44, mg.nome, mg.cor, true);
-    Efeitos.onda(heroi.x, heroi.y, 14, 200 * esc, mg.cor, 0.55);
-    Efeitos.corte(heroi.x, heroi.y - 10, mg.cor,
-      (1 + (mg.mult - 1) * 0.8) * esc, heroi.facing);
+    efeitoArea(mg, esc);
     Efeitos.sacudir(0.1 + (mg.mult - 1) * 0.15);
     for (var i = inimigos.length - 1; i >= 0; i--) {
       var en = inimigos[i];
@@ -1533,6 +1868,8 @@ var Batalha = (function () {
       // visual-skills); escala com o nvSkill da skill
       Efeitos.nuvem(en.x, en.y - 8, mg.cor,
         Math.round(7 * Efeitos.escala(mg.nvSkill)));
+      // coroa do veneno (R-VS-8): extras livres de RNG por cima
+      efeitoVeneno(mg, Efeitos.escala(mg.nvSkill), en);
       numero(en.x, en.y - 30, mg.nome, mg.cor, false);
     }
   }
@@ -1573,6 +1910,8 @@ var Batalha = (function () {
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
     Efeitos.onda(heroi.x, heroi.y, 12, sk.alcance * esc, sk.cor, 0.45);
     Efeitos.corte(heroi.x, heroi.y - 10, sk.cor, 1.5 * esc, heroi.facing);
+    // extras do empurrão (R-VS-8): coroa de faíscas livre de RNG
+    efeitoMobilidade(sk, esc);
     Efeitos.sacudir(0.25);
     var r2 = sk.alcance * sk.alcance;
     for (var i = 0; i < inimigos.length; i++) {
@@ -1603,6 +1942,9 @@ var Batalha = (function () {
     heroi.escapa = { x: ux, y: uy, t: 0.6 };
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
     var esc = Efeitos.escala(sk.nvSkill);
+    // extras da mobilidade (R-VS-8): coroa/estrelas livres de RNG por
+    // cima da explosão+rastro da baseline
+    efeitoMobilidade(sk, esc);
     if (sk.modo === 'blink') {
       Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 0.9 * esc);
       var ox = heroi.x, oy = heroi.y;      // origem p/ o rastro
@@ -1638,6 +1980,9 @@ var Batalha = (function () {
     numero(heroi.x, heroi.y - 44, sk.nome, sk.cor, true);
     Efeitos.onda(heroi.x, heroi.y, 12, sk.alcance * esc, sk.cor, 0.5);
     Efeitos.explosao(heroi.x, heroi.y - 10, sk.cor, 1.0 * esc);
+    // extras do medo (R-VS-8): anéis em eco/estrelas — livres de RNG,
+    // por cima da onda+explosão da baseline (o alcance segue o real)
+    efeitoMedo(sk, esc);
     Efeitos.sacudir(0.15);
     var r2 = sk.alcance * sk.alcance;
     for (var i = 0; i < inimigos.length; i++) {
@@ -2547,6 +2892,12 @@ var Batalha = (function () {
     spawn: spawn,             // p/ fixtures da seção 41 (skill de espécie)
     regeneraEspecie: regeneraEspecie,  // skill pura (teste sem arena)
     drenaVida: drenaVida,              // skill pura (teste sem arena)
+    efeitoArea: efeitoArea,    // dispatch por vfx.tipo (teste, R-VS-7)
+    efeitoNuke: efeitoNuke,    // dispatch por vfx.tipo (teste, R-VS-8)
+    efeitoCura: efeitoCura,
+    efeitoMedo: efeitoMedo,
+    efeitoVeneno: efeitoVeneno,
+    efeitoMobilidade: efeitoMobilidade,
     qtdMonstros: qtdMonstros, // escala de monstros testável (seção 39)
     escalaMonstros: escalaMonstros, // A/B mundo vs mapa (seção 39)
     fimCampanha: function () { return MAPA_FIM_CAMPANHA; },

@@ -14,14 +14,22 @@
 var Efeitos = (function () {
   // ------------------------------------------------------------ pools
   var MAX = { parts: 380, nums: 50, aneis: 24, raios: 8, arcos: 10,
-    zonas: 10, ondas: 16, feixes: 6 };
+    zonas: 10, ondas: 16, feixes: 6, fissuras: 8 };
   var parts = [], nums = [], aneis = [], raios = [], arcos = [];
-  var zonas = [], ondas = [], feixes = [];
+  var zonas = [], ondas = [], feixes = [], fissuras = [];
 
   function limitar(lista, max) {
     while (lista.length > max) lista.shift();
   }
   function push(e) { parts.push(e); limitar(parts, MAX.parts); }
+
+  // pseudo-random determinístico por índice (sem Math.random): as
+  // receitas novas da emenda usam padrão fixo por skill e não
+  // deslocam a sequência de RNG do jogo (lição da spec original)
+  function hash01(i) {
+    var s = Math.sin(i * 12.9898 + 4.1414) * 43758.5453;
+    return s - Math.floor(s);
+  }
 
   // ------------------------------------------------- estado singleton
   var flash = null;        // {cor, a, t, tMax} — luz de tela
@@ -59,6 +67,7 @@ var Efeitos = (function () {
     }
     nums.length = 0; aneis.length = 0; raios.length = 0; arcos.length = 0;
     zonas.length = 0; ondas.length = 0; feixes.length = 0;
+    fissuras.length = 0;
     flash = null; borda = null; cargaAtual = null;
     ultZonaR = 0; ultOndaR = 0;
     shakeT = 0; shakeFor = 0; hitStop = 0;
@@ -69,6 +78,7 @@ var Efeitos = (function () {
     parts.length = 0; nums.length = 0; aneis.length = 0;
     raios.length = 0; arcos.length = 0;
     zonas.length = 0; ondas.length = 0; feixes.length = 0;
+    fissuras.length = 0;
     flash = null; borda = null; cargaAtual = null;
     ultZonaR = 0; ultOndaR = 0;
     shakeT = 0; shakeFor = 0; hitStop = 0;
@@ -77,7 +87,7 @@ var Efeitos = (function () {
   function qtd() {
     return parts.length + nums.length + aneis.length +
       raios.length + arcos.length + zonas.length + ondas.length +
-      feixes.length + (cargaAtual ? 1 : 0);
+      feixes.length + fissuras.length + (cargaAtual ? 1 : 0);
   }
 
   // ------------------------------------------------ sprites (doc §3)
@@ -196,15 +206,20 @@ var Efeitos = (function () {
   }
 
   // ------------------------------------------------ catálogo (doc §4)
-  // faíscas em rajada: ângulo aleatório, cor cicla pela lista
-  function faiscaMuita(x, y, cores, n, forca) {
+  // faíscas em rajada: ângulo aleatório, cor cicla pela lista.
+  // `ang`/`abertura` (emenda R-VS-7): com abertura, o leque fica
+  // centrado em `ang` (tiro direcional) em vez de 360° — opcional,
+  // sem argumentos = comportamento antigo intacto.
+  function faiscaMuita(x, y, cores, n, forca, ang, abertura) {
     if (mudo) return;
     for (var i = 0; i < n; i++) {
-      var ang = Math.random() * Math.PI * 2;
+      var dir = abertura === undefined
+        ? Math.random() * Math.PI * 2
+        : ang + (Math.random() - 0.5) * abertura;
       var vel = rand(35, 95) * (forca || 1);
       push({
         tipo: 'faisca', x: x + rand(-2, 2), y: y + rand(-2, 2),
-        vx: Math.cos(ang) * vel, vy: Math.sin(ang) * vel - rand(10, 30),
+        vx: Math.cos(dir) * vel, vy: Math.sin(dir) * vel - rand(10, 30),
         dur: rand(0.25, 0.5), t: 0, fase: Math.random() * 6,
         tam: Math.random() < 0.3 ? 2 : 1,
         cor: cores[i % cores.length]
@@ -329,11 +344,13 @@ var Efeitos = (function () {
   }
 
   // relâmpago: polilinha jagged pré-calculada (doc §5.8)
-  // raio RADIAL (nivelUp): 12 raios em ângulos i/12·2π, r=16,
-  // traço de 1px a cada 2px partindo de s=4 (doc §4 — catálogo)
-  function raioRadial(x, y) {
+  // raio RADIAL (nivelUp): raios em ângulos i/n·2π, r=16,
+  // traço de 1px a cada 2px partindo de s=4 (doc §4 — catálogo).
+  // `n` opcional (emenda R-VS-7): a Nova Arcana varia o nº de raios
+  // pelo `vfx`; sem argumento = 12 de sempre (nivelUp intacto).
+  function raioRadial(x, y, n) {
     if (mudo) return;
-    raios.push({ radial: true, x: x, y: y, t: 0, tMax: 0.55 });
+    raios.push({ radial: true, x: x, y: y, n: n || 12, t: 0, tMax: 0.55 });
     limitar(raios, MAX.raios);
   }
 
@@ -360,16 +377,36 @@ var Efeitos = (function () {
   // Projétil teleguiado com rastro: na chegada explode e chama
   // aoChegar() — o dano é da Batalha (callback). Único spawn que
   // sobrevive ao silenciar (dano offline).
-  function missil(de, para, cor, escala, aoChegar) {
+  // `op` (emenda R-VS-8) é opcional:
+  //   .decorativo = 2º missil da Adaga Gêmea — SEM callback e feito só
+  //     de RNG determinístico (hash01): curva 0, rastro e estouro sem
+  //     Math.random. Assim o 2º missil NÃO desloca a sequência de RNG
+  //     do jogo (lição da spec: reduzir draws na receita, nunca
+  //     afrouxar o teste).
+  //   .trilha     = estilo do rastro ('peso'/'fina'/'sombra'/'divina')
+  //     — muda gravidade/vida/dispersão das 2 partículas por frame,
+  //     NUNCA a contagem: o nº de draws por frame é idêntico ao da
+  //     baseline, só o visual muda.
+  var TRILHAS = {
+    chama:  { grav: 20, dur: 0.40, desp: 5, sobe: 0 },   // baseline
+    peso:   { grav: 95, dur: 0.35, desp: 7, sobe: 0 },   // cai pesado
+    fina:   { grav: 0,  dur: 0.30, desp: 2, sobe: 0 },   // linha limpa
+    sombra: { grav: -24, dur: 0.55, desp: 4, sobe: 1 },  // sobe
+    divina: { grav: 40, dur: 0.50, desp: 3, sobe: 0 }    // desce leve
+  };
+  function missil(de, para, cor, escala, aoChegar, op) {
     var dx = para.x - de.x, dy = para.y - de.y;
     var d = Math.sqrt(dx * dx + dy * dy) || 1;
+    var dec = !!(op && op.decorativo);
     push({
       tipo: 'missil', x: de.x, y: de.y, x0: de.x, y0: de.y,
       para: para,
       nx: -dy / d, ny: dx / d,
-      curva: (Math.random() - 0.5) * 16,
+      curva: dec ? 0 : (Math.random() - 0.5) * 16,
       dur: Math.max(0.18, Math.min(0.32, d / 340)), t: 0,
-      cor: cor, escala: escala || 1, aoChegar: aoChegar
+      cor: cor, escala: escala || 1, aoChegar: aoChegar,
+      decor: dec, semente: 1,
+      trilha: TRILHAS[(op && op.trilha) || 'chama'] || TRILHAS.chama
     });
   }
 
@@ -481,6 +518,89 @@ var Efeitos = (function () {
   function escala(nv) {
     var n = (typeof nv === 'number' && nv > 0) ? Math.min(nv, 10) : 0;
     return 1 + 0.1 * n;
+  }
+
+  // --------------------------- receitas da emenda (R-VS-7)
+  // Identidade POR SKILL (dispatch em batalha por vfx.tipo). Padrão
+  // fixo por índice (hash01) nas receitas novas: sem Math.random, a
+  // sequência de RNG do jogo não desloca (lição da spec original).
+
+  // Projétil reto com rastro (Rajada Arcana — "tiros p/ todos os
+  // lados"): sem gravidade, vive 0,55s; o desenho faz a trilha
+  // (glow + cópias atrás na direção do voo — sem rotação).
+  function tiro(x, y, ang, vel, cor, esc) {
+    if (mudo) return;
+    var v = vel || 240;
+    push({
+      tipo: 'tiro', x: x, y: y,
+      vx: Math.cos(ang) * v, vy: Math.sin(ang) * v,
+      dur: 0.55, t: 0, cor: cor, esc: esc || 1
+    });
+  }
+
+  // Chuva do teto (Chuva de Adagas): cai de fora da tela até o ponto
+  // alvo e estala com um clarão (brilho branco + cor da skill).
+  function chuva(x, y, raio, n, cor, esc) {
+    if (mudo) return;
+    var e = esc || 1;
+    for (var i = 0; i < n; i++) {
+      var h1 = hash01(i * 5 + 1), h2 = hash01(i * 5 + 2),
+        h3 = hash01(i * 5 + 3), h4 = hash01(i * 5 + 4);
+      push({
+        tipo: 'cai',
+        x: x + (h1 - 0.5) * 2 * raio,     // cai reto (vx 0)
+        y: y - (150 + h3 * 90),           // nasce fora de vista
+        ty: y + (h2 - 0.5) * raio,        // ponto de aterrissagem
+        vy: 260 + h4 * 140,               // cai rápido (240px em <1s)
+        dur: 2.5, t: 0, cor: cor, esc: e, bateu: false
+      });
+    }
+  }
+
+  // Pilares escalonados (Julgamento Divino): N feixes com atraso — o
+  // pool `feixes` ganha campo `atraso` (como os anéis têm).
+  function pilares(x, y, raio, n, cor, alt, atraso) {
+    if (mudo) return;
+    for (var i = 0; i < n; i++) {
+      var h1 = hash01(i * 7 + 3), h2 = hash01(i * 7 + 5);
+      feixes.push({
+        x: x + (h1 - 0.5) * 2 * raio,
+        y: y + (h2 - 0.5) * raio,
+        cor: cor, alt: alt, tMax: 0.5, t: 0,
+        atraso: (atraso || 0.14) * i
+      });
+      limitar(feixes, MAX.feixes);
+    }
+  }
+
+  // Órbita de lâminas (Fúria Guerreira): n segmentos girando no pool
+  // `arcos` (entrada com flag `giro` — o update gira o ângulo; o
+  // desenho sabe separar de um `corte` pela flag).
+  function giro(x, y, raio, n, cor, dur, vel) {
+    if (mudo) return;
+    arcos.push({
+      giro: true, x: x, y: y, raio: raio, n: n, cor: cor,
+      vel: vel === undefined ? 5.5 : vel, ang: 0,
+      t: 0, tMax: dur === undefined ? 0.75 : dur
+    });
+    limitar(arcos, MAX.arcos);
+  }
+
+  // Fissuras no chão (Terremoto): rachaduras radiais com geometria
+  // pré-calculada no spawn (hash01) — cresce rápido e some (tMax).
+  function fissura(x, y, n, raio, cor) {
+    if (mudo) return;
+    var tracos = [];
+    for (var i = 0; i < n; i++) {
+      tracos.push({
+        ang: (i / n) * Math.PI * 2 + (hash01(i + 11) - 0.5) * 0.7,
+        comp: raio * (0.5 + hash01(i + 31) * 0.5),
+        larg: hash01(i + 57) > 0.62 ? 2 : 1
+      });
+    }
+    fissuras.push({ x: x, y: y, cor: cor, tracos: tracos,
+      t: 0, tMax: 1.1 });
+    limitar(fissuras, MAX.fissuras);
   }
 
   // ------------------------------------------------ receitas (doc §5)
@@ -654,6 +774,19 @@ var Efeitos = (function () {
     } else if (e.tipo === 'mote') {
       e.y += e.vy * dt;
       e.x += Math.sin((e.t + e.fase) * 6) * 8 * dt;
+    } else if (e.tipo === 'tiro') {
+      // reto, sem gravidade (emenda R-VS-7): só avança na direção
+      e.x += e.vx * dt;
+      e.y += e.vy * dt;
+    } else if (e.tipo === 'cai') {
+      // desce do teto até `ty` e "bate" (o clarão nasce no desenho)
+      if (e.y < e.ty) {
+        e.y += e.vy * dt;
+        if (e.y >= e.ty) { e.y = e.ty; e.bateu = true; e.tb = 0;
+          e.dur = e.t + 0.35; }     // some logo após o clarão
+      } else if (e.bateu) {
+        e.tb += dt;                 // tempo do clarão (fade 0,3s)
+      }
     } else if (e.tipo === 'missil') {
       var k = Math.min(1, e.t / e.dur);
       var ax = e.para ? e.para.x : e.x;
@@ -665,13 +798,30 @@ var Efeitos = (function () {
       e.y = py + e.ny * off;
       // rastro denso estilo VS (spec visual-skills): 2/frame (era 1
       // com p=0,9), dispersão menor e vida maior — o missil deixa uma
-      // trilha contínua em vez de faíscas soltas
+      // trilha contínua em vez de faíscas soltas. O ESTILO (emenda
+      // R-VS-8) muda só gravidade/vida/dispersão — a contagem (e o nº
+      // de draws) é sempre 2×3, idêntica à baseline. O missil
+      // DECORATIVO troca rand por hash01: 0 draws, RNG intacto.
       if (!mudo) {
+        var tri = e.trilha || TRILHAS.chama;
         for (var tr = 0; tr < 2; tr++) {
+          var vxT, vyT, fT;
+          if (e.decor) {
+            e.semente += 3;
+            vxT = (hash01(e.semente) - 0.5) * 2 * tri.desp;
+            vyT = (hash01(e.semente + 1) - 0.5) * 2 * tri.desp;
+            fT = hash01(e.semente + 2) * 6;
+          } else {
+            vxT = (Math.random() - 0.5) * 2 * tri.desp;
+            vyT = (Math.random() - 0.5) * 2 * tri.desp;
+            fT = Math.random() * 6;
+          }
           push({
             tipo: 'brasa', x: e.x, y: e.y,
-            vx: rand(-5, 5), vy: rand(-5, 5),
-            grav: 20, dur: 0.4, t: 0, fase: Math.random() * 6,
+            vx: vxT, vy: vyT,
+            grav: tri.sobe ? -tri.grav : tri.grav,
+            sobe: !!tri.sobe,
+            dur: tri.dur, t: 0, fase: fT,
             cor: e.cor
           });
         }
@@ -702,8 +852,16 @@ var Efeitos = (function () {
         if (e.tipo === 'missil') {
           var fx = e.para ? e.para.x : e.x;
           var fy = e.para ? e.para.y : e.y;
-          explosao(fx, fy, e.cor, e.escala);
-          if (e.aoChegar) e.aoChegar();
+          if (e.decor) {
+            // estouro do missil decorativo (emenda): só receitas LIVRES
+            // de RNG (pulso + anel) — o `explosao` de brasas custaria
+            // 36 draws e deslocaria a sequência do jogo
+            pulso(fx, fy, e.cor, 3 * e.escala, 16 * e.escala, 0.4);
+            anel(fx, fy, 3, 15 * e.escala, 0.35, e.cor, 0.8);
+          } else {
+            explosao(fx, fy, e.cor, e.escala);
+            if (e.aoChegar) e.aoChegar();
+          }
         }
         parts.splice(i, 1);
       }
@@ -729,6 +887,7 @@ var Efeitos = (function () {
     for (i = arcos.length - 1; i >= 0; i--) {
       e = arcos[i];
       e.t += dt;
+      if (e.giro) e.ang += e.vel * dt;   // órbita da Fúria (emenda)
       if (e.t >= e.tMax) arcos.splice(i, 1);
     }
     for (i = zonas.length - 1; i >= 0; i--) {
@@ -743,8 +902,14 @@ var Efeitos = (function () {
     }
     for (i = feixes.length - 1; i >= 0; i--) {
       e = feixes[i];
+      if (e.atraso > 0) { e.atraso -= dt; continue; }  // pilares escalonados
       e.t += dt;
       if (e.t >= e.tMax) feixes.splice(i, 1);
+    }
+    for (i = fissuras.length - 1; i >= 0; i--) {
+      e = fissuras[i];
+      e.t += dt;
+      if (e.t >= e.tMax) fissuras.splice(i, 1);
     }
     // carga (singleton): expira sozinha se a batalha parar de
     // atualizar (o missil já partiu — fade curto, sem "estalo")
@@ -783,6 +948,10 @@ var Efeitos = (function () {
       ctx.globalAlpha = 0.5;
       var s5 = glow(e.cor, 5);
       ctx.drawImage(s5, Math.round(e.x) - 5, Math.round(e.y) - 5);
+    } else if (e.tipo === 'tiro') {
+      ctx.globalAlpha = 0.55 * (1 - Math.min(1, e.t / e.dur) * 0.5);
+      var s6 = glow(e.cor, 4);
+      ctx.drawImage(s6, Math.round(e.x) - 4, Math.round(e.y) - 4);
     }
     ctx.globalAlpha = 1;
   }
@@ -829,6 +998,43 @@ var Efeitos = (function () {
       ctx.fillRect(Math.round(e.x) - 1, Math.round(e.y) - 1, 3, 3);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(Math.round(e.x), Math.round(e.y), 1, 1);
+    } else if (e.tipo === 'tiro') {
+      // projétil reto com trilha (emenda R-VS-7): 3 cópias atrás na
+      // direção do voo + núcleo — sem rotação (rasterizador)
+      ctx.globalAlpha = 1 - k * 0.6;
+      ctx.fillStyle = e.cor;
+      var des = 1 + (e.esc || 1);
+      for (var c = 1; c <= 3; c++) {
+        ctx.globalAlpha = (1 - k * 0.6) * (0.5 - c * 0.12);
+        ctx.fillRect(Math.round(e.x - e.vx * 0.016 * c) - 1,
+          Math.round(e.y - e.vy * 0.016 * c) - 1, des, des);
+      }
+      ctx.globalAlpha = 1 - k * 0.3;
+      ctx.fillRect(Math.round(e.x) - 1, Math.round(e.y) - 1, des + 1,
+        des + 1);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(Math.round(e.x), Math.round(e.y), 1, 1);
+    } else if (e.tipo === 'cai') {
+      // lâmina caindo do teto: risco vertical; no "bate" vira clarão
+      // que some em 0,3s (e.tb = tempo desde a batida)
+      if (!e.bateu) {
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = e.cor;
+        var xa = Math.round(e.x);
+        ctx.fillRect(xa, Math.round(e.y) - 7, 1, 9);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(xa, Math.round(e.y) - 5, 1, 4);
+      } else {
+        var fade = Math.max(0, 1 - (e.tb || 0) / 0.3);
+        if (fade > 0.02) {
+          ctx.globalAlpha = 0.85 * fade;
+          var gl = glow(e.cor, 4);
+          ctx.drawImage(gl, Math.round(e.x) - 4, Math.round(e.y) - 4);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(Math.round(e.x) - 1, Math.round(e.y) - 1, 3, 3);
+        }
+      }
+      ctx.globalAlpha = 1;
     }
     ctx.globalAlpha = 1;
   }
@@ -972,9 +1178,41 @@ var Efeitos = (function () {
     ctx.globalAlpha = 1;
   }
 
+  // Órbita de lâminas (Fúria Guerreira — emenda R-VS-7): n segmentos
+  // girando no raio; entra/sai com fade (mesmo some do corte).
+  function desenhaGiro(ctx, a) {
+    var prog = 1 - a.t / a.tMax;
+    if (prog <= 0) return;
+    var some = prog > 0.75 ? (1 - prog) / 0.25 : Math.min(1, prog / 0.15);
+    var n = a.n, i;
+    for (i = 0; i < n; i++) {
+      var base = a.ang + (i / n) * Math.PI * 2;
+      // cada lâmina = 5 segmentos curvos (arco curto)
+      for (var s = 0; s < 5; s++) {
+        var ang = base + (s - 2) * 0.16;
+        var px = a.x + Math.cos(ang) * a.raio;
+        var py = a.y + Math.sin(ang) * a.raio * 0.8;
+        var br = 1 - Math.abs(s - 2) * 0.22;
+        ctx.globalAlpha = some * br;
+        ctx.fillStyle = a.cor;
+        ctx.fillRect(Math.round(px) - 1, Math.round(py) - 1, 3, 3);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(Math.round(px), Math.round(py), 1, 1);
+      }
+      // ponta brilhante
+      var tx = a.x + Math.cos(base + 0.4) * a.raio;
+      var ty = a.y + Math.sin(base + 0.4) * a.raio * 0.8;
+      ctx.globalAlpha = 0.5 * some;
+      var g = glow(a.cor, 5);
+      ctx.drawImage(g, Math.round(tx) - 5, Math.round(ty) - 5);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   function desenhaArcos(ctx) {
     for (var i = 0; i < arcos.length; i++) {
       var a = arcos[i];
+      if (a.giro) { desenhaGiro(ctx, a); continue; }
       var prog = 1 - a.t / a.tMax;
       if (prog > 0.94) continue;
       var some = prog > 0.7 ? (1 - prog) / 0.3 : 1;
@@ -1017,10 +1255,11 @@ var Efeitos = (function () {
       if (r.radial) {
         var kr = r.t / r.tMax;
         var len = 16 * (0.35 + 0.65 * (1 - kr));
+        var nR = r.n || 12;
         ctx.globalAlpha = 1 - kr;
         ctx.fillStyle = '#ffd866';
-        for (var q = 0; q < 12; q++) {
-          var angR = q / 12 * Math.PI * 2;
+        for (var q = 0; q < nR; q++) {
+          var angR = q / nR * Math.PI * 2;
           for (var s2 = 4; s2 < len; s2 += 2) {
             ctx.fillRect(Math.round(r.x + Math.cos(angR) * s2),
               Math.round(r.y + Math.sin(angR) * s2), 1, 1);
@@ -1085,10 +1324,45 @@ var Efeitos = (function () {
 
   // camada de baixo: zonas/ondas no chão + anéis de choque (atrás
   // das entidades — o chão é o fundo, a onda varre por cima dele)
+  // Fissuras (Terremoto — emenda R-VS-7): rachaduras radiais no
+  // chão; crescem rápido (0,25s) e afundam some (alpha cai).
+  function desenhaFissuras(ctx) {
+    for (var i = 0; i < fissuras.length; i++) {
+      var f = fissuras[i];
+      var k = Math.min(1, f.t / f.tMax);
+      var sobe = Math.min(1, f.t / 0.25);
+      var some = k > 0.55 ? (1 - k) / 0.45 : 1;
+      if (some <= 0.02) continue;
+      var x = Math.round(f.x), y = Math.round(f.y);
+      for (var j = 0; j < f.tracos.length; j++) {
+        var tr = f.tracos[j];
+        var comp = tr.comp * sobe;
+        var nP = Math.max(2, Math.round(comp / 3));
+        ctx.globalAlpha = some * (0.5 + 0.3 * (j % 2));
+        ctx.fillStyle = f.cor;
+        for (var p = 1; p <= nP; p++) {
+          var d = (p / nP) * comp;
+          // zigue-zague sutil (deslocamento por índice = hash01 do spawn)
+          var off = (hash01(j * 13 + p) - 0.5) * 4;
+          var px = x + Math.cos(tr.ang) * d + Math.cos(tr.ang + 1.57) * off;
+          var py = y + Math.sin(tr.ang) * d * 0.8 +
+            Math.sin(tr.ang + 1.57) * off * 0.8;
+          ctx.fillRect(Math.round(px), Math.round(py), tr.larg, tr.larg);
+        }
+      }
+      // brilho quente no ponto de origem
+      ctx.globalAlpha = 0.7 * some * (1 - k);
+      var g = glow(f.cor, 5);
+      ctx.drawImage(g, x - 5, y - 5);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   function desenharBaixo(ctx) {
     desenhaZonas(ctx);
     desenhaOndas(ctx);
     desenhaAneis(ctx);
+    desenhaFissuras(ctx);
   }
 
   // camada de topo (ordem do doc §8): aditiva → sólida → fumaça → números
@@ -1165,19 +1439,29 @@ var Efeitos = (function () {
     ctx.globalAlpha = 1;
   }
 
-  // sonda p/ testes (seção 49 + 56)
+  // sonda p/ testes (seção 49 + 56 + emenda 43)
   function info() {
-    var ests = [], nMotes = 0, nBrilhos = 0;
+    var ests = [], nMotes = 0, nBrilhos = 0, nTiros = 0, nCais = 0;
     for (var i = 0; i < nums.length; i++) ests.push(nums[i].est);
     for (i = 0; i < parts.length; i++) {
       if (parts[i].tipo === 'mote') nMotes++;
       else if (parts[i].tipo === 'brilho') nBrilhos++;
+      else if (parts[i].tipo === 'tiro') nTiros++;
+      else if (parts[i].tipo === 'cai') nCais++;
+    }
+    var nGiros = 0, nDecor = 0;
+    for (i = 0; i < arcos.length; i++) if (arcos[i].giro) nGiros++;
+    for (i = 0; i < parts.length; i++) {
+      if (parts[i].tipo === 'missil' && parts[i].decor) nDecor++;
     }
     return {
       parts: parts.length, nums: nums.length, aneis: aneis.length,
       raios: raios.length, arcos: arcos.length,
       zonas: zonas.length, ondas: ondas.length, feixes: feixes.length,
       motes: nMotes, brilhos: nBrilhos,
+      tiros: nTiros, cais: nCais, giros: nGiros,
+      fissuras: fissuras.length,
+      decor: nDecor,          // missis decorativos voando (Adaga Gêmea)
       carga: cargaAtual ? { prog: cargaAtual.prog } : null,
       zonaR: ultZonaR, ondaR: ultOndaR,
       qtd: qtd(),
@@ -1209,6 +1493,8 @@ var Efeitos = (function () {
     explosao: explosao,
     corte: corte,
     cura: cura,
+    anel: anel,               // anel expandindo (emenda R-VS-8: medo)
+    estrela: estrela,          // brilho em cruz (emenda R-VS-7: estrela)
     missil: missil,
     poeiraPart: poeiraPart,
     // receitas (Docs/efeitos.md §5)
@@ -1228,6 +1514,12 @@ var Efeitos = (function () {
     nuvem: nuvem,
     rastro: rastro,
     escala: escala,
+    // receitas da emenda (R-VS-7 — identidade por skill)
+    tiro: tiro,
+    chuva: chuva,
+    pilares: pilares,
+    giro: giro,
+    fissura: fissura,
     // game feel
     sacudir: sacudir,
     shakeOffset: shakeOffset,

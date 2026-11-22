@@ -13,274 +13,373 @@ var Skills = (function () {
     // guerreiro — varredura contando golpes + controle de espaço
     { id: 'golpe-bravo', classe: 'guerreiro', nivel: 5, tipo: 'area',
       nome: 'Golpe Embravecido', cor: '#ff8a5a', aCada: 7, mult: 1.2,
+      vfx: { tipo: 'crescente', esc: 1.8, n: 1 },
       ramos: [
         { id: 'largada', nome: 'Largada', efeito: 'varredura forte, rara',
-          mods: { aCada: 1.4, mult: 1.35 } },
+          mods: { aCada: 1.4, mult: 1.35 },
+          vfx: { esc: 2.6 } },
         { id: 'pressa', nome: 'Pressa', efeito: 'varredura seguida, fraca',
-          mods: { aCada: 0.7, mult: 0.8 } }
+          mods: { aCada: 0.7, mult: 0.8 },
+          vfx: { esc: 1.2, n: 2 } }
       ] },
     { id: 'terremoto', classe: 'guerreiro', nivel: 15, tipo: 'area',
       nome: 'Terremoto', cor: '#ffd866', aCada: 8, mult: 2.0,
+      vfx: { tipo: 'fissura', raios: 7, raio: 60, onda: 140 },
       ramos: [
         { id: 'abrisso', nome: 'Abrisso', efeito: 'devastador, a cada 12',
-          mods: { aCada: 1.5, mult: 1.4 } },
+          mods: { aCada: 1.5, mult: 1.4 },
+          vfx: { raios: 11, raio: 90, onda: 195 } },
         { id: 'tremor', nome: 'Tremor', efeito: 'constante, mais leve',
-          mods: { aCada: 0.75, mult: 0.75 } }
+          mods: { aCada: 0.75, mult: 0.75 },
+          vfx: { raios: 5, raio: 42, onda: 100 } }
       ] },
     { id: 'empurrao', classe: 'guerreiro', nivel: 25, tipo: 'mobilidade',
       nome: 'Empurrão', cor: '#ffb066', modo: 'empurra',
       gatilho: 44, alcance: 64, impulso: 300, dur: 0.22, intervalo: 7,
+      vfx: { tipo: 'empurrao', n: 8, esc: 1 },
       ramos: [
         { id: 'bastiao', nome: 'Bastião', efeito: 'afasta mais longe, espera mais',
-          mods: { intervalo: 1.4, alcance: 1.4 } },
+          mods: { intervalo: 1.4, alcance: 1.4 },
+          vfx: { esc: 1.4, n: 6 } },
         { id: 'ruptura', nome: 'Ruptura', efeito: 'empurra forte, janela curta',
-          mods: { impulso: 1.5, dur: 0.6 } }
+          mods: { impulso: 1.5, dur: 0.6 },
+          vfx: { esc: 0.85, n: 12 } }
       ] },
     { id: 'golpe-fulminante', classe: 'guerreiro', nivel: 35, tipo: 'nuke',
       nome: 'Golpe Fulminante', cor: '#ff6b3a', intervalo: 6, mult: 2.6,
+      vfx: { tipo: 'sismo', trilha: 'peso', raio: 34, raios: 6 },
       ramos: [
         { id: 'impacto', nome: 'Impacto', efeito: 'golpe pesado, espera mais',
-          mods: { intervalo: 1.4, mult: 1.4 } },
+          mods: { intervalo: 1.4, mult: 1.4 },
+          vfx: { raio: 46, raios: 9 } },
         { id: 'fulgur', nome: 'Fulgur', efeito: 'golpe rápido, mais leve',
-          mods: { intervalo: 0.7, mult: 0.75 } }
+          mods: { intervalo: 0.7, mult: 0.75 },
+          vfx: { raio: 26, raios: 4 } }
       ] },
     { id: 'furia-guerreira', classe: 'guerreiro', nivel: 45, tipo: 'area',
       nome: 'Fúria Guerreira', cor: '#ff5a3a', aCada: 5, mult: 1.6,
+      vfx: { tipo: 'giro', n: 3, raio: 32, vel: 5.5 },
       ramos: [
         { id: 'tita', nome: 'Titã', efeito: 'varredura brutal, espaçada',
-          mods: { aCada: 1.6, mult: 1.45 } },
+          mods: { aCada: 1.6, mult: 1.45 },
+          vfx: { n: 2, raio: 48, vel: 3.6 } },
         { id: 'frenesi', nome: 'Frenesi', efeito: 'golpes colados, mais fracos',
-          mods: { aCada: 0.6, mult: 0.8 } }
+          mods: { aCada: 0.6, mult: 0.8 },
+          vfx: { n: 6, raio: 26, vel: 9 } }
       ] },
     // guerreiro — árvore maior (spec arvore-skills): sustain, burst e controle
     { id: 'impeto-vital', classe: 'guerreiro', nivel: 60, tipo: 'cura',
       nome: 'Ímpeto Vital', cor: '#8ce08c', intervalo: 7, pct: 0.05,
+      vfx: { tipo: 'impeto', alt: 70, n: 3 },
       ramos: [
         { id: 'vigor', nome: 'Vigor', efeito: 'cura grande, espera mais',
-          mods: { intervalo: 1.4, pct: 1.5 } },
+          mods: { intervalo: 1.4, pct: 1.5 },
+          vfx: { alt: 96, n: 4 } },
         { id: 'folego', nome: 'Fôlego', efeito: 'cura frequente, miúda',
-          mods: { intervalo: 0.7, pct: 0.75 } }
+          mods: { intervalo: 0.7, pct: 0.75 },
+          vfx: { alt: 52, n: 2 } }
       ] },
     { id: 'estocada', classe: 'guerreiro', nivel: 150, tipo: 'nuke',
       nome: 'Estocada Brutal', cor: '#ff6b3a', intervalo: 9, mult: 3.4,
+      vfx: { tipo: 'estocada', trilha: 'fina', n: 4, raio: 26 },
       ramos: [
         { id: 'bruto', nome: 'Bruto', efeito: 'fura tudo, devagar',
-          mods: { intervalo: 1.4, mult: 1.35 } },
+          mods: { intervalo: 1.4, mult: 1.35 },
+          vfx: { n: 6, raio: 34 } },
         { id: 'raso', nome: 'Raso', efeito: 'estocadas leves, seguidas',
-          mods: { intervalo: 0.65, mult: 0.75 } }
+          mods: { intervalo: 0.65, mult: 0.75 },
+          vfx: { n: 3, raio: 20 } }
       ] },
     { id: 'grito-guerra', classe: 'guerreiro', nivel: 400, tipo: 'medo',
       nome: 'Grito de Guerra', cor: '#ffb066',
       gatilho: 52, alcance: 60, dur: 3, intervalo: 11,
+      vfx: { tipo: 'grito', n: 6, esc: 1 },
       ramos: [
         { id: 'pavor', nome: 'Pavor', efeito: 'afasta por muito tempo, raro',
-          mods: { dur: 1.5, intervalo: 1.4 } },
+          mods: { dur: 1.5, intervalo: 1.4 },
+          vfx: { n: 9, esc: 1.4 } },
         { id: 'eco', nome: 'Eco', efeito: 'eco frequente, medo breve',
-          mods: { intervalo: 0.7, dur: 0.7 } }
+          mods: { intervalo: 0.7, dur: 0.7 },
+          vfx: { n: 4, esc: 0.8 } }
       ] },
     // mago — projéteis e explosões à distância
     { id: 'bola-fogo', classe: 'mago', nivel: 5, tipo: 'nuke',
       nome: 'Bola de Fogo', cor: '#ff6b3a', intervalo: 4.5, mult: 1.8,
+      vfx: { tipo: 'bola', trilha: 'chama', raio: 30, raios: 5 },
       ramos: [
         { id: 'chama', nome: 'Chama', efeito: 'chama intensa, mais lenta',
-          mods: { intervalo: 1.35, mult: 1.5 } },
+          mods: { intervalo: 1.35, mult: 1.5 },
+          vfx: { raio: 40, raios: 8 } },
         { id: 'veloz', nome: 'Veloz', efeito: 'rajada rápida, fraca',
-          mods: { intervalo: 0.7, mult: 0.75 } }
+          mods: { intervalo: 0.7, mult: 0.75 },
+          vfx: { raio: 24, raios: 4 } }
       ] },
     { id: 'nova-arcano', classe: 'mago', nivel: 15, tipo: 'area',
       nome: 'Nova Arcana', cor: '#8a6bff', aCada: 6, mult: 1.5,
+      vfx: { tipo: 'estrela', raios: 12, estrelas: 6, raio: 70 },
       ramos: [
         { id: 'eclipse', nome: 'Eclipse', efeito: 'nova devastadora, rara',
-          mods: { aCada: 1.5, mult: 1.4 } },
+          mods: { aCada: 1.5, mult: 1.4 },
+          vfx: { raios: 17, estrelas: 10, raio: 100 } },
         { id: 'fenda', nome: 'Fenda', efeito: 'estilhaços seguidos, leves',
-          mods: { aCada: 0.67, mult: 0.8 } }
+          mods: { aCada: 0.67, mult: 0.8 },
+          vfx: { raios: 8, estrelas: 4, raio: 48 } }
       ] },
     { id: 'teleporte', classe: 'mago', nivel: 25, tipo: 'mobilidade',
       nome: 'Teleporte', cor: '#8a6bff', modo: 'blink',
       gatilho: 44, distancia: 96, intervalo: 8,
+      vfx: { tipo: 'blink', n: 7, esc: 1 },
       ramos: [
         { id: 'salto', nome: 'Salto', efeito: 'teleporte longo, espera mais',
-          mods: { intervalo: 1.4, distancia: 1.4 } },
+          mods: { intervalo: 1.4, distancia: 1.4 },
+          vfx: { n: 5, esc: 1.5 } },
         { id: 'reflexo', nome: 'Reflexo', efeito: 'blink curto, frequente',
-          mods: { intervalo: 0.7, distancia: 0.7 } }
+          mods: { intervalo: 0.7, distancia: 0.7 },
+          vfx: { n: 10, esc: 0.75 } }
       ] },
     { id: 'meteoro', classe: 'mago', nivel: 35, tipo: 'nuke',
       nome: 'Meteoro', cor: '#ffb066', intervalo: 7, mult: 3.0,
+      vfx: { tipo: 'cratera', trilha: 'peso', raio: 46, raios: 8 },
       ramos: [
         { id: 'colisao', nome: 'Colisão', efeito: 'impacto colossal, demorado',
-          mods: { intervalo: 1.4, mult: 1.4 } },
+          mods: { intervalo: 1.4, mult: 1.4 },
+          vfx: { raio: 62, raios: 12 } },
         { id: 'brasa', nome: 'Brasa', efeito: 'brasa frequente, miúda',
-          mods: { intervalo: 0.7, mult: 0.78 } }
+          mods: { intervalo: 0.7, mult: 0.78 },
+          vfx: { raio: 34, raios: 5 } }
       ] },
     { id: 'rajada-arcana', classe: 'mago', nivel: 45, tipo: 'area',
       nome: 'Rajada Arcana', cor: '#9a8bff', aCada: 5, mult: 1.8,
+      vfx: { tipo: 'radial', n: 10, vel: 240, esc: 1 },
       ramos: [
         { id: 'ciclone', nome: 'Ciclone', efeito: 'rajada diluvial, espaçada',
-          mods: { aCada: 1.5, mult: 1.4 } },
+          mods: { aCada: 1.5, mult: 1.4 },
+          vfx: { n: 7, vel: 185, esc: 1.6 } },
         { id: 'fagulha', nome: 'Fagulha', efeito: 'fagulhas seguidas, leves',
-          mods: { aCada: 0.6, mult: 0.8 } }
+          mods: { aCada: 0.6, mult: 0.8 },
+          vfx: { n: 16, vel: 330, esc: 0.6 } }
       ] },
     // mago — árvore maior: veneno arcano, controle e sustain
     { id: 'toxina-arcano', classe: 'mago', nivel: 60, tipo: 'veneno',
       nome: 'Toxina Arcana', cor: '#7ed957', chance: 0.25, dps: 0.6, dur: 5,
+      vfx: { tipo: 'toxina', n: 9, esc: 1.25 },
       ramos: [
         { id: 'necrose', nome: 'Necrose', efeito: 'aplica fácil, tick fraco',
-          mods: { chance: 1.4, dps: 0.75 } },
+          mods: { chance: 1.4, dps: 0.75 },
+          vfx: { n: 13, esc: 1 } },
         { id: 'agonia', nome: 'Agônia', efeito: 'difícil de aplicar, drena forte',
-          mods: { chance: 0.7, dps: 1.5 } }
+          mods: { chance: 0.7, dps: 1.5 },
+          vfx: { n: 6, esc: 1.7 } }
       ] },
     { id: 'horror-abissal', classe: 'mago', nivel: 150, tipo: 'medo',
       nome: 'Horror Abissal', cor: '#8a6bff',
       gatilho: 60, alcance: 64, dur: 4, intervalo: 12,
+      vfx: { tipo: 'horror', n: 5, esc: 1.2 },
       ramos: [
         { id: 'tenebra', nome: 'Tenebra', efeito: 'pesadelo longo, demorado',
-          mods: { dur: 1.5, intervalo: 1.35 } },
+          mods: { dur: 1.5, intervalo: 1.35 },
+          vfx: { n: 8, esc: 1.6 } },
         { id: 'vulto', nome: 'Vulto', efeito: 'vulto frequente, breve',
-          mods: { intervalo: 0.7, dur: 0.7 } }
+          mods: { intervalo: 0.7, dur: 0.7 },
+          vfx: { n: 4, esc: 0.85 } }
       ] },
     { id: 'escudo-arcano', classe: 'mago', nivel: 400, tipo: 'cura',
       nome: 'Escudo Arcano', cor: '#8a6bff', intervalo: 9, pct: 0.05,
+      vfx: { tipo: 'escudo', alt: 76, n: 8 },
       ramos: [
         { id: 'egide', nome: 'Égide', efeito: 'escudo grosso, demora a recarregar',
-          mods: { intervalo: 1.4, pct: 1.5 } },
+          mods: { intervalo: 1.4, pct: 1.5 },
+          vfx: { alt: 104, n: 12 } },
         { id: 'pulso', nome: 'Pulso', efeito: 'pulsos segidos, miúdos',
-          mods: { intervalo: 0.7, pct: 0.75 } }
+          mods: { intervalo: 0.7, pct: 0.75 },
+          vfx: { alt: 56, n: 5 } }
       ] },
     // ladino — adagas à distância e esquiva
     { id: 'veneno', classe: 'ladino', nivel: 5, tipo: 'veneno',
       nome: 'Veneno', cor: '#7ed957', chance: 0.3, dps: 0.8, dur: 5,
+      vfx: { tipo: 'veneno', n: 7, esc: 1 },
       ramos: [
         { id: 'letal', nome: 'Letal', efeito: 'veneno forte, evapora rápido',
-          mods: { dps: 1.5, dur: 0.7 } },
+          mods: { dps: 1.5, dur: 0.7 },
+          vfx: { n: 5, esc: 1.5 } },
         { id: 'toxico', nome: 'Tóxico', efeito: 'prende em quase todo golpe, tick fraco',
-          mods: { chance: 1.6, dps: 0.65 } }
+          mods: { chance: 1.6, dps: 0.65 },
+          vfx: { n: 11, esc: 0.8 } }
       ] },
     { id: 'adaga-sombria', classe: 'ladino', nivel: 15, tipo: 'nuke',
       nome: 'Adaga Sombria', cor: '#b06bff', intervalo: 3.5, mult: 2.4,
+      vfx: { tipo: 'sombria', trilha: 'sombra', raio: 28, raios: 4 },
       ramos: [
         { id: 'sombrio', nome: 'Sombrio', efeito: 'golpe demorado e certeiro',
-          mods: { intervalo: 1.4, mult: 1.4 } },
+          mods: { intervalo: 1.4, mult: 1.4 },
+          vfx: { raio: 38, raios: 6 } },
         { id: 'ritmo', nome: 'Ritmo', efeito: 'adagas leves, sem parar',
-          mods: { intervalo: 0.7, mult: 0.78 } }
+          mods: { intervalo: 0.7, mult: 0.78 },
+          vfx: { raio: 22, raios: 3 } }
       ] },
     { id: 'esquiva', classe: 'ladino', nivel: 25, tipo: 'mobilidade',
       nome: 'Esquiva', cor: '#7ed957', modo: 'esquiva',
       gatilho: 40, distancia: 64, intervalo: 6,
+      vfx: { tipo: 'esquiva', n: 6, esc: 1 },
       ramos: [
         { id: 'planar', nome: 'Planar', efeito: 'desliza longe, espera mais',
-          mods: { intervalo: 1.4, distancia: 1.4 } },
+          mods: { intervalo: 1.4, distancia: 1.4 },
+          vfx: { n: 4, esc: 1.4 } },
         { id: 'agil', nome: 'Ágil', efeito: 'deslize curto, frequente',
-          mods: { intervalo: 0.7, distancia: 0.7 } }
+          mods: { intervalo: 0.7, distancia: 0.7 },
+          vfx: { n: 9, esc: 0.7 } }
       ] },
     { id: 'chuva-adagas', classe: 'ladino', nivel: 35, tipo: 'area',
       nome: 'Chuva de Adagas', cor: '#d8d8f0', aCada: 5, mult: 1.4,
+      vfx: { tipo: 'chuva', n: 9, raio: 75, esc: 1 },
       ramos: [
         { id: 'saraiva', nome: 'Saraiva', efeito: 'chuva pesada, espaçada',
-          mods: { aCada: 1.5, mult: 1.4 } },
+          mods: { aCada: 1.5, mult: 1.4 },
+          vfx: { n: 6, raio: 100, esc: 1.6 } },
         { id: 'leve', nome: 'Leve', efeito: 'fio leve, sem parar',
-          mods: { aCada: 0.6, mult: 0.8 } }
+          mods: { aCada: 0.6, mult: 0.8 },
+          vfx: { n: 15, raio: 55, esc: 0.7 } }
       ] },
     { id: 'adaga-gemea', classe: 'ladino', nivel: 45, tipo: 'nuke',
       nome: 'Adaga Gêmea', cor: '#b06bff', intervalo: 2.6, mult: 1.8,
+      // gemêa: `gemea` pede o 2º missil DECORATIVO (sem callback — o
+      // dano continua no missil real; emenda R-VS-8)
+      vfx: { tipo: 'gemea', trilha: 'sombra', gemea: true, raio: 24,
+        raios: 3 },
       ramos: [
         { id: 'espelho', nome: 'Espelho', efeito: 'par de lâminas pesadas',
-          mods: { intervalo: 1.4, mult: 1.4 } },
+          mods: { intervalo: 1.4, mult: 1.4 },
+          vfx: { raio: 34, raios: 5 } },
         { id: 'breve', nome: 'Breve', efeito: 'lâminas leves, sem parar',
-          mods: { intervalo: 0.7, mult: 0.78 } }
+          mods: { intervalo: 0.7, mult: 0.78 },
+          vfx: { raio: 20, raios: 2 } }
       ] },
     // ladino — árvore maior: sustain, medo e dano executável
     { id: 'bandagem', classe: 'ladino', nivel: 60, tipo: 'cura',
       nome: 'Bandagem Rápida', cor: '#8ce08c', intervalo: 6, pct: 0.05,
+      vfx: { tipo: 'bandagem', alt: 60, n: 6 },
       ramos: [
         { id: 'sutura', nome: 'Sutura', efeito: 'cura grande, demora a refazer',
-          mods: { intervalo: 1.4, pct: 1.5 } },
+          mods: { intervalo: 1.4, pct: 1.5 },
+          vfx: { alt: 88, n: 9 } },
         { id: 'firme', nome: 'Firme', efeito: 'reaperta sempre, miúdo',
-          mods: { intervalo: 0.7, pct: 0.75 } }
+          mods: { intervalo: 0.7, pct: 0.75 },
+          vfx: { alt: 44, n: 4 } }
       ] },
     { id: 'sombra-pavor', classe: 'ladino', nivel: 150, tipo: 'medo',
       nome: 'Sombra Pavorosa', cor: '#b06bff',
       gatilho: 44, alcance: 56, dur: 2.8, intervalo: 9,
+      vfx: { tipo: 'vulto', n: 7, esc: 1.15 },
       ramos: [
         { id: 'horror', nome: 'Horror', efeito: 'sombra demorada, rara',
-          mods: { dur: 1.5, intervalo: 1.4 } },
+          mods: { dur: 1.5, intervalo: 1.4 },
+          vfx: { n: 11, esc: 1.5 } },
         { id: 'vaga', nome: 'Vaga', efeito: 'vaga frequente, curta',
-          mods: { intervalo: 0.7, dur: 0.7 } }
+          mods: { intervalo: 0.7, dur: 0.7 },
+          vfx: { n: 5, esc: 0.8 } }
       ] },
     { id: 'adaga-perfurante', classe: 'ladino', nivel: 400, tipo: 'nuke',
       nome: 'Adaga Perfurante', cor: '#d8d8f0', intervalo: 8, mult: 3.6,
+      vfx: { tipo: 'perfuro', trilha: 'fina', raio: 40, raios: 6 },
       ramos: [
         { id: 'furo', nome: 'Furo', efeito: 'perfuração única e brutal',
-          mods: { intervalo: 1.4, mult: 1.35 } },
+          mods: { intervalo: 1.4, mult: 1.35 },
+          vfx: { raio: 56, raios: 9 } },
         { id: 'fluxo', nome: 'Fluxo', efeito: 'fluxo de lâminas, mais leve',
-          mods: { intervalo: 0.65, mult: 0.75 } }
+          mods: { intervalo: 0.65, mult: 0.75 },
+          vfx: { raio: 30, raios: 4 } }
       ] },
     // clérigo — cura, castigo e medo
     { id: 'bencao', classe: 'clerigo', nivel: 5, tipo: 'cura',
       nome: 'Bênção', cor: '#8ce08c', intervalo: 5, pct: 0.06,
+      vfx: { tipo: 'bencao', alt: 70, n: 7 },
       ramos: [
         { id: 'graca', nome: 'Graça', efeito: 'bênção forte, demorada',
-          mods: { intervalo: 1.4, pct: 1.45 } },
+          mods: { intervalo: 1.4, pct: 1.45 },
+          vfx: { alt: 96, n: 11 } },
         { id: 'fervor', nome: 'Fervor', efeito: 'fervor constante, miúdo',
-          mods: { intervalo: 0.7, pct: 0.78 } }
+          mods: { intervalo: 0.7, pct: 0.78 },
+          vfx: { alt: 52, n: 5 } }
       ] },
     { id: 'castigo', classe: 'clerigo', nivel: 15, tipo: 'nuke',
       nome: 'Castigo Sagrado', cor: '#ffe89a', intervalo: 4.5, mult: 2.2,
+      vfx: { tipo: 'castigo', trilha: 'divina', raio: 32, raios: 5 },
       ramos: [
         { id: 'censura', nome: 'Censura', efeito: 'censura pesada, demorada',
-          mods: { intervalo: 1.4, mult: 1.4 } },
+          mods: { intervalo: 1.4, mult: 1.4 },
+          vfx: { raio: 44, raios: 8 } },
         { id: 'toque', nome: 'Toque', efeito: 'toque leve, frequente',
-          mods: { intervalo: 0.7, mult: 0.78 } }
+          mods: { intervalo: 0.7, mult: 0.78 },
+          vfx: { raio: 24, raios: 3 } }
       ] },
     { id: 'amedronta', classe: 'clerigo', nivel: 25, tipo: 'medo',
       nome: 'Amedronta', cor: '#c9a0ff',
       gatilho: 56, alcance: 56, dur: 3.5, intervalo: 9,
+      vfx: { tipo: 'terror', n: 6, esc: 1 },
       ramos: [
         { id: 'terror', nome: 'Terror', efeito: 'terror longo, demorado',
-          mods: { dur: 1.5, intervalo: 1.4 } },
+          mods: { dur: 1.5, intervalo: 1.4 },
+          vfx: { n: 9, esc: 1.35 } },
         { id: 'sopro', nome: 'Sopro', efeito: 'sopro frequente, breve',
-          mods: { intervalo: 0.7, dur: 0.7 } }
+          mods: { intervalo: 0.7, dur: 0.7 },
+          vfx: { n: 4, esc: 0.8 } }
       ] },
     { id: 'oracao', classe: 'clerigo', nivel: 35, tipo: 'cura',
       nome: 'Oração Santificada', cor: '#8ce08c', intervalo: 4, pct: 0.10,
+      vfx: { tipo: 'oracao', alt: 84, n: 9 },
       ramos: [
         { id: 'hino', nome: 'Hino', efeito: 'hino potente, demorado',
-          mods: { intervalo: 1.4, pct: 1.4 } },
+          mods: { intervalo: 1.4, pct: 1.4 },
+          vfx: { alt: 112, n: 14 } },
         { id: 'louvor', nome: 'Louvor', efeito: 'louvor contínuo, mais leve',
-          mods: { intervalo: 0.7, pct: 0.8 } }
+          mods: { intervalo: 0.7, pct: 0.8 },
+          vfx: { alt: 64, n: 7 } }
       ] },
     { id: 'julgamento', classe: 'clerigo', nivel: 45, tipo: 'area',
       nome: 'Julgamento Divino', cor: '#ffe89a', aCada: 6, mult: 2.0,
+      vfx: { tipo: 'pilares', n: 4, raio: 85, alt: 70, atraso: 0.14 },
       ramos: [
         { id: 'pena', nome: 'Pena', efeito: 'veredito devastador, raro',
-          mods: { aCada: 1.5, mult: 1.4 } },
+          mods: { aCada: 1.5, mult: 1.4 },
+          vfx: { n: 3, raio: 110, alt: 105, atraso: 0.24 } },
         { id: 'brado', nome: 'Brado', efeito: 'brado seguido, leve',
-          mods: { aCada: 0.67, mult: 0.8 } }
+          mods: { aCada: 0.67, mult: 0.8 },
+          vfx: { n: 5, raio: 65, alt: 48, atraso: 0.09 } }
       ] },
     // clérigo — árvore maior: mobilidade sagrada, praga e nuke celestial
     { id: 'passo-sagrado', classe: 'clerigo', nivel: 60, tipo: 'mobilidade',
       nome: 'Passo Sagrado', cor: '#ffe89a', modo: 'blink',
       gatilho: 44, distancia: 80, intervalo: 9,
+      vfx: { tipo: 'passo', n: 8, esc: 1.2 },
       ramos: [
         { id: 'extase', nome: 'Éxtase', efeito: 'passo longo, demorado',
-          mods: { intervalo: 1.4, distancia: 1.4 } },
+          mods: { intervalo: 1.4, distancia: 1.4 },
+          vfx: { n: 6, esc: 1.6 } },
         { id: 'voo', nome: 'Voo', efeito: 'passo curto, frequente',
-          mods: { intervalo: 0.7, distancia: 0.7 } }
+          mods: { intervalo: 0.7, distancia: 0.7 },
+          vfx: { n: 11, esc: 0.85 } }
       ] },
     { id: 'peste-divina', classe: 'clerigo', nivel: 150, tipo: 'veneno',
       nome: 'Peste Divina', cor: '#b8e86a', chance: 0.3, dps: 0.7, dur: 6,
+      vfx: { tipo: 'peste', n: 8, esc: 1.2 },
       ramos: [
         { id: 'praga', nome: 'Praga', efeito: 'praga forte, apaga rápido',
-          mods: { dps: 1.5, dur: 0.7 } },
+          mods: { dps: 1.5, dur: 0.7 },
+          vfx: { n: 6, esc: 1.7 } },
         { id: 'lenta', nome: 'Lenta', efeito: 'pega em quase tudo, tick fraco',
-          mods: { chance: 1.6, dps: 0.7 } }
+          mods: { chance: 1.6, dps: 0.7 },
+          vfx: { n: 12, esc: 0.9 } }
       ] },
     { id: 'ira-celestial', classe: 'clerigo', nivel: 400, tipo: 'nuke',
       nome: 'Ira Celestial', cor: '#ffe89a', intervalo: 10, mult: 4.0,
+      vfx: { tipo: 'celestia', trilha: 'divina', raio: 52, raios: 10 },
       ramos: [
         { id: 'colera', nome: 'Cólera', efeito: 'ira total, demora a virar',
-          mods: { intervalo: 1.4, mult: 1.35 } },
+          mods: { intervalo: 1.4, mult: 1.35 },
+          vfx: { raio: 70, raios: 14 } },
         { id: 'raio', nome: 'Raio', efeito: 'raiões leves, sem parar',
-          mods: { intervalo: 0.65, mult: 0.75 } }
+          mods: { intervalo: 0.65, mult: 0.75 },
+          vfx: { raio: 40, raios: 7 } }
       ] }
   ];
 
@@ -328,6 +427,8 @@ var Skills = (function () {
   // intactos, p/ quem nunca mexeu: baseline medido não muda).
   // Fonte única do merge: carregadas repassa e a batalha continua
   // lendo CAMPOS (nenhum gatilho muda).
+  // vfx (emenda visual-skills): o ramo sobrepõe POR CHAVE o vfx base
+  // — sem ramo a referência original é mantida (read-only na LISTA).
   function comRamo(sk, ramoId) {
     if (!Array.isArray(sk.ramos) || !sk.ramos.length) return sk;
     var r = null;
@@ -343,6 +444,18 @@ var Skills = (function () {
       if (!Object.prototype.hasOwnProperty.call(r.mods, m)) continue;
       if (typeof out[m] !== 'number') continue;
       out[m] = out[m] * r.mods[m];
+    }
+    // mescla do vfx visual: cópia rasa do base + overrides do ramo
+    // (nunca muta o objeto da LISTA — cópia nova por chave)
+    if (r.vfx) {
+      var vf = {};
+      for (var b in sk.vfx) {
+        if (Object.prototype.hasOwnProperty.call(sk.vfx, b)) vf[b] = sk.vfx[b];
+      }
+      for (var w in r.vfx) {
+        if (Object.prototype.hasOwnProperty.call(r.vfx, w)) vf[w] = r.vfx[w];
+      }
+      out.vfx = vf;
     }
     // aCada é INTEIRO (o gatilho area usa %) — arredonda p/ >= 1 ou o
     // proc fracionário nunca dispara
